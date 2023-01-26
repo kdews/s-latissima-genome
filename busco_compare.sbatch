@@ -35,6 +35,8 @@ for lineage in "${lineages[@]}"
 do
   wd="${sum_dir}/${lineage}/"
   mkdir -p "$wd"
+  # Clear any old text files from working directory
+  rm ${wd}/*.txt
   if [[ -n $(ls *${lineage}*/short_summary*.txt) ]]
   then
     cmd="cp -u *${lineage}*/short_summary*.txt $wd"
@@ -50,6 +52,10 @@ do
   cd "$wd"
   for file in $(ls *.txt)
   do
+    new="${file//*short_summary_/}"
+    new="${new//*aug_busco_/}"
+    new="${new//Macpyr2/Mac_pyr2}"
+    new="$(echo $new | awk -F_ '{print $1,$2}' | sed 's/ /_/g')"
     if [[ "$lineage" == "quast" ]]
     then
       cmd="mv $file short_summary_${new}.txt"
@@ -57,7 +63,7 @@ do
       cmd="mv $file short_summary.specific.${lineage}.${new}.txt"
     fi
     echo "$cmd"
-    #$cmd
+    $cmd
   done
   cd ../..
 done
@@ -75,5 +81,5 @@ do
     conda activate busco
   fi
   echo "$cmd"
-  #$cmd
+  $cmd
 done
