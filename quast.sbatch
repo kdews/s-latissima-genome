@@ -8,6 +8,7 @@
 
 # Print date and time
 date
+script_config
 
 # Load conda and BUSCO env
 cond=~/.conda_for_sbatch.sh
