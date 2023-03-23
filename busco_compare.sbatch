@@ -54,8 +54,8 @@ do
   do
     new="${file//*short_summary_/}"
     new="${new//*aug_busco_/}"
-    new="${new//Macpyr2/Mac_pyr2}"
-    new="$(echo $new | awk -F_ '{print $1,$2}' | sed 's/ /_/g')"
+    # new="${new//Macpyr2/Mac_pyr2}"
+    # new="$(echo $new | awk -F_ '{print $1,$2}' | sed 's/ /_/g')"
     if [[ "$lineage" == "quast" ]]
     then
       cmd="mv $file short_summary_${new}.txt"
