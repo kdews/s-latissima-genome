@@ -82,4 +82,5 @@ do
   fi
   echo "$cmd"
   $cmd
+  cmd="Rscript --vanilla s-latissima-genome/pretty_busco.R $wd"
 done
