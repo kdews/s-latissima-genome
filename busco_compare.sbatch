@@ -58,9 +58,9 @@ do
     # new="$(echo $new | awk -F_ '{print $1,$2}' | sed 's/ /_/g')"
     if [[ "$lineage" == "quast" ]]
     then
-      cmd="mv $file short_summary_${new}.txt"
+      cmd="mv $file short_summary_${new}"
     else
-      cmd="mv $file short_summary.specific.${lineage}.${new}.txt"
+      cmd="mv $file short_summary.specific.${lineage}.${new}"
     fi
     echo "$cmd"
     $cmd
@@ -82,5 +82,9 @@ do
   fi
   echo "$cmd"
   $cmd
-  cmd="Rscript --vanilla s-latissima-genome/pretty_busco.R $wd"
+  # Clean up BUSCO graph
+  module load gcc/11.3.0  openblas/0.3.20 r/4.2.2
+  cmd="Rscript s-latissima-genome/pretty_busco.R $wd"
+  echo $cmd
+  $cmd
 done

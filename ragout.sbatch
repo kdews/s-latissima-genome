@@ -9,7 +9,7 @@
 # Print date and time
 date
 
-# Load conda and BUSCO env
+# Load conda and Ragout env
 cond=~/.conda_for_sbatch.sh
 [[ -a "$cond" ]] && source "$cond" || \
 { echo "Error on source of $cond"; exit 1; }
@@ -32,6 +32,6 @@ assembly_no_ext=$(basename "${assembly%.*}")
 # Output directory name
 out="${SLURM_JOB_NAME}_${assembly_no_ext}"
 
-cmd="ragout $recipe_file"
+cmd="ragout -s hal $recipe_file"
 echo "$cmd"
 $cmd

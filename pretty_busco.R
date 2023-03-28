@@ -1,17 +1,14 @@
 ## Initialization
 # Load required packages
-library(ggplot2)
-wd <- "/scratch2/kdeweese/latissima/genome_stats/"
-setwd(wd)
-# line_args <- commandArgs(TRUE)
-# wd <- line_args[1]
-wd <- "busco_summaries/eukaryota_odb10"
-lineage <- gsub(".*/", "", wd)
+library(tidyverse, quietly = TRUE)
+line_args <- commandArgs(TRUE)
+wd <- line_args[1]
+lineage <- unlist(strsplit(wd, "/"))[2]
 # Source BUSCO-generated R script
 source(paste(wd, "busco_figure.R", sep = "/"))
 # Read table of species names and FASTA file names
 spec_names <- read.table("assemblies/pretty_names.txt", sep = "\t")
-names(spec_names) <- c("species", "my_species")
+names(spec_names) <- c("Species", "my_species")
 
 ## Data
 # Strip lineage names from species
@@ -23,37 +20,55 @@ spec_names$my_species <- gsub("\\..*", "", spec_names$my_species)
 spec_names$my_species <- factor(spec_names$my_species, levels = lvls)
 df <- merge(df, spec_names, sort = FALSE)
 # Labels for figure legend
-lbs <- c("Complete and single-copy", "Complete and duplicated",
-         "Fragmented", "Missing")
+lbs <- c(" Complete (C) and single-copy (S)  ",
+           " Complete (C) and duplicated (D)",
+           " Fragmented (F)  ",
+           " Missing (M)")
 cat_labs <- data.frame(label=factor(lbs, levels = rev(lbs)),
-                       category=unique(df$category))
+                       category=levels(df$category))
 df <- merge(df, cat_labs, sort = FALSE)
 # Order species factor by highest complete (S) percentage
 ord_spc <- df[df$category == "S",]
-ord_spc <- ord_spc[order(ord_spc$my_percentage), "species"]
-df$species <- factor(df$species, levels = ord_spc)
-# Format plot axis labels
-cnt <- paste0("n=", total_buscos)
-yl <- paste0("% BUSCOs", "\n", lineage, " (", cnt, ")")
-# Filter out species
-drop_spec <- c("U. pinnatifida 20", "F. vesiculosus",
-               "C. okamuranus", "E. siliculosus")
-df <- df[grep(paste(drop_spec, collapse = "|"), df$species, invert = TRUE),]
+ord_spc <- ord_spc[order(ord_spc$my_percentage), "Species"]
+df$Species <- factor(df$Species, levels = ord_spc)
+df <- df[order(df$Species),]
+# Format plot titles and axis labels
+cnt <- paste0("n = ", total_buscos)
+yl <- paste0("\n", "% BUSCOs", " (", cnt, ")")
+ttl <- unlist(strsplit(lineage, "_"))
+ttl[1] <- tools::toTitleCase(ttl[1])
+ttl[2] <- paste0("(", ttl[2], ")")
+ttl <- paste(ttl, collapse = " ")
+# Label summary of values in each categeory for each species
+vals <- as.data.frame(pivot_wider(df[,c("Species", "my_values", "category")],
+                    names_from = category,
+                    values_from = my_values))
+vals <- vals %>% mutate(summ = paste(paste0("C:", S+D),
+                                     paste0("[S:", S, ","),
+                                     paste0("D:", D, "],"),
+                                     paste0("F:", F, ","),
+                                     paste0("M:", M)))
+vals <- vals$summ
 
 ## Plot
+# Bar plot of BUSCO score breakdown
 busc_plot <- ggplot(data = df,
-                    aes(x = species, y = my_percentage, fill = label)) +
+                    aes(x = Species, y = my_percentage,
+                        fill = label)) +
   geom_col() +
   coord_flip() +
   theme_classic() +
-  labs(x = NULL, y = yl) +
+  labs(title = my_title, subtitle = ttl, x = NULL, y = yl) +
   scale_fill_manual(values = rev(my_colors)) +
-  theme(legend.position = "top",
-        legend.title = element_blank()) +
-  guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE)) +
-  geom_text(data = df[df$my_values > 0,],
-              aes(label = my_values),
-            position = position_stack(vjust = 0.5))
-
-ggsave(file = paste(lineage, "busco_plot.png", sep = "_"),
-       plot = busc_plot, width = 7, height = 4)
+  annotate("text", x = 1:length(vals), y = 3, label = vals, hjust = 0, size = 5) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        legend.position = "top",
+        legend.title = element_blank(),
+        text = element_text(size = 16),
+        axis.text = element_text(color = "black"),
+        axis.text.y = element_text(face = "italic")) +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE))
+# Save plot
+ggsave(file = my_output, plot = busc_plot,
+       width = my_width, height = my_height, units = my_unit)
