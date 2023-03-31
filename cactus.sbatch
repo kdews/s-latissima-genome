@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH -J cactus
 #SBATCH -p oneweek
-#SBATCH --mem=150gb
+#SBATCH --constraint=xeon-2640v3
+#SBATCH --mem=50gb
 #SBATCH --time=7-0
 #SBATCH --cpus-per-task=16
 #SBATCH -o %x.log
@@ -14,9 +15,6 @@ module load gcc/11.3.0 python/3.9.12 git/2.36.1
 env_path=/home1/kdeweese/bin/cactus-bin-v2.4.4/cactus_env/bin/activate
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
-which cactus
-cactus --help
-exit 0
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -46,11 +44,11 @@ mkdir -p $tmp
 # Set SLURM arguments for Toil
 export TOIL_SLURM_ARGS="-t 1-0 -q normal"
 # Set name of partition to use for Toil
-export TOIL_SLURM_PE='oneweek'
+export TOIL_SLURM_PE='main'
 
 # Run Cactus multialignment
-opts="--batchSystem Slurm --binariesMode local --workDir $tmp --clean onError"
-# slurm_opts="--maxNodes ${SLURM_CPUS_PER_TASK} --maxMemory ${SLURM_MEM_PER_NODE}"
-cmd="cactus $opts $js ${script_dir}${seqfile} $hal"
+opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean onError"
+slurm_opts="--consCores ${SLURM_CPUS_PER_TASK}"
+cmd="cactus $slurm_opts $opts $js ${script_dir}${seqfile} $hal"
 echo "$cmd"
 $cmd

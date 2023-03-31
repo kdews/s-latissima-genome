@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J busco_compare
-#SBATCH -p gpu
+#SBATCH -p main
 #SBATCH --mem-per-cpu=2gb
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
@@ -25,7 +25,7 @@ fi
 
 
 # Define variables
-sum_dir="$1"
+[[ -z $1 ]] && sum_dir="busco_summaries" || sum_dir="$1"
 lineages=("eukaryota_odb10" "stramenopiles_odb10" "quast")
 
 
