@@ -1,6 +1,11 @@
 ## Initialization
 # Load required packages
 library(tidyverse, quietly = TRUE)
+if (require(showtext, quietly = TRUE)) {
+  showtext_auto()
+  showtext_opts(dpi=300)
+}
+# Import files
 if (length(commandArgs(trailingOnly = TRUE))>0) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {

@@ -1,10 +1,9 @@
 #!/bin/bash
 #SBATCH -J tree_prune_ete3
-#SBATCH -p oneweek
-#SBATCH --constraint=xeon-2640v3
-#SBATCH --mem=50gb
-#SBATCH --time=7-0
-#SBATCH --cpus-per-task=16
+#SBATCH -p main
+#SBATCH --mem=5gb
+#SBATCH --time=01:00:00
+#SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
 # Print date and time
@@ -33,12 +32,16 @@ fi
 script_dir="s-latissima-genome"
 [[ -d $script_dir ]] && script_dir="${script_dir}/"
 py_script=${SLURM_JOB_NAME}.py
-# Newick tree file
-tree=assemblies/brown_algae_newick_tree.txt
-# List of desired species in tree
-spec_list=assembles/pretty_names.txt
+# Cactus-formatted seqFile, i.e.,
+# NEWICK tree
+# name1 path1
+# name2 path2
+# ...
+# nameN pathN
+seq_file="s_lat_alignment.txt"
+
 
 # Run tree pruning Python script
-cmd="python ${script_dir}${py_script} $tree $spec_list"
+cmd="python ${script_dir}${py_script} ${script_dir}${seq_file}"
 echo "$cmd"
 $cmd
