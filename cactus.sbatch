@@ -20,8 +20,10 @@ env_path=/home1/kdeweese/bin/cactus-bin-v2.4.4/cactus_env/bin/activate
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Runs Cactus alignment of multiple genomes from different species to generate a HAL file.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch
+Runs Cactus alignment of multiple genomes from different species to generate a
+HAL file. Can create a Cactus-formatted seqFile from a Newick tree and species
+list, if provided.
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch [newick_tree] [species_list]
 Requires: 
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
@@ -29,10 +31,35 @@ Requires:
   exit 0
 fi
 
-# Define variables
-script_dir="s-latissima-genome"
-[[ -d $script_dir ]] && script_dir="${script_dir}/"
+
+# If needed, generates formatted seqFile, i.e.,
+# NEWICK tree
+# name1 path1
+# name2 path2
+# ...
+# nameN pathN
 seqfile="s_lat_alignment.txt"
+(( $# > 0 )) && { newick_tree="$1"; species_list="$2"; }
+if [[ -f $seqfile ]]
+then
+  echo "Found seqfile: $seqfile"
+elif [[ -v newick_tree ]] && [[ -v species_list ]]
+  echo "Newick tree: ($newick_tree)"
+  echo "Species list: ($species_list)."
+  [[ -f $newick_tree ]] || { echo "Error: tree not found."; exit 1; }
+  [[ -f $species_list ]] || { echo "Error: species list not found."; exit 1; }
+  echo "Generating formatted seqFile ($seqfile)..."
+  cp $newick_tree $seqfile
+  cat $species_list >> $seqfile
+else
+  echo "\
+Error: no seqfile ($seqfile), Newick tree ($newick_tree) or species list
+($species_list) found."
+  exit 1
+fi
+
+
+# Define variables
 seqfile_no_ext=$(basename "${seqfile%.*}")
 tmp="${SLURM_JOB_NAME}_tmp"
 js="${SLURM_JOB_NAME}_jobstore"
@@ -49,6 +76,6 @@ export TOIL_SLURM_PE='main'
 # Run Cactus multialignment
 opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean onError"
 slurm_opts="--consCores ${SLURM_CPUS_PER_TASK}"
-cmd="cactus $slurm_opts $opts $js ${script_dir}${seqfile} $hal"
+cmd="cactus $slurm_opts $opts $js $seqfile $hal"
 echo "$cmd"
-$cmd
+# $cmd
