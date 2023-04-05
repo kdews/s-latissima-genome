@@ -4,20 +4,25 @@ library(ape)
 if (require(showtext, quietly = TRUE)) {
   showtext_auto()
 }
-# Set working dir
-setwd("/scratch2/kdeweese/latissima/genome_stats")
+
 # Set filename(s)
+png_file <- "phylo_prune.png"
 if(length(commandArgs(trailingOnly = TRUE)) > 0) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {
-  line_args <- c("brown_algae_newick_tree.txt", "species.txt")
+  # Set working dir
+  setwd("/scratch2/kdeweese/latissima/genome_stats")
+  line_args <- c(
+    "species.txt",
+    "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
+  )
 }
-tree_file <- line_args[1]
-species_file <- line_args[2]
+species_file <- line_args[1]
+tree_file <- line_args[2]
 # Split filename for output naming
+tree_name <- tools::file_path_sans_ext(basename(tree_file))
 tree_ext <- tools::file_ext(tree_file)
-out_tree <- gsub(paste0("\\.", tree_ext), paste0("_pruned", "\\.", tree_ext),
-                 tree_file)
+out_tree <- paste0(tree_name, "_pruned.", tree_ext)
 
 ## Data
 # Import tree and species list
@@ -26,26 +31,50 @@ t <- read.tree(tree_file)
 # Prune tree
 tp <- keep.tip(t, species)
 write.tree(tp, out_tree)
+print(paste("Pruned tree written to:", out_tree))
 
-# Plot phylogenetic trees
-# Label only species of interest in full phylo
-idx <- grep(paste(species, collapse = "|"), t$tip.label, invert = T)
-t$tip.label[idx] <- ""
-# Shorten species names for labels
-t$tip.label <- gsub("[a-z]+_", "._", t$tip.label)
-tp$tip.label <- gsub("[a-z]+_", "._", tp$tip.label)
+## Plot phylogenetic trees
+trees <- list(t, tp)
+class(trees) <- "multiPhylo"
+png(png_file, units = "in", width = 8, height = 5, res = 96)
+# Get x limits for each graph
+xlims <- list()
+ylims <- list()
+for (i in 1:length(trees)) {
+  tree <- trees[[i]]
+  plt <- plot.phylo(tree, plot = F)
+  xlims[[i]] <- plt$x.lim
+  ylims[[i]] <- plt$y.lim
+}
 # Save plots to png
-png("phylo_prune.png", units = "in", width = 8, height = 5, res = 96)
-par(mfrow = c(2, 1))
-par(oma = rep(0, 4))
-par(mar = c(2, 0, 0, 0))
-# Full
-plot.phylo(t, show.tip.label = T)
-title(sub = "Full phylogeny")
-axisPhylo()
-# Pruned
-par(mar = c(2, 17, 0, 6))
-title(sub = "Pruned phylogeny")
-plot.phylo(tp, show.tip.label = T)
-axisPhylo()
+par(oma = rep(0, 4), mar = rep(1, 4))
+layout(matrix(c(1:length(trees)), byrow = T, nrow = 2),
+       heights = c(length(trees):1))
+for (i in 1:length(trees)) {
+  tree <- trees[[i]]
+  xlim <- xlims[[1]]
+  xlim[2] <- xlim[2]*0.8
+  ylim <- ylims[[i]]
+  # Label only species of interest in full phylo
+  idx <- grep(paste(species, collapse = "|"), tree$tip.label, invert = T)
+  tree$tip.label[idx] <- ""
+  # Shorten species names for labels
+  tree$tip.label <- gsub("[a-z]+_", "._", tree$tip.label)
+  if (i == 1) {
+    ttl = "Phylogenetic tree pruning"
+  } else {
+    ttl = ""
+  }
+  plt <- plot.phylo(tree, show.tip.label = T,
+                    x.lim = xlim, y.lim = c(0, ylim[2]+1),
+                    main = ttl)
+  # Place scale bar in lower right corner
+  if (i == length(trees)) {
+    xpos <- plt$x.lim[1] + diff(plt$x.lim)*0.5
+    ypos <- plt$y.lim[1] + (ylim[1] - plt$y.lim[1])*0.5
+    len <- round(mean(trees[[1]]$edge.length), 2)
+    add.scale.bar(x = xpos, y = ypos, length = len)
+  }
+}
 dev.off()
+print(paste("Full and pruned phylogenetic trees plotted in:", png_file))

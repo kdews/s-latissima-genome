@@ -1,16 +1,18 @@
 #!/bin/bash
 #SBATCH -J cactus
-#SBATCH -p oneweek
-#SBATCH --constraint=xeon-2640v3
-#SBATCH --mem=50gb
+#SBATCH -p shared
+#SBATCH --mem=0
 #SBATCH --time=7-0
 #SBATCH --cpus-per-task=16
 #SBATCH -o %x.log
+
+## NOTE: if oneweek Discovery partition, use: --constraint=xeon-2640v3
 
 # Print date and time
 date
 
 # Load Python module and Cactus virtualenv
+module purge
 module load gcc/11.3.0 python/3.9.12 git/2.36.1
 env_path=/home1/kdeweese/bin/cactus-bin-v2.4.4/cactus_env/bin/activate
 [[ -a "$env_path" ]] && source "$env_path" || \
@@ -23,7 +25,8 @@ then
 Runs Cactus alignment of multiple genomes from different species to generate a
 HAL file. Can create a Cactus-formatted seqFile from a Newick tree and species
 list, if provided.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch [newick_tree] [species_list]
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch [species] [tree]
+
 Requires: 
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
@@ -32,29 +35,30 @@ Requires:
 fi
 
 
+seqfile="s_lat_alignment.txt"
 # If needed, generates formatted seqFile, i.e.,
 # NEWICK tree
+#
 # name1 path1
 # name2 path2
 # ...
 # nameN pathN
-seqfile="s_lat_alignment.txt"
-(( $# > 0 )) && { newick_tree="$1"; species_list="$2"; }
+(( $# > 0 )) && {  species="$1"; tree="$2"; }
 if [[ -f $seqfile ]]
 then
   echo "Found seqfile: $seqfile"
-elif [[ -v newick_tree ]] && [[ -v species_list ]]
-  echo "Newick tree: ($newick_tree)"
-  echo "Species list: ($species_list)."
-  [[ -f $newick_tree ]] || { echo "Error: tree not found."; exit 1; }
-  [[ -f $species_list ]] || { echo "Error: species list not found."; exit 1; }
+elif [[ -v tree ]] && [[ -v species ]]
+then
+  echo "Species list: $species."
+  echo "Newick tree: $tree"
+  [[ -f $species ]] || { echo "Error: species list not found."; exit 1; }
+  [[ -f $tree ]] || { echo "Error: tree not found."; exit 1; }
   echo "Generating formatted seqFile ($seqfile)..."
-  cp $newick_tree $seqfile
-  cat $species_list >> $seqfile
+  cp $tree $seqfile
+  echo "" >> $seqfile
+  cat $species >> $seqfile
 else
-  echo "\
-Error: no seqfile ($seqfile), Newick tree ($newick_tree) or species list
-($species_list) found."
+  echo "Error: no seqFile ($seqfile), tree ($tree) or species list ($species)."
   exit 1
 fi
 
@@ -69,13 +73,13 @@ hal="${seqfile_no_ext}.hal"
 mkdir -p $tmp
 
 # Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal"
-# Set name of partition to use for Toil
-export TOIL_SLURM_PE='main'
+export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
+# Set name of partition to use for parallel Toil jobs
+export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
 opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean onError"
 slurm_opts="--consCores ${SLURM_CPUS_PER_TASK}"
 cmd="cactus $slurm_opts $opts $js $seqfile $hal"
 echo "$cmd"
-# $cmd
+$cmd

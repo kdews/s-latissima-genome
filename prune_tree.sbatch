@@ -3,27 +3,31 @@
 #SBATCH -p main
 #SBATCH --mem=5gb
 #SBATCH --time=01:00:00
-#SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
 # Print date and time
 date
 
-# Source conda and activate ete3 env
-cond=~/.conda_for_sbatch.sh
-[[ -a "$cond" ]] && source "$cond" || \
-{ echo "Error on source of $cond"; exit 1; }
+# Load R module
+module purge
+module load gcc/11.3.0 openblas/0.3.20 r/4.2.2 
+
+# Kelp Newick tree from https://doi.org/10.1016/j.ympev.2019.04.012
+tree="https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
 
 # Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 1 ))
 then
   echo "\
 Takes Newick tree and list of species, and uses R's ape to prune it to contain
 only desired species. 
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <newick_tree> <species_list.txt>
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch <species> [tree]
+
 Requires: 
  - R v4.2.2
- - ape v5.7-1 (https://cran.r-project.org/package=ape)"
+ - ape v5.7-1 (https://cran.r-project.org/package=ape)
+ 
+Default Newick tree: Kelp phylogeny from Starko et al. 2019 ($tree)"
   exit 0
 fi
 
@@ -31,13 +35,24 @@ fi
 script_dir="s-latissima-genome"
 [[ -d $script_dir ]] && script_dir="${script_dir}/"
 r_script=${SLURM_JOB_NAME}.R
-newick_tree=$1
-species_list=$2
+species="$1"
+(( $# > 1 )) && tree="$2"
+if [[ ! -f $tree ]] && [[ $tree == http?(s)://*.txt ]]
+then
+    if [[ -f "$(basename $tree)" ]]
+    then
+      tree="$(basename $tree)"
+    else
+      wget "$tree"
+      tree="$(basename $tree)"
+    fi
+fi
+echo "Species list: $species."
+echo "Input Newick tree: $tree"
+[[ -f $species ]] || { echo "Error: species list not found."; exit 1; }
+[[ -f $tree ]] || { echo "Error: tree not found."; exit 1; }
 
-
-
-
-# Run tree pruning Python script
-cmd="Rscript ${script_dir}${r_script} ${newick_tree} ${species_list}"
+# Run tree pruning R script
+cmd="Rscript ${script_dir}${r_script} ${species} ${tree}"
 echo "$cmd"
 $cmd
