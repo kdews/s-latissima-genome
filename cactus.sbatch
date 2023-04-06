@@ -73,12 +73,12 @@ hal="${seqfile_no_ext}.hal"
 mkdir -p $tmp
 
 # Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
+export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared -o "
 # Set name of partition to use for parallel Toil jobs
 export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
-opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean onError"
+opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean never"
 slurm_opts="--consCores ${SLURM_CPUS_PER_TASK}"
 cmd="cactus $slurm_opts $opts $js $seqfile $hal"
 echo "$cmd"
