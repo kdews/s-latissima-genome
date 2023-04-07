@@ -14,7 +14,7 @@ date
 # Load Python module and Cactus virtualenv
 module purge
 module load gcc/11.3.0 python/3.9.12 git/2.36.1
-env_path=/home1/kdeweese/bin/cactus-bin-v2.4.4/cactus_env/bin/activate
+env_path="/home1/kdeweese/cactus-bin-v2.5.0/cactus_env/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
 
@@ -27,7 +27,7 @@ HAL file. Can create a Cactus-formatted seqFile from a Newick tree and species
 list, if provided.
 Usage: sbatch ${SLURM_JOB_NAME}.sbatch [species] [tree]
 
-Requires: 
+Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
  - Cactus (https://github.com/ComparativeGenomicsToolkit/cactus"
@@ -64,22 +64,27 @@ fi
 
 
 # Define variables
+ncor="${SLURM_CPUS_PER_TASK}"
 seqfile_no_ext=$(basename "${seqfile%.*}")
 tmp="${SLURM_JOB_NAME}_tmp"
 js="${SLURM_JOB_NAME}_jobstore"
+wklg="${SLURM_JOB_NAME}_workerLogs"
 # Output HAL file name
 hal="${seqfile_no_ext}.hal"
-# Create temporary work directory
+# Create temporary work directory and log directory
 mkdir -p $tmp
+mkdir -p $wklg
 
 # Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared -o "
+export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
 # Set name of partition to use for parallel Toil jobs
 export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
-opts="--batchSystem slurm --binariesMode local --workDir $tmp --clean never"
-slurm_opts="--consCores ${SLURM_CPUS_PER_TASK}"
-cmd="cactus $slurm_opts $opts $js $seqfile $hal"
+res="--restart"
+opts="--binariesMode local --clean never --stats"
+slurm_opts="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
+log_opts="--logDebug --workDir $tmp --writeLogs $wklg --disableCaching"
+cmd="cactus $opts $slurm_opts $log_opts $js $seqfile $hal"
 echo "$cmd"
 $cmd
