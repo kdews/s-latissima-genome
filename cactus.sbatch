@@ -30,7 +30,7 @@ Usage: sbatch ${SLURM_JOB_NAME}.sbatch [species] [tree]
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
- - Cactus (https://github.com/ComparativeGenomicsToolkit/cactus"
+ - Cactus (https://github.com/ComparativeGenomicsToolkit/cactus)"
   exit 0
 fi
 
@@ -82,9 +82,12 @@ export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
 res="--restart"
-opts="--binariesMode local --clean never --stats"
+opts="--binariesMode local"
+cleans="--clean never --stats --cleanWorkDir never"
 slurm_opts="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-log_opts="--logDebug --workDir $tmp --writeLogs $wklg --disableCaching"
-cmd="cactus $opts $slurm_opts $log_opts $js $seqfile $hal"
+logs="--workDir $tmp"
+logs2="--logDebug --disableCaching --noStdOutErr --writeLogs $wklg"
+# cmd="cactus $opts $cleans $slurm_opts $logs $js $seqfile $hal"
+cmd="cactus $opts $logs $js $seqfile $hal"
 echo "$cmd"
 $cmd
