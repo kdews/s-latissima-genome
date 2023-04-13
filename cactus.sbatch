@@ -68,12 +68,12 @@ ncor="${SLURM_CPUS_PER_TASK}"
 seqfile_no_ext=$(basename "${seqfile%.*}")
 tmp="${SLURM_JOB_NAME}_tmp"
 js="${SLURM_JOB_NAME}_jobstore"
-wklg="${SLURM_JOB_NAME}_workerLogs"
+msgs="${SLURM_JOB_NAME}_msgs"
 # Output HAL file name
 hal="${seqfile_no_ext}.hal"
-# Create temporary work directory and log directory
+# Create temporary work directory and message directory
 mkdir -p $tmp
-mkdir -p $wklg
+
 
 # Set SLURM arguments for Toil
 export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
@@ -81,12 +81,14 @@ export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
 export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
-res="--restart"
-opts="--binariesMode local"
 # cleans="--clean never --stats --cleanWorkDir never"
-slurm_opts="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-logs="--workDir $tmp --logDebug --noMoveExports --noLinkImports"
 # logs2="--disableCaching --noStdOutErr --writeLogs $wklg"
-cmd="cactus $opts $cleans $slurm_opts $logs $logs2 $js $seqfile $hal"
+res="--restart"
+slurm_opts1="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
+slurm_opts2="--binariesMode local --maxLocalJobs 100"
+logs="--workDir $tmp --logDebug  --writeMessages $msgs --realTimeLogging"
+nohardlink="--noMoveExports --noLinkImports --disableCaching"
+opts="$slurm_opts1 $slurm_opts2 $logs $nohardlink"
+cmd="cactus $opts $js $seqfile $hal"
 echo "$cmd"
 $cmd
