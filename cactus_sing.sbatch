@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH -J cactus
-#SBATCH -p shared
-#SBATCH --mem=0
-#SBATCH --time=7-0
-#SBATCH --cpus-per-task=16
+#SBATCH -J cactus_sing
+#SBATCH -p gpu
+#SBATCH --gres=gpu
+#SBATCH --mem=20g
+#SBATCH --time=2-0
+#SBATCH --cpus-per-task=10
 #SBATCH -o %x.log
 
 ## NOTE: if oneweek Discovery partition, use: --constraint=xeon-2640v3
@@ -14,7 +15,7 @@ date
 # Load Python module and Cactus virtualenv
 module purge
 module load gcc/11.3.0 python/3.9.12 git/2.36.1
-env_path="/home1/kdeweese/cactus-bin-v2.5.0/cactus_env/bin/activate"
+env_path="/home1/kdeweese/cactus/cactus_env/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
 
@@ -76,20 +77,23 @@ mkdir -p $tmp
 
 
 # Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
+export TOIL_SLURM_ARGS="-t 1-0 -q normal -p gpu"
 # Set name of partition to use for parallel Toil jobs
 export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
+# Specifically set Docker image to GPU-enabled version
+# export CACTUS_DOCKER_TAG="v2.5.0-gpu"
 
 # Run Cactus multialignment
 # cleans="--clean never --stats --cleanWorkDir never"
-# logs2="--disableCaching --noStdOutErr --writeLogs $wklg"
+# logs2="--noStdOutErr --writeLogs $wklg"
 # might lead to max allocated mem errors: --maxLocalJobs 100
+# nohardlink="--noMoveExports --noLinkImports --disableCaching"
+# --disableAutoDeployment
 res="--restart"
-slurm_opts1="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-slurm_opts2="--binariesMode local --defaultMemory 4G"
-logs="--workDir $tmp --logDebug  --writeMessages $msgs --realTimeLogging"
-nohardlink="--noMoveExports --noLinkImports --disableCaching"
+slurm_opts1="--batchSystem slurm --consCores $ncor"
+slurm_opts2="--binariesMode singularity"
+logs="--workDir $tmp --writeMessages $msgs --realTimeLogging --logDebug"
 opts="$slurm_opts1 $slurm_opts2 $logs $nohardlink"
-cmd="cactus $res $opts $js $seqfile $hal"
+cmd="cactus $opts $js $seqfile $hal"
 echo "$cmd"
 $cmd
