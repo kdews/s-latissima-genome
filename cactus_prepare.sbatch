@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J cactus
+#SBATCH -J cactus_prepare
 #SBATCH -p shared
 #SBATCH --mem=0
 #SBATCH --time=7-0
@@ -17,23 +17,6 @@ module load gcc/11.3.0 python/3.9.12 git/2.36.1
 env_path="/home1/kdeweese/cactus-bin-v2.5.0/cactus_env/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
-
-# Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
-then
-  echo "\
-Runs Cactus alignment of multiple genomes from different species to generate a
-HAL file. Can create a Cactus-formatted seqFile from a Newick tree and species
-list, if provided.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch [species] [tree]
-
-Requires:
- - virtualenv (https://virtualenv.pypa.io/en/latest)
- - Toil (https://toil.readthedocs.io/en/latest)
- - Cactus (https://github.com/ComparativeGenomicsToolkit/cactus)"
-  exit 0
-fi
-
 
 seqfile="s_lat_alignment.txt"
 # If needed, generates formatted seqFile, i.e.,
@@ -74,22 +57,16 @@ hal="${seqfile_no_ext}.hal"
 # Create local temporary work directory
 mkdir -p $tmp
 
-
 # Set SLURM arguments for Toil
 export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
 # Set name of partition to use for parallel Toil jobs
 export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
-# cleans="--clean never --stats --cleanWorkDir never"
-# logs2="--disableCaching --noStdOutErr --writeLogs $wklg"
-# might lead to max allocated mem errors: --maxLocalJobs 100
-res="--restart"
 slurm_opts1="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-slurm_opts2="--binariesMode local --defaultMemory 4G"
+slurm_opts2="--defaultMemory 4G"
 logs="--workDir $tmp --logDebug --writeMessages $msgs --realTimeLogging"
-nohardlink="--noMoveExports --noLinkImports --disableCaching"
-opts="$slurm_opts1 $slurm_opts2 $logs $nohardlink"
-cmd="cactus $res $opts $js $seqfile $hal"
+opts="--binariesMode local --outHal $hal"
+cmd="cactus-prepare-toil $opts $slurm_opts1 $logs file:./$js $seqfile"
 echo "$cmd"
 $cmd
