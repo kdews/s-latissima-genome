@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH -J aug_busco
-#SBATCH -p gpu
 #SBATCH --mem-per-cpu=2gb
 #SBATCH --time=10:00:00
 #SBATCH --nodes=2
@@ -38,7 +37,7 @@ L2=stramenopiles_odb10
 assembly=$1
 assembly_no_ext=$(basename "${assembly%.*}")
 # Shorten SLURM output variables
-job="${SLURM_JOB_NAME}"
+job="$SLURM_JOB_NAME"
 ntsk="$SLURM_NTASKS"
 nthrd="$SLURM_CPUS_PER_TASK"
 # Output name

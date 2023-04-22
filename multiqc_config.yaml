@@ -13,7 +13,7 @@
 
 ---
 # Title to use for the report.
-title: "S. latissima gametophyte WGS QC"
+title: "S. latissima genome statistics"
 
 # Disable the analysis paths and time in the report header
 show_analysis_paths: False
@@ -51,61 +51,30 @@ max_table_rows: 500 # Swap tables for a beeswarm plot above this
 
 # Overwrite module filename search patterns. See multiqc/utils/search_patterns.yaml
 # for the defaults. Remove a default by setting it to null.
-sp:
-  hisat2:
-    fn: "*.hisat2.summary"
-  picard/markdups:
-    fn: "*.mark_dupes.metrics"
-  picard/alignment_metrics:
-    fn: "*.collect_alignment_summary.metrics"
-  picard/basedistributionbycycle:
-    skip: true
-  picard/gcbias:
-    skip: true
-  picard/hsmetrics:
-    skip: true
-  picard/insertsize:
-    skip: true
-  picard/oxogmetrics:
-    skip: true
-  picard/pcr_metrics:
-    skip: true
-  picard/quality_by_cycle:
-    skip: true
-  picard/quality_score_distribution:
-    skip: true
-  picard/quality_yield_metrics:
-    skip: true
-  picard/rnaseqmetrics:
-    skip: true
-  picard/rrbs_metrics:
-    skip: true
-  picard/sam_file_validation:
-    fn: "*.validate.summary"
-  picard/variant_calling_metrics:
-    skip: true
-  picard/wgs_metrics:
-    fn: "*.collect_wgs.metrics"
+# sp:
+#   busco:
+#     fn: "aug_busco*/short_summary*"
+#   quast:
+#     fn: "quast_*/report.tsv"
+  
 
 # Change module order
 module_order:
-  - picard/markdups
-  - picard/alignment_metrics
-  - picard/wgs_metrics
-  - hisat2
-  - picard/sam_file_validation
-  - fastqc:
-      name: "FastQC (trimmed)"
-      anchor: "fastqc_trimmed"
-      info: "This section of the report shows FastQC results AFTER adapter trimming."
+  - busco:
+      name: "BUSCO (Euk)"
+      anchor: "busco_euk"
+      info: "eukaryota"
       target: ""
       path_filters:
-        - "*val_1_fastqc.zip"
-  - cutadapt
-  - fastqc:
-      name: "FastQC (raw)"
-      info: "This section of the report shows FastQC results BEFORE adapter trimming."
-      anchor: "fastqc_raw"
+        - "short_summary.specific.eukaryota_*"
+  - busco:
+      name: "BUSCO (Stra)"
+      anchor: "busco_stra"
+      info: "stramenopiles"
       path_filters:
-        - "*_R1_fastqc.zip"
+        - "short_summary.specific.stramenopiles_*"
+  - quast:
+      name: "QUAST"
+      anchor: "quast"
+      info: "quast"
 

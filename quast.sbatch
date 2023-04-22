@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J quast
-#SBATCH -p meb_largemem
+#SBATCH -p oneweek
 #SBATCH --mem=230gb
 #SBATCH --time=7-0
 #SBATCH --cpus-per-task=12
@@ -33,7 +33,7 @@ fi
 assembly=$1
 assembly_no_ext=$(basename "${assembly%.*}")
 # Shorten SLURM output variables
-job="${SLURM_JOB_NAME}"
+job="$SLURM_JOB_NAME"
 nthrd="$SLURM_CPUS_PER_TASK"
 # Output directory name
 out="${job}_${assembly_no_ext}"

@@ -1,49 +1,47 @@
 #!/bin/bash
-#SBATCH --mem=15gb
-#SBATCH --time=01:00:00
+#SBATCH -J multiqc
+#SBATCH -p main
+#SBATCH --mem-per-cpu=2gb
+#SBATCH --time=05:00:00
+#SBATCH -o %x.log
 
-prefix=$1
-qc_dir=$2
-# Optional, to specify directory containing scripts
-scripts_dir=$3
+# Print date and time
+date
+
+# Help message
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+then
+  echo "\
+Generates MultiQC report from files in directories named ${prefixes[@]}...,
+where by default prefixes=("busco" "quast").
+
+Usage: sbatch busco_compare.sbatch [prefixes]
+Requires: MultiQC (https://multiqc.info)"
+  exit 0
+fi
 
 # Load conda
-source $(which activate) || { echo "Error sourcing $cond"; exit 1; }
+cond=~/.conda_for_sbatch.sh
+[[ -a "$cond" ]] && source "$cond" || \
+{ echo "Error on source of $cond"; exit 1; }
+
 # Load multiqc
 conda activate multiqc
 multiqc --version
-if [[ $? -ne 0 ]]
-then
-	echo "Error - check MultiQC installation."
-fi
 
-# If input directory exists, run MultiQC
-if [[ -d $qc_dir ]]
-then
-	multiqc -c ${scripts_dir}multiqc_config.yaml \
--o $qc_dir $qc_dir
-else
-	echo "Error - input directory to MultiQC, \
-${qc_dir}, not found."
-fi
+# Optional arguments
+# Specify directory containing scripts
+scripts_dir="s-latissima-genome"
+[[ -d "$scripts_dir" ]] && scripts_dir="${scripts_dir}/"
+# Configuration file
+config="-c ${scripts_dir}multiqc_config.yaml"
+# Prefixes of directories to search
+prefixes=("aug_busco" "quast")
+# Can optionally be specified by n positional arguments
+(( $# > 0 )) && prefixes=${@}
+prefixes=( "${prefixes[@]/%/*/}" )
 
-# Checkpoints
-if [[ $? -eq 0 ]]
-then
-	if [[ -f ${qc_dir}/multiqc_report.html  ]]
-	then
-		if [[ ! -d checkpoints ]]
-		then
-			mkdir checkpoints
-		fi
-		touch checkpoints/${prefix}.checkpoint
-		exit 0
-	else
-		echo "Error - MultiQC report not created."
-		exit 1
-	fi
-else
-	echo "Error - non-zero exit code returned by MultiQC."
-	exit 1
-fi
-
+# Run MultiQC
+cmd="multiqc $config $prefixes"
+echo "$cmd"
+$cmd

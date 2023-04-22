@@ -14,7 +14,7 @@ fi
 
 
 # Iterate through all genome assemblies in directory
-for assembly in $(ls assemblies)
+for assembly in $(ls assemblies | grep "\.fasta")
 do
   if [[ -f assemblies/"$assembly" ]]
   then

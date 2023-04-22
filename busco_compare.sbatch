@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH -J busco_compare
-#SBATCH -p main
 #SBATCH --mem-per-cpu=2gb
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
@@ -73,7 +72,7 @@ done
 for dir in $(ls "$sum_dir")
 do
   wd="${sum_dir}/${dir}"
-  cmd="generate_plot.py -wd $wd"
+  cmd="generate_plot.py -wd $wd --no_r"
   if [[ "$dir" == "quast" ]]
   then
     conda activate busco_for_quast
@@ -83,7 +82,7 @@ do
   echo "$cmd"
   $cmd
   # Clean up BUSCO graph
-  module load gcc/11.3.0  openblas/0.3.20 r/4.2.2
+  module load gcc/11.3.0 openblas/0.3.20 r/4.2.2
   cmd="Rscript s-latissima-genome/pretty_busco.R $wd"
   echo $cmd
   $cmd
