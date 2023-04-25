@@ -42,6 +42,6 @@ prefixes=("aug_busco" "quast")
 prefixes=( "${prefixes[@]/%/*/}" )
 
 # Run MultiQC
-cmd="multiqc $config $prefixes"
+cmd="multiqc -f $config $prefixes"
 echo "$cmd"
 $cmd

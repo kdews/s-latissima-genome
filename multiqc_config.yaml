@@ -58,23 +58,23 @@ max_table_rows: 500 # Swap tables for a beeswarm plot above this
 #     fn: "quast_*/report.tsv"
   
 
-# Change module order
-module_order:
-  - busco:
-      name: "BUSCO (Euk)"
-      anchor: "busco_euk"
-      info: "eukaryota"
-      target: ""
-      path_filters:
-        - "short_summary.specific.eukaryota_*"
-  - busco:
-      name: "BUSCO (Stra)"
-      anchor: "busco_stra"
-      info: "stramenopiles"
-      path_filters:
-        - "short_summary.specific.stramenopiles_*"
-  - quast:
-      name: "QUAST"
-      anchor: "quast"
-      info: "quast"
+# # Change module order
+# module_order:
+#   - busco:
+#       name: "BUSCO (Euk)"
+#       anchor: "busco_euk"
+#       info: "eukaryota"
+#       target: ""
+#       path_filters:
+#         - "short_summary.specific.eukaryota_*"
+#   - busco:
+#       name: "BUSCO (Stra)"
+#       anchor: "busco_stra"
+#       info: "stramenopiles"
+#       path_filters:
+#         - "short_summary.specific.stramenopiles_*"
+#   - quast:
+#       name: "QUAST"
+#       anchor: "quast"
+#       info: "quast"
 
