@@ -36,8 +36,8 @@ if [[ -f $mqc_samples ]]
 then
   echo "Found file for sample naming: $mqc_samples"
 else
-  awk -F '\t' '{print $2, $1}' $samples_file > $mqc_samples
-  sed "s/#//g" $mqc_samples | sed "s/\.fasta//g" > $mqc_samples
+  awk -F '\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
+  sed "s/\.fasta//g" > $mqc_samples
 fi
 
 
@@ -56,6 +56,6 @@ prefixes=("aug_busco")
 prefixes=( "${prefixes[@]/%/*/short_*.txt}" )
 
 # Run MultiQC
-cmd="multiqc $config ${prefixes[@]}"
+cmd="multiqc $opts $config ${prefixes[@]}"
 echo "$cmd"
 $cmd
