@@ -36,13 +36,13 @@ if [[ -f $mqc_samples ]]
 then
   echo "Found file for sample naming: $mqc_samples"
 else
-  awk -F '\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
+  awk -F '\t' -v OFS='\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
   sed "s/\.fasta//g" > $mqc_samples
 fi
 
 
 # Arguments to MultiQC
-opts="-f --sample_names $mqc_samples"
+opts="-f --sample-names $mqc_samples"
 # Optional arguments
 # Specify directory containing scripts
 scripts_dir="s-latissima-genome"
