@@ -36,6 +36,8 @@ if [[ -f $mqc_samples ]]
 then
   echo "Found file for sample naming: $mqc_samples"
 else
+  echo "Creating sample name file: $mqc_samples"
+  # echo "MultiQC Names	Proper Names" > $mqc_samples
   awk -F '\t' -v OFS='\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
   sed "s/\.fasta//g" > $mqc_samples
 fi
