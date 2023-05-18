@@ -44,7 +44,7 @@ fi
 
 
 # Arguments to MultiQC
-opts="-f --sample-names $mqc_samples"
+opts="-f --replace-names $mqc_samples"
 # Optional arguments
 # Specify directory containing scripts
 scripts_dir="s-latissima-genome"

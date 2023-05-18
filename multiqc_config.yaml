@@ -16,7 +16,8 @@
 title: "S. latissima genome statistics"
 
 # Replace entire sample name with replacement name
-sample_names_replace_complete: True
+# sample_names_replace_complete: True
+sample_names_replace_regex: True
 
 # Disable the analysis paths and time in the report header
 show_analysis_paths: False
