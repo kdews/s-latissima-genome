@@ -37,14 +37,14 @@ then
   echo "Found file for sample naming: $mqc_samples"
 else
   echo "Creating sample name file: $mqc_samples"
-  echo "MultiQC Names	Proper Names" > $mqc_samples
-  awk -F '\t' -v OFS='\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
-  sed "s/\.fasta//g" >> $mqc_samples
+  # echo "MultiQC Names	Proper Names" > $mqc_samples
+  awk -F '\t' -v OFS='\t' '{print ".*"$2, $1}' $samples_file | sed "s/#//g" | \
+  sed "s/\.fasta//g" > $mqc_samples
 fi
 
 
 # Arguments to MultiQC
-opts="-f --replace-names $mqc_samples"
+opts="-f --profile-runtime --replace-names $mqc_samples"
 # Optional arguments
 # Specify directory containing scripts
 scripts_dir="s-latissima-genome"
@@ -52,10 +52,11 @@ scripts_dir="s-latissima-genome"
 # Configuration file
 config="-c ${scripts_dir}multiqc_config.yaml"
 # Prefixes of directories to search
-prefixes=("aug_busco")
+prefixes=("aug_busco" "quast")
 # Can optionally be specified by n positional arguments
 (( $# > 0 )) && prefixes=${@}
-prefixes=( "${prefixes[@]/%/*/short_*.txt}" )
+# prefixes=( "${prefixes[@]/%/*/short_*.txt}" )
+prefixes=( "${prefixes[@]/%/*/}" )
 
 # Run MultiQC
 cmd="multiqc $opts $config ${prefixes[@]}"
