@@ -44,7 +44,8 @@ fi
 
 
 # Arguments to MultiQC
-opts="-f --profile-runtime --replace-names $mqc_samples"
+opts="-f --profile-runtime"
+opts2="--replace-names $mqc_samples"
 # Optional arguments
 # Specify directory containing scripts
 scripts_dir="s-latissima-genome"
@@ -52,13 +53,14 @@ scripts_dir="s-latissima-genome"
 # Configuration file
 config="-c ${scripts_dir}multiqc_config.yaml"
 # Prefixes of directories to search
-prefixes=("aug_busco" "quast")
+prefixes=("aug_busco*/short_*" "quast*/report*")
+# prefixes=("aug_busco*/short_*.txt" "quast*/report*")
 # Can optionally be specified by n positional arguments
 (( $# > 0 )) && prefixes=${@}
-# prefixes=( "${prefixes[@]/%/*/short_*.txt}" )
-prefixes=( "${prefixes[@]/%/*/}" )
+# prefixes=( "${prefixes[@]/%/*/short_*.txt}" "${prefixes[@]/%/*/report*}")
+# prefixes=( "${prefixes[@]/%/*/}" )
 
 # Run MultiQC
-cmd="multiqc $opts $config ${prefixes[@]}"
+cmd="multiqc $opts $opts $config ${prefixes[@]}"
 echo "$cmd"
 $cmd
