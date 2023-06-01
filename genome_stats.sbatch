@@ -5,7 +5,7 @@ if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Runs BUSCO and QUAST on list of genome assemblies.
-Usage: bash genome_stats.sbatch
+Usage: bash genome_stats.sbatch <script.sbatch>
 Requires: 
   - BUSCO (https://busco.ezlab.org)
   - QUAST (https://quast.sourceforge.net)"
