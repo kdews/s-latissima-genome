@@ -31,7 +31,7 @@ for (spc in species[[2]]) {
   buscos[[spc]] <- lin_busc
 }
 
-
-plot(buscos)
+unique(unlist(lapply(lapply(buscos, "[[", lins[1]), "[[", 1)))
+attributes(buscos)
 names(buscos[grep("s_lat_genome|Sugarkelp", buscos)])
 
