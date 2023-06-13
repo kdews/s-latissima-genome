@@ -45,6 +45,8 @@ parseBuscos <- function(busco_csvs, species, lins) {
                factor(Conservation,
                       levels = c("Unconserved", "Conserved", "Lost"))) %>%
       ungroup()
+    print(head(df))
+    
     buscos[[lin]] <- df %>% 
       pivot_longer(cols = !c(BUSCO, Conservation),
                    names_to = "Species", values_to = "Status")
