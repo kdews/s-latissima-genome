@@ -34,22 +34,25 @@ parseBuscos <- function(busco_csvs, species, lins) {
         df <- merge(df, tab)
       }
     }
+    total <- length(species)
+    # df <- df %>%
+    #   rowwise() %>%
+    #   mutate(Conservation = 
+    #            ifelse(n_distinct(c_across(!BUSCO)) == 1,
+    #                   "Conserved",
+    #                   ifelse(n_distinct(c_across(!c(BUSCO, s_lat_genome))) == 1,
+    #                          "Lost", "Unconserved")),
+    #          Conservation =
+    #            factor(Conservation,
+    #                   levels = c("Unconserved", "Conserved", "Lost"))) %>%
+    #   ungroup()
     df <- df %>%
       rowwise() %>%
-      mutate(Conservation = 
-               ifelse(n_distinct(c_across(!BUSCO)) == 1,
-                      "Conserved",
-                      ifelse(n_distinct(c_across(!c(BUSCO, s_lat_genome))) == 1,
-                             "Lost", "Unconserved")),
-             Conservation =
-               factor(Conservation,
-                      levels = c("Unconserved", "Conserved", "Lost"))) %>%
-      ungroup()
-    print(head(df))
-    
-    buscos[[lin]] <- df %>% 
-      pivot_longer(cols = !c(BUSCO, Conservation),
-                   names_to = "Species", values_to = "Status")
+      mutate(Species_Present = sum(across(!BUSCO) == "Complete")) %>%
+      pivot_longer(cols = !c(BUSCO, Species_Present),
+                   names_to = "Species",
+                   values_to = "Status")
+    buscos[[lin]] <- df
   }
   return(buscos)
 }
@@ -61,17 +64,22 @@ species[,2] <- sapply(species[,2], removePattern, "\\.fasta")
 spcs <- species[,2]
 # Create data frame for each lineage
 buscos <- parseBuscos(busco_csvs, spcs, lins)
-filtered_out_buscos <- sapply(lins, function(x)
-  buscos[[x]][buscos[[x]][["Conservation"]] == "Lost",][["BUSCO"]])
+head(buscos$eukaryota)
 
 
 for (lin in lins) {
   df <- buscos[[lin]]
+  df <- df[grep("sugar|s_lat", df[["Species"]], ignore.case = T),]
   p <- ggplot(df, aes(x = BUSCO, y = Species)) +
-    geom_point(aes(size = Conservation)) +
+    geom_tile(aes(fill = Status)) +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(color = "black")) +
+    coord_flip() +
     # scale_fill_brewer(palette = "Dark2") +
     # scale_color_brewer(palette = "Dark2") +
-    facet_grid(cols = vars(Status)) +
+    # facet_grid(cols = vars(Species)) +
     ggtitle(tools::toTitleCase(lin))
   print(p)
 }
