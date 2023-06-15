@@ -3,7 +3,7 @@
 library(tidyverse, quietly = TRUE)
 if (require(showtext, quietly = TRUE)) {
   showtext_auto()
-  showtext_opts(dpi=300)
+  if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
 }
 # Import files
 if (length(commandArgs(trailingOnly = TRUE))>0) {
