@@ -58,7 +58,7 @@ parseBuscos <- function(busco_csvs, species, lins) {
                sum(across(!c(All_Species_Present, BUSCO,
                              `S. latissima`, `S. latissima2`)) ==
                      "Duplicated")) %>%
-      pivot_longer(cols = !c(BUSCO, Species_Present),
+      pivot_longer(cols = !c(BUSCO, All_Species_Present, Species_Present),
                    names_to = "Species",
                    values_to = "Status")
   }
@@ -68,22 +68,26 @@ parseBuscos <- function(busco_csvs, species, lins) {
 filtAnalysis <- function(df) {
   df <- df %>%
     rowwise() %>%
-    mutate(Lost = case_when((Species == "S. latissima" &
-                               Status == "Missing" |
-                               Status == "Fragmented" &
-                               Species_Present == 4) ~ 1,
-                            TRUE ~ 0),
-           Regained = case_when((Species == "S. latissima2" &
-                                   Lost == 1 &
-                                   Status == "Complete" |
-                                   Status == "Duplicated") ~ 1,
-                                TRUE ~ 0))
-  regained <- df[df$Regained == 1, "BUSCO"]$BUSCO
+    mutate(Lost = case_when((Species == "S. latissima" & Species_Present == 4 & 
+                               Status == "Missing") ~ 1,
+                            (Species == "S. latissima" & Species_Present == 4 &
+                               Status == "Fragmented") ~ 1,
+                            TRUE ~ 0))
+  lost <- df[df$Lost == 1, "BUSCO"]$BUSCO
   df <- df %>%
     rowwise() %>%
-    mutate(if_else(BUSCO %in% regained,
-                   paste0("<span style='color: green'>", BUSCO, "</span>"),
-                   BUSCO))
+    mutate(Regained = case_when((Species == "S. latissima2" & BUSCO %in% lost &
+                                   Status == "Complete") ~ 1,
+                                (Species == "S. latissima2" & BUSCO %in% lost &
+                                   Status == "Duplicated") ~ 1,
+                                TRUE ~ 0),
+           Regained = as.factor(Regained))
+  regained <- df[df$Regained == 1, "BUSCO"]$BUSCO
+  print(length(which(df$BUSCO %in% regained)))
+  # df <- df %>%
+  #   mutate(BUSCO = if_else(BUSCO %in% regained,
+  #                  paste0("<span style='color: green'>", BUSCO, "</span>"),
+  #                  BUSCO))
   
   return(df)
 }
@@ -91,13 +95,15 @@ filtAnalysis <- function(df) {
 ggheatmapBuscos <- function(lin, buscos) {
   df <- buscos[[lin]]
   p <- ggplot(df, aes(x = Species, y = reorder(BUSCO, All_Species_Present))) +
-    geom_tile(aes(fill = Status)) +
-    theme(axis.text.y = ggtext::element_markdown(),
+    geom_tile(aes(fill = Status, alpha = Regained)) +
+    scale_fill_manual(values = colors_busco) +
+    scale_alpha_manual(values = c(0.2, 1)) +
+    theme(axis.text.y = element_blank(),
+          # axis.text.y = ggtext::element_markdown(),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(color = "black")) +
-    scale_fill_manual(values = colors_busco) +
     ylab("BUSCO Gene") +
     ggtitle(tools::toTitleCase(lin))
   return(p)
@@ -123,8 +129,8 @@ spcs <- species[,2]
 # Create data frame for each lineage
 busco_list <- parseBuscos(busco_csvs, species, lins)
 buscos <- busco_list[[1]]
-buscos <- lapply(buscos, filtAnalysis)
 busc_mat <- busco_list[[2]]
+buscos <- lapply(buscos, filtAnalysis)
 
 # Generate heat map of BUSCO status for each genome in each lineage gene set
 hmaps <- lapply(lins, ggheatmapBuscos, buscos)
