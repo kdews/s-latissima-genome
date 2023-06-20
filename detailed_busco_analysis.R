@@ -2,6 +2,7 @@
 rm(list = ls())
 # Required packages
 library(tidyverse)
+library(ggdendro)
 if (require(showtext, quietly = TRUE)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
@@ -83,18 +84,29 @@ filtAnalysis <- function(df) {
                                 TRUE ~ 0),
            Regained = as.factor(Regained))
   regained <- df[df$Regained == 1, "BUSCO"]$BUSCO
-  print(length(which(df$BUSCO %in% regained)))
-  # df <- df %>%
-  #   mutate(BUSCO = if_else(BUSCO %in% regained,
-  #                  paste0("<span style='color: green'>", BUSCO, "</span>"),
-  #                  BUSCO))
-  
   return(df)
 }
-# Plot unclustered ggplot2 heat map
-ggheatmapBuscos <- function(lin, buscos) {
+# Extract hclust dendrogram across BUSCO genes
+getDendro <- function(lin, busc_mat) {
+  mat <- busc_mat[[lin]]
+  hclust_mat <- hclust(dist(mat))
+  return(hclust_mat)
+  # ttl <- tools::toTitleCase(lin)
+  # heatmap(mat, scale = "none", col = colors_busco,
+  #         main = ttl, ylab = "BUSCO Gene")
+  # legend(x = "right", legend = codes_busco, fill = colors_busco)
+}
+# Plot clustered ggplot2 heat map
+heatmapBuscos <- function(lin, buscos, busc_mat, hclust_mats) {
+  ttl <- tools::toTitleCase(lin)
   df <- buscos[[lin]]
-  p <- ggplot(df, aes(x = Species, y = reorder(BUSCO, All_Species_Present))) +
+  mat <- busc_mat[[lin]]
+  hclust_mat <- hclust_mats[[lin]]
+  hclust_order <- hclust_mat$order
+  df$BUSCO <- factor(x = df$BUSCO,
+                     levels = rownames(mat)[hclust_order],
+                     ordered = T)
+  p <- ggplot(df, aes(x = Species, y = BUSCO)) +
     geom_tile(aes(fill = Status, alpha = Regained)) +
     scale_fill_manual(values = colors_busco) +
     scale_alpha_manual(values = c(0.2, 1)) +
@@ -104,17 +116,13 @@ ggheatmapBuscos <- function(lin, buscos) {
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
           axis.line = element_line(color = "black")) +
-    ylab("BUSCO Gene") +
-    ggtitle(tools::toTitleCase(lin))
-  return(p)
-}
-# Plot clustered heat map comparing BUSCO content across genomes
-heatmapBuscos <- function(lin, busc_mat) {
-  mat <- busc_mat[[lin]]
-  ttl <- tools::toTitleCase(lin)
-  heatmap(mat, scale = "none", col = colors_busco,
-          main = ttl, ylab = "BUSCO Gene")
-  legend(x = "right", legend = codes_busco, fill = colors_busco)
+    ggtitle(ttl)
+  # print(plot(hclust_mat))
+  d <- ggdendrogram(hclust_mat, rotate = T) +
+    ggtitle(ttl)
+  print(p)
+  print(d)
+  # return(list(p, d))
 }
 
 
@@ -133,8 +141,8 @@ busc_mat <- busco_list[[2]]
 buscos <- lapply(buscos, filtAnalysis)
 
 # Generate heat map of BUSCO status for each genome in each lineage gene set
-hmaps <- lapply(lins, ggheatmapBuscos, buscos)
-print(hmaps)
-# print(lapply(lins, heatmapBuscos, busc_mat))
-
-
+hclust_mats <- lapply(lins, getDendro, busc_mat)
+names(hclust_mats) <- lins
+par(mfrow = c(1, 2))
+lapply(lins, heatmapBuscos, buscos, busc_mat, hclust_mats)
+# print(hmaps)
