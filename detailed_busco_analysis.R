@@ -3,9 +3,11 @@ rm(list = ls())
 # Required packages
 library(tidyverse)
 library(ggdendro)
+library(gridExtra)
+library(ggpubr)
 if (require(showtext, quietly = TRUE)) {
   showtext_auto()
-  if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
+  if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 # Set working directory
 setwd("/scratch2/kdeweese/latissima/genome_stats/")
@@ -73,7 +75,8 @@ filtAnalysis <- function(df) {
                                Status == "Missing") ~ 1,
                             (Species == "S. latissima" & Species_Present == 4 &
                                Status == "Fragmented") ~ 1,
-                            TRUE ~ 0))
+                            TRUE ~ 0),
+           Lost = as.factor(Lost))
   lost <- df[df$Lost == 1, "BUSCO"]$BUSCO
   df <- df %>%
     rowwise() %>%
@@ -83,18 +86,21 @@ filtAnalysis <- function(df) {
                                    Status == "Duplicated") ~ 1,
                                 TRUE ~ 0),
            Regained = as.factor(Regained))
-  regained <- df[df$Regained == 1, "BUSCO"]$BUSCO
+  df <- df %>%
+    rowwise() %>%
+    mutate(Conservation = case_when(Lost == 1 ~ "Lost",
+                                    Regained == 1 ~ "Regained",
+                                    TRUE ~ "NA"),
+           Conservation = factor(Conservation,
+                                 levels = c("Regained", "Lost", "NA")))
   return(df)
 }
 # Extract hclust dendrogram across BUSCO genes
 getDendro <- function(lin, busc_mat) {
   mat <- busc_mat[[lin]]
-  hclust_mat <- hclust(dist(mat))
+  h <- heatmap(mat, scale = "none", keep.dendro = T)
+  hclust_mat <- as.hclust(h$Rowv)
   return(hclust_mat)
-  # ttl <- tools::toTitleCase(lin)
-  # heatmap(mat, scale = "none", col = colors_busco,
-  #         main = ttl, ylab = "BUSCO Gene")
-  # legend(x = "right", legend = codes_busco, fill = colors_busco)
 }
 # Plot clustered ggplot2 heat map
 heatmapBuscos <- function(lin, buscos, busc_mat, hclust_mats) {
@@ -107,22 +113,41 @@ heatmapBuscos <- function(lin, buscos, busc_mat, hclust_mats) {
                      levels = rownames(mat)[hclust_order],
                      ordered = T)
   p <- ggplot(df, aes(x = Species, y = BUSCO)) +
-    geom_tile(aes(fill = Status, alpha = Regained)) +
+    geom_tile(aes(fill = Status)) +
     scale_fill_manual(values = colors_busco) +
-    scale_alpha_manual(values = c(0.2, 1)) +
-    theme(axis.text.y = element_blank(),
-          # axis.text.y = ggtext::element_markdown(),
-          panel.grid.major = element_blank(),
+    theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
-          axis.line = element_line(color = "black")) +
+          axis.text.y = element_blank(),
+          axis.line = element_line(color = "black"),
+          legend.position = "left") +
     ggtitle(ttl)
-  # print(plot(hclust_mat))
+  return(p)
+}
+# Annotated regained genes with alpha aesthetic
+regainHeatmap <- function(p) {
+  p2 <- p + 
+    aes(alpha = Conservation) +
+    scale_alpha_manual(values = c(1, 1, 0.2)) + 
+    guides(alpha = "none")
+  return(p2)
+}
+# Create row dendrogram for BUSCO gene axis
+rowDendro <- function(hclust_mat) {
   d <- ggdendrogram(hclust_mat, rotate = T) +
-    ggtitle(ttl)
-  print(p)
-  print(d)
-  # return(list(p, d))
+    theme(axis.text.x = element_blank(),
+          axis.text.y = element_blank())
+  return(d)
+}
+# Arrange heatmap and dendrogram plots
+heatArrange <- function(hmaps, dends) {
+  p1 <- ggarrange(hmaps[[1]], hmaps[[2]], 
+                  ncol = 1, nrow = 2,
+                  common.legend = T, legend = "left")
+  p2 <- ggarrange(dends[[1]], dends[[2]], 
+                  ncol = 1, nrow = 2)
+  p3 <- ggarrange(p1, p2, ncol = 2, nrow = 1, widths = c(1, 0.25))
+  return(p3)
 }
 
 
@@ -143,6 +168,14 @@ buscos <- lapply(buscos, filtAnalysis)
 # Generate heat map of BUSCO status for each genome in each lineage gene set
 hclust_mats <- lapply(lins, getDendro, busc_mat)
 names(hclust_mats) <- lins
-par(mfrow = c(1, 2))
-lapply(lins, heatmapBuscos, buscos, busc_mat, hclust_mats)
-# print(hmaps)
+hmaps <- lapply(lins, heatmapBuscos, buscos, busc_mat, hclust_mats)
+hmaps_r <- lapply(hmaps, regainHeatmap)
+dends <- lapply(hclust_mats, rowDendro)
+fig <- heatArrange(hmaps, dends)
+fig_r <- heatArrange(hmaps_r, dends)
+# Save figures to files
+showtext_opts(dpi = 300)
+ggsave("busco_heat_across_genomes.png", fig, 
+       width = 7, height = 10, units = "in", bg = "white")
+ggsave("busco_heat_across_genomes_REGAIN.png", fig_r, 
+       width = 7, height = 10, units = "in", bg = "white")
