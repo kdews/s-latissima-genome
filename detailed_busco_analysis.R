@@ -207,7 +207,20 @@ dends <- lapply(hclust_mats, rowDendro)
 fig <- heatArrange(hmaps, dends)
 fig_r <- heatArrange(hmaps_r, dends)
 
-
+euk_reg <- buscos$eukaryota[buscos$eukaryota$Conservation == "Regained",]$BUSCO
+stra_reg <- buscos$stramenopiles[buscos$stramenopiles$Conservation == "Regained",]$BUSCO
+sug_csvs <- grep("s_lat|Sugar", busco_csvs, value = T)
+for (fn in sug_csvs) {
+  tab <- read.delim(fn, skip = 2)
+  if (any(tab$X..Busco.id %in% euk_reg)) {
+    euk_tab <- tab[tab$X..Busco.id %in% euk_reg, ]
+  }
+  if (any(tab$X..Busco.id %in% stra_reg)) {
+    stra_tab <- tab[tab$X..Busco.id %in% stra_reg, ]
+  }
+}
+euk_tab[, c("Sequence")]
+stra_tab[, c("Sequence", "Description")]
 
 # Save figures to files
 showtext_opts(dpi = 300)

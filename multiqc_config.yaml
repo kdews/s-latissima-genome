@@ -17,7 +17,7 @@ title: "S. latissima genome statistics"
 
 # Replace entire sample name with replacement name
 # sample_names_replace_complete: True
-sample_names_replace_regex: True
+# sample_names_replace_regex: True
 
 # Disable the analysis paths and time in the report header
 show_analysis_paths: False
@@ -55,11 +55,9 @@ max_table_rows: 500 # Swap tables for a beeswarm plot above this
 
 # Overwrite module filename search patterns. See multiqc/utils/search_patterns.yaml
 # for the defaults. Remove a default by setting it to null.
-# sp:
-#   busco:
-#     fn: "aug_busco*/short_summary*"
-#   quast:
-#     fn: "quast_*/report.tsv"
+sp:
+  quast:
+    fn: "report.tsv"
   
 
 # # Change module order

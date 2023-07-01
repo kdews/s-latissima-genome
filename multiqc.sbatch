@@ -15,7 +15,7 @@ then
 Generates MultiQC report from files in directories named ${prefixes[@]}...,
 where by default prefixes=("busco" "quast").
 
-Usage: sbatch busco_compare.sbatch [prefixes]
+Usage: sbatch multiqc.sbatch [prefixes]
 Requires: MultiQC (https://multiqc.info)"
   exit 0
 fi
@@ -37,15 +37,17 @@ then
   echo "Found file for sample naming: $mqc_samples"
 else
   echo "Creating sample name file: $mqc_samples"
-  # echo "MultiQC Names	Proper Names" > $mqc_samples
-  awk -F '\t' -v OFS='\t' '{print ".*"$2, $1}' $samples_file | sed "s/#//g" | \
-  sed "s/\.fasta//g" > $mqc_samples
+  echo "MultiQC Names	Proper Names" >> $mqc_samples
+  # awk -F '\t' -v OFS='\t' '{print ".*"$2, $1}' $samples_file | sed "s/#//g" | \
+  awk -F '\t' -v OFS='\t' '{print $2, $1}' $samples_file | sed "s/#//g" | \
+  sed "s/\.fasta//g" >> $mqc_samples
 fi
 
 
 # Arguments to MultiQC
-opts="-f --profile-runtime"
-opts2="--replace-names $mqc_samples"
+opts="-f"
+# opts2="--replace-names $mqc_samples"
+opts2="--sample-names $mqc_samples"
 # Optional arguments
 # Specify directory containing scripts
 scripts_dir="s-latissima-genome"
