@@ -82,8 +82,9 @@ do
   echo "$cmd"
   $cmd
   # Clean up BUSCO graph
-  module load gcc/11.3.0 openblas/0.3.20 r/4.2.2
-  # module load gcc/11.3.0 openblas/0.3.20 r/4.3.0
+  # module load gcc/11.3.0 openblas/0.3.20 r/4.2.2
+  mods="$(cat ${scripts_dir}/modules_for_Rscript.txt)"
+  module load $mods
   cmd="Rscript s-latissima-genome/pretty_busco.R $wd"
   echo $cmd
   $cmd

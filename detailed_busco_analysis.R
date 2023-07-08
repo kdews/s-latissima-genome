@@ -179,6 +179,19 @@ heatArrange <- function(hmaps, dends) {
   p3 <- ggarrange(p1, p2, ncol = 2, nrow = 1, widths = c(1, 0.25))
   return(p3)
 }
+# Generate list of contigs with BUSCO genes in unfiltered genome
+contigList <- function(lin, buscos, busco_csvs) {
+  df <- buscos[[lin]]
+  regained <- df[df$Conservation == "Regained",]$BUSCO
+  sug_csvs <- grep("Sugar", busco_csvs, value = T)
+  fn <- grep(lin, sug_csvs, value = T)
+  tab <- read.delim(fn, skip = 2)
+  tab <- tab[tab$Status == "Complete" | tab$Status == "Duplicated",]
+  if (any(tab$X..Busco.id %in% regained)) {
+    tab <- tab[tab$X..Busco.id %in% regained, ]
+  }
+  return(tab$Sequence)
+}
 
 
 # Input data
@@ -207,21 +220,6 @@ dends <- lapply(hclust_mats, rowDendro)
 fig <- heatArrange(hmaps, dends)
 fig_r <- heatArrange(hmaps_r, dends)
 
-euk_reg <- buscos$eukaryota[buscos$eukaryota$Conservation == "Regained",]$BUSCO
-stra_reg <- buscos$stramenopiles[buscos$stramenopiles$Conservation == "Regained",]$BUSCO
-sug_csvs <- grep("s_lat|Sugar", busco_csvs, value = T)
-for (fn in sug_csvs) {
-  tab <- read.delim(fn, skip = 2)
-  if (any(tab$X..Busco.id %in% euk_reg)) {
-    euk_tab <- tab[tab$X..Busco.id %in% euk_reg, ]
-  }
-  if (any(tab$X..Busco.id %in% stra_reg)) {
-    stra_tab <- tab[tab$X..Busco.id %in% stra_reg, ]
-  }
-}
-euk_tab[, c("Sequence")]
-stra_tab[, c("Sequence", "Description")]
-
 # Save figures to files
 showtext_opts(dpi = 300)
 # width/height ratio should be 2/3: 8 in/12 in seems good
@@ -229,3 +227,7 @@ ggsave("busco_heat_across_genomes.png", fig,
        width = 8, height = 12, units = "in", bg = "white")
 ggsave("busco_heat_across_genomes_REGAIN.png", fig_r,
        width = 8, height = 12, units = "in", bg = "white")
+# Save list of unfiltered contigs containing BUSCO genes
+contigs <- unique(unlist(lapply(lins, contigList, buscos, busco_csvs)))
+write.table(contigs, "busco_contigs.txt",
+            quote = F, row.names = F, col.names = F)
