@@ -35,6 +35,7 @@ fi
 scripts_dir="s-latissima-genome"
 r_script="${SLURM_JOB_NAME}.R"
 contig_ids="busco_contigs.txt"
+assembly="assemblies/SugarkelpHifiasm.raconPolished.fasta"
 # Only execute if result not present
 if [[ -f "$contig_ids" ]]
 then
@@ -48,20 +49,37 @@ else
   echo "$cmd"
   $cmd
 fi
-
-# Count number of contigs in result
+# Count resulting contigs
 int="$(wc -l $contig_ids | awk '{print $1}')"
 
-# Subset contigs and split into single FASTAs
-cmd="sbatch --parsable ${scripts_dir}/seqtk_subseq.sbatch $contig_ids"
-echo "$cmd"
-job1="$($cmd)"
+# Subset contigs
+# Set variables
+contig_ids_no_ext="$(basename ${contig_ids%.*})"
+assembly_no_ext="$(basename ${assembly%.*})"
+prefix="${contig_ids_no_ext}_${assembly_no_ext}"
+subset="${prefix}.fasta"
+# Only execute if result not present
+if [[ -f $subset ]]
+then
+  echo "Skipping subsetting step, $subset exists in working directory."
+else
+  # Load conda environment for seqtk
+  conda activate seqtk
+  # Subset list of FASTA IDs into multi-FASTA
+  cmd="seqtk subseq $assembly $contig_ids"
+  echo "$cmd > $subset"
+  $cmd > $subset
+fi
 
 # Generate mums with MUMmer for contigs versus reference genome
 # Set variables
 ref="assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta"
-query="busco_contigs_SugarkelpHifiasm.raconPolished.fasta"
-cmd="sbatch -d afterok:${job1} -n $int ${scripts_dir}/mummer.sbatch $ref $query"
+# Run all contigs versus entire genome
+cmd="sbatch -a 0 ${scripts_dir}/mummer.sbatch $ref $subset"
+echo "$cmd"
+$cmd
+# Set array size based on number of contigs
+cmd="sbatch -a 1-$int ${scripts_dir}/mummer.sbatch $ref $assembly $contig_ids"
 echo "$cmd"
 $cmd
 

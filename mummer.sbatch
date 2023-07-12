@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -J mummer
-#SBATCH -n 13
-#SBATCH --mem=25gb
-#SBATCH --time=02:00:00
-#SBATCH -o %x.log
+#SBATCH --mem=10gb
+#SBATCH -c 10
+#SBATCH --time=01:00:00
+#SBATCH -o %x_%a.log
 #SBATCH -p htcondor
 
 # Print date and time
@@ -18,67 +18,81 @@ cond=~/.conda_for_sbatch.sh
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Aligns FASTA file of contigs to genome reference and outputs MUMmer results
-(contigs_vs_genome.out), as well as gnuplot of MUMmer alignments 
-(contigs_vs_genome.gp, contigs_vs_genome.png, ...).
-Usage: sbatch mummer.sbatch <contigs.fasta> <genome.fasta>
+Aligns with MUMmer's NUCmer in two modes:
+  1. Multi-FASTA query:  Uses entire given query multi-FASTA to align to ref...
+  2. Single-FASTA query: Uses specific query contig ID from given query assembly
+                         to align to ref, specified by array ID number and list
+                         of contigs...
+...and generates a dotplot of the alignment.
+Usage:
+  Multi-FASTA mode
+    sbatch -a 0 mummer.sbatch <ref.fasta> <query.fasta>
+  Single-FASTA mode
+    sbatch -a 1-<int> mummer.sbatch <ref.fasta> <query.fasta> <contig_list.txt>
 Requires:
+ - seqtk (https://github.com/lh3/seqtk)
  - MUMmer (https://github.com/mummer4/mummer)
  - gnuplot (http://www.gnuplot.info)"
   exit 0
 fi
 
 # Set variables
+num="$SLURM_ARRAY_TASK_ID"
 ref="$1"
-ref="assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta"
+assembly="$2"
 ref_no_ext="$(basename ${ref%.*})"
-query="$2"
-query="busco_contigs_SugarkelpHifiasm.raconPolished.fasta"
-query_no_ext="$(basename ${query%.*})"
-prefix="${query_no_ext}_vs_${ref_no_ext}"
-q_ids=($(ls ${query_no_ext}*.fa))
+assembly_no_ext="$(basename ${assembly%.*})"
+if [[ "$num" -eq 0 ]]
+then
+  query="$assembly"
+else
+  contig_ids="$3"
+  contig_id="$(sed -n ${num}p $contig_ids)"
+  query_prefix="${num}_${assembly_no_ext}_${contig_id}"
+  query="${query_prefix}.fasta"
+fi
+mum_prefix="mummer_${query_prefix}_vs_${ref_no_ext}"
+tempfile="mummer_temp_${num}.txt"
 
+# Subset contig
+if [[ -z "$contig_id" ]]
+then
+  echo "No subsetting, running MUMmer with multi-FASTA query: $query"
+else
+  # Load conda environment for seqtk
+  conda activate seqtk
+  # Subset list of FASTA IDs into multi-FASTA
+  # Create temporary list file for seqtk
+  echo "$contig_id" > "$tempfile"
+  cmd="seqtk subseq $assembly $tempfile"
+  echo "$cmd > $query"
+  $cmd > $query
+fi
+
+# Alignment of contigs to related reference genome
 # Load gnuplot and GNU parallel
-module load gcc/11.3.0 gnuplot/5.4.3 libgd/2.2.4 parallel
+conda activate
+module purge
+module load gcc/11.3.0 gnuplot/5.4.3 libgd/2.2.4
 # Load MUMmer conda env
 conda activate mummer
+# Don't rerun completed analysis
+if [[ -f "${mum_prefix}.delta" ]]
+then
+  echo "Skipping MUMmer alignment, found ${mum_prefix}.delta"
+else
+  # Run alignment
+  cmd="nucmer -p $mum_prefix -t $SLURM_CPUS_PER_TASK $ref $query"
+  # cmd="mummer -mum -b -n -l 100 $ref $query"
+  echo "$cmd"
+  $cmd
+fi
 
-# Invoke parallel with jobs=$SLURM_NTASKS and a joblog file
-thr="$SLURM_CPUS_PER_TASK"
-par="parallel -j $SLURM_NTASKS --link"
-# srun arguments allocate a single core to the set
-# of threads defined by $SLURM_CPUS_PER_TASK
-srun="srun --exclusive"
-mum_opts="--jl mummer.joblog --res {/.}.out"
-cmd="mummer -mum -b -n $ref {}" 
-$par $mum_opts $srun $cmd ::: ${q_ids[@]}
+# Generate MUMmerplot 
+opts="-f -l --png --large -R $ref -Q $query"
+cmd="mummerplot $opts -p $mum_prefix -t $mum_prefix ${mum_prefix}.delta"
+echo "$cmd"
+$cmd
 
-
-# # Don't rerun completed analysis
-# if [[ -f "${prefix}.out" ]]
-# then
-#   echo "Skipping MUMmer alignment, found ${prefix}.out"
-# else
-#   # Run MUMmer on each split query FASTA
-#   q_ids=($(ls ${query_no_ext}*.fa))
-#   num=$((${#q_ids[@]}-1))
-#   for i in $(seq 0 $num)
-#   do
-#     contig=${q_ids[i]}
-#     cmd="mummer -mum -b -n $ref $contig"
-#     echo "$cmd > ${prefix}.out"
-#     $cmd > "${prefix}.out"
-#   done
-# fi
-
-# # Generate MUMmerplot 
-# opts="--postscript --large -R $ref"
-# for i in $(seq 0 $num)
-# do
-#   contig=${q_ids[i]}
-#   title="$(grep '>' $contig | sed 's/>//g' | sed 's/ .*//g')"
-#   echo "$title"
-#   cmd="mummerplot $opts -p $title -q $contig -t $title ${prefix}.out"
-#   echo "$cmd"
-#   $cmd
-# done
+# Remove temporary files unless error occured
+[[ $? -eq 0 ]] && rm $tempfile $query || echo "Error code: $?"

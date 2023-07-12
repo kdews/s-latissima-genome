@@ -24,25 +24,23 @@ Requires: seqtk (https://github.com/lh3/seqtk)"
 fi
 
 # Set variables
-seqlist="busco_contigs.txt"
 seqlist="$1"
 seqlist_no_ext="$(basename ${seqlist%.*})"
-fasta="assemblies/SugarkelpHifiasm.raconPolished.fasta"
-fasta="$2"
-fasta_no_ext="$(basename ${fasta%.*})"
-prefix="${seqlist_no_ext}_${fasta_no_ext}"
-outfa="${prefix}.fasta"
+assembly="$2"
+assembly_no_ext="$(basename ${assembly%.*})"
+prefix="${seqlist_no_ext}_${assembly_no_ext}"
+subset="${prefix}.fasta"
 
 # Load conda environment for seqtk
 conda activate seqtk
 
 # Subset list of FASTA IDs into $outfa
-cmd="seqtk subseq $fasta $seqlist"
-echo "$cmd > $outfa"
-$cmd > $outfa
+cmd="seqtk subseq $assembly $seqlist"
+echo "$cmd > $subset"
+$cmd > $subset
 
 # Separate contig multifasta into unique files
-int=$(grep -c ">" "$outfa")
-cmd="seqtk split -n $int $prefix $outfa"
+int=$(grep -c ">" "$subset")
+cmd="seqtk split -n $int $prefix $subset"
 echo "$cmd"
 $cmd
