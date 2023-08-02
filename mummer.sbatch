@@ -45,6 +45,7 @@ assembly_no_ext="$(basename ${assembly%.*})"
 if [[ "$num" -eq 0 ]]
 then
   query="$assembly"
+  query_prefix="${num}_${assembly_no_ext}"
 else
   contig_ids="$3"
   contig_id="$(sed -n ${num}p $contig_ids)"
@@ -82,7 +83,7 @@ then
   echo "Skipping MUMmer alignment, found ${mum_prefix}.delta"
 else
   # Run alignment
-  cmd="nucmer -p $mum_prefix -t $SLURM_CPUS_PER_TASK $ref $query"
+  cmd="nucmer -p $mum_prefix -t $SLURM_CPUS_PER_TASK -g 1000 $ref $query"
   # cmd="mummer -mum -b -n -l 100 $ref $query"
   echo "$cmd"
   $cmd
@@ -94,5 +95,5 @@ cmd="mummerplot $opts -p $mum_prefix -t $mum_prefix ${mum_prefix}.delta"
 echo "$cmd"
 $cmd
 
-# Remove temporary files unless error occured
-[[ $? -eq 0 ]] && rm $tempfile $query || echo "Error code: $?"
+# # Remove temporary files unless error occured
+# [[ $? -eq 0 ]] && rm $tempfile $query || echo "Error code: $?"
