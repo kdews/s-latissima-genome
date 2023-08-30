@@ -22,7 +22,7 @@ Analysis of BUSCO results that plots a comparison of BUSCO scores across genomes
 and highlights specific conserved BUSCO genes in heatmaps. Also outputs a list
 ('busco_contigs.txt') of unfiltered contig IDs that contain BUSCO genes. If 
 'busco_contigs.txt' exists, delete it to rerun the analysis.
-Usage: sbatch detailed_busco_analysis.sbatch
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch
 Requires:
  - R (https://www.r-project.org)
  - seqtk (https://github.com/lh3/seqtk)
