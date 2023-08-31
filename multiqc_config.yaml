@@ -53,11 +53,11 @@ num_datasets_plot_limit: 50 # If interactive, don't plot on load if > this numbe
 max_table_rows: 500 # Swap tables for a beeswarm plot above this
 
 
-# Overwrite module filename search patterns. See multiqc/utils/search_patterns.yaml
-# for the defaults. Remove a default by setting it to null.
-sp:
-  quast:
-    fn: "report.tsv"
+# # Overwrite module filename search patterns. See multiqc/utils/search_patterns.yaml
+# # for the defaults. Remove a default by setting it to null.
+# sp:
+#   quast:
+#     fn: "report.tsv"
   
 
 # # Change module order

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J multiqc
 #SBATCH -p main
-#SBATCH --mem-per-cpu=2gb
+#SBATCH --mem=2gb
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
 
@@ -63,6 +63,7 @@ prefixes=("aug_busco*/short_*" "quast*/report*")
 # prefixes=( "${prefixes[@]/%/*/}" )
 
 # Run MultiQC
-cmd="multiqc $opts $opts $config ${prefixes[@]}"
+# cmd="multiqc $opts $opts2 $config ${prefixes[@]}"
+cmd="multiqc $opts $opts2 ${prefixes[@]}"
 echo "$cmd"
 $cmd

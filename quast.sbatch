@@ -1,14 +1,13 @@
 #!/bin/bash
 #SBATCH -J quast
 #SBATCH -p oneweek
-#SBATCH --mem=230gb
-#SBATCH --time=7-0
+#SBATCH --mem=15gb
+#SBATCH --time=05:00:00
 #SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
 # Print date and time
 date
-script_config
 
 # Load conda and BUSCO env
 cond=~/.conda_for_sbatch.sh
@@ -30,15 +29,16 @@ fi
 
 
 # Define variables
-assembly=$1
-assembly_no_ext=$(basename "${assembly%.*}")
+assembly="$1"
+assembly_no_ext="$(basename "${assembly%.*}")"
 # Shorten SLURM output variables
 job="$SLURM_JOB_NAME"
 nthrd="$SLURM_CPUS_PER_TASK"
 # Output directory name
 out="${job}_${assembly_no_ext}"
 
-quast="quast --large -k -b --report-all-metrics --threads $nthrd -o $out"
+# quast="quast --large -k -b --report-all-metrics --threads $nthrd -o $out"
+quast="quast --large -k -b --threads $nthrd -o $out"
 cmd="$quast $assembly"
 echo "$cmd"
 $cmd
