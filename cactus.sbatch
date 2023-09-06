@@ -13,8 +13,9 @@ date
 
 # Load Python module and Cactus virtualenv
 module purge
-module load gcc/11.3.0 python/3.9.12 git/2.36.1
-env_path="/home1/kdeweese/cactus-bin-v2.5.0/cactus_env/bin/activate"
+# module load gcc/11.3.0 python/3.9.12 git/2.36.1
+module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
+env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/venv-cactus-v2.6.7/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
 

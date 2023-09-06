@@ -17,3 +17,4 @@ setwd("/scratch2/kdeweese/latissima/genome_stats/")
 # Input
 vcffile <- "master_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.vcf.filtered.vcf.gz.recode.vcf"
 vcf <- read.vcf(vcffile, to = 1729853)
+class(vcf)
