@@ -26,29 +26,34 @@ densOverlay <- function(idx) {
   return(p)
 }
 
-violinPlot <- function(idx, cutoff) {
+violinPlot <- function(idx) {
   sum_idx <- idx %>%
     group_by(Species) %>%
     summarize(max=max(`Scaffold Length (Mb)`),
               quant=quantile(`Scaffold Length (Mb)`)[["75%"]],
+              quant=quantile(`Scaffold Length (Mb)`)[["75%"]],
+              N50=Biostrings::N50(`Scaffold Length (Mb)`),
+              noverN50 = sum(`Scaffold Length (Mb)` > N50),
               n = n())
-  annot_labs <- c(paste("n =", sum_idx$n),
-                     paste("max = ", round(sum_idx$max, digits = 1)),
-                     paste("75% = ", round(sum_idx$quant, digits = 1)))
-  annot_labs <- paste(annot_labs, collapse = "\n")
+  annot_labs <- paste(paste("n =", sum_idx$n),
+                      paste("n>N50 =", sum_idx$noverN50),
+                     # paste("max = ", round(sum_idx$max, digits = 1)),
+                     # paste("75% = ", round(sum_idx$quant, digits = 1)),
+                     sep = "\n")
   print(sum_idx)
   print(annot_labs)
   y_pos <- max(idx$`Scaffold Length (Mb)`)*1.1
   p <- ggplot(data = idx,
               mapping = aes(x = Species, y = `Scaffold Length (Mb)`)) +
     geom_violin(mapping = aes(col = Species, fill = Species), alpha = 0.4) +
-    # geom_boxplot() +
     geom_jitter(height = 0, width = 0.02, size = 0.8) +
-    geom_hline(yintercept = cutoff) +
     annotate(geom = "text", x = sum_idx$Species, y = y_pos,
-             label = paste(paste("n =", sum_idx$n),
-                           paste("max = ", round(sum_idx$max, digits = 1)),
-                           sep = "\n")) +
+             label = annot_labs) +
+    stat_summary(fun = Biostrings::N50, geom = "point",
+                 col = "red", size = 3) +
+    stat_summary(fun = Biostrings::N50, geom = "text",
+                 label = paste(round(sum_idx$N50, digits = 1), "Mb"),
+                 col = "red", position = "jitter") +
     scale_fill_viridis_d() +
     scale_color_viridis_d()
   return(p)
@@ -76,11 +81,10 @@ idx <- idx %>%
   arrange(`Scaffold Length (Mb)`)
 
 # Plot distributions of scaffold lengths
-p1 <- violinPlot(idx, 2)
+# p1 <- violinPlot(idx)
 idx <- idx[idx$Species != "Saccharina japonica",]
-p2 <- violinPlot(idx, 2)
-ggarrange(p1, p2, common.legend = T)
+((p2 <- violinPlot(idx)))
+# ggarrange(p1, p2, common.legend = T)
 
-f <- quantile(idx$`Scaffold Length (Mb)`)
-f[["100%"]]
-
+showtext_opts(dpi = 300)
+ggsave("scaffold_sizes_violin.png", p2, width = 8, height = 6)
