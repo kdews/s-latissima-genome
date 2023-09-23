@@ -25,7 +25,7 @@ sumDf <- function(df) {
   return(sum_df)
 }
 
-violinPlot <- function(idx, n50 = NULL) {
+violinPlot <- function(idx, ttl, n50 = NULL) {
   sum_idx <- sumDf(idx)
   p <- ggplot(data = idx,
               mapping = aes(x = Species, y = `Length (Mb)`)) +
@@ -37,7 +37,8 @@ violinPlot <- function(idx, n50 = NULL) {
     annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.05,
              label = paste(round(sum_idx$total, digits = 1), "Mb")) +
     scale_fill_viridis_d() +
-    scale_color_viridis_d()
+    scale_color_viridis_d() +
+    ggtitle(ttl)
   n50_lab <- paste(paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
                    paste("n>N50 =", sum_idx$noverN50),
                    sep = "\n")
@@ -78,10 +79,11 @@ idx <- idx %>%
   mutate(`Length (Mb)`= Length/1000000) %>%
   select(ID, `Length (Mb)`, Species) %>%
   group_by(Species) %>%
-  arrange(desc(`Length (Mb)`), .by_group = T)
+  arrange(desc(`Length (Mb)`), .by_group = T) %>%
+  filter(Species != "Saccharina japonica")
 # Summarize data frame
 sum_idx <- sumDf(idx)
-# Filter contigs/scaffolds by size
+# Filter contigs/scaffolds by size (>4 Mb)
 idx_filt <- idx %>%
   filter(`Length (Mb)` >= 4)
 # Summarize filtered data frame
@@ -89,6 +91,7 @@ sum_idx_filt <- sumDf(idx_filt)
 target_len <- round(mean(sum_idx_filt %>%
                         filter(Species != "Saccharina latissima") %>%
                         pull(total)))
+# Approximate genome length of related species by retrieving more S. lat contigs
 n_contigs <- sum_idx %>% 
   filter(Species == "Saccharina latissima") %>%
   pull(total)
@@ -98,35 +101,28 @@ for (x in 1:n_contigs) {
                     slice_head(n = x) %>%
                     pull(`Length (Mb)`))
   if (x == 1) {
-    sac_lens <- data.frame(n=c(x), total=c(temp_len))
+    sac_lens <- data.frame(n=c(x), total_len=c(temp_len))
   } else {
     sac_lens <- rbind(sac_lens, c(x, temp_len))
   }
-  # if (temp_len >= target_len) {
-  #   opt_len <- target_n
-  #   opt_n <- x
-  #   break
-  # }
+  if (!exists("opt_len") & temp_len >= target_len) {
+    opt_len <- temp_len
+    opt_n <- x
+  }
 }
-print(opt_n)
-print(opt_len)
-
+# Filter out smaller S. latissima contigs (< 1Mb)
+retrieved_contigs <- idx %>% 
+  filter(Species == "Saccharina latissima") %>%
+  slice_head(n = opt_n) %>%
+  filter(`Length (Mb)` >= 1)
+# Combine retrieved contigs with filtered index
+idx_filt <- unique(rbind(idx_filt, retrieved_contigs))
 
 # Plot length distributions using violin plots
-p1 <- violinPlot(idx, n50 = T)
+p1 <- violinPlot(idx, "Unfiltered", n50 = T)
+p2 <- violinPlot(idx_filt, "Size filtered")
+ps <- ggarrange(p1, p2, common.legend = T)
 
-p2 <- violinPlot(idx_filt, n50 = T)
-((
-  ps <- ggarrange(p1, p2, common.legend = T)
-))
-print(idx[idx$Species == "Saccharina latissima",], n=50)
-
-
-# idx_sac <- idx %>%
-#   filter(Species == "Saccharina latissima") %>%
-#   mutate(Species = paste0(Species, " (", gsub("_.*", "", ID), ")"))
-# print(idx[idx$Species == "Macrocystis pyrifera",], n=34)
-# print(idx[idx$Species == "Undaria pinnatifida",], n=50)
-
-# showtext_opts(dpi = 300)
-# ggsave("scaffold_sizes_violin.png", p2, width = 8, height = 6)
+# Save plots
+showtext_opts(dpi = 300)
+ggsave("scaffold_sizes_violin.png", ps, width = 13, height = 6, bg = "white")
