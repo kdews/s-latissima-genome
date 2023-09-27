@@ -1,20 +1,28 @@
 # Clear environment
 rm(list = ls())
 # Required packages
-library(tidyverse)
-library(gridExtra)
-library(ggpubr)
-if (require(showtext, quietly = TRUE)) {
+library(tidyverse, quietly = T, warn.conflicts = F)
+library(gridExtra, quietly = T)
+library(ggpubr, quietly = T)
+if (require(showtext, quietly = T)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 
 # Input
-wd <- "/scratch2/kdeweese/latissima/genome_stats"
-setwd(wd)
-species_file <- "species.txt"
+if (interactive()) {
+  wd <- "/scratch2/kdeweese/latissima/genome_stats"
+  setwd(wd)
+  species_file <- "species.txt"
+  for_seqtk <- "for_seqtk.txt"
+} else {
+  line_args <- commandArgs(trailingOnly = T)
+  species_file <- line_args[1]
+  for_seqtk <- line_args[2]
+}
 
 # Functions
+# Summarize index statistics for each assembly
 sumDf <- function(df) {
   sum_df <- df %>%
     group_by(Species) %>%
@@ -24,7 +32,7 @@ sumDf <- function(df) {
               n = n())
   return(sum_df)
 }
-
+# Create annotated violin plot of contig lengths by species
 violinPlot <- function(idx, ttl, n50 = NULL) {
   sum_idx <- sumDf(idx)
   p <- ggplot(data = idx,
@@ -61,8 +69,10 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 
 # Read in data
 species_tab <- read.table(species_file)
-species <- gsub("_"," ", species_tab$V1)
-fns <- paste0(species_tab$V2, ".fai")
+colnames(species_tab) <- c("Species", "Assembly")
+species_tab$Species <- gsub("_"," ", species_tab$Species)
+species <- species_tab$Species
+fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
   idx_temp <- read.table(fns[i])
   idx_temp <- idx_temp[,1:2]
@@ -126,3 +136,28 @@ ps <- ggarrange(p1, p2, common.legend = T)
 # Save plots
 showtext_opts(dpi = 300)
 ggsave("scaffold_sizes_violin.png", ps, width = 13, height = 6, bg = "white")
+# Export filtered lists of contigs for each species
+assembly_list <- c()
+outlist <- c()
+for (spc in unique(idx_filt$Species)) {
+  contig_list <- idx_filt %>%
+    filter(Species == spc) %>%
+    pull(ID)
+  fname <- species_tab %>%
+    filter(Species == spc) %>%
+    pull(Assembly)
+  outfile <- paste0("chromosome_extract_",
+                    basename(tools::file_path_sans_ext(fname)),
+                    ".txt")
+  write.table(contig_list, file = outfile,
+              quote = F, col.names = F, row.names = F, sep = "\t")
+  assembly_list <- append(assembly_list, fname)
+  outlist <- append(outlist, outfile)
+}
+# Create dataframe of assemblies and respective contig lists
+df_for_subset <- data.frame(species=unique(idx_filt$Species),
+                            assembly=assembly_list,
+                            contig_list=outlist)
+write.table(df_for_subset, file = for_seqtk,
+            quote = F, col.names = F, row.names = F, sep = "\t")
+print(paste("Table of results in:", for_seqtk))
