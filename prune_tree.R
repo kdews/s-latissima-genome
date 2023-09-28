@@ -13,7 +13,7 @@ if(length(commandArgs(trailingOnly = TRUE)) > 0) {
   # Set working dir
   setwd("/scratch2/kdeweese/latissima/genome_stats")
   line_args <- c(
-    "species.txt",
+    "species_chrom.txt",
     "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
   )
 }

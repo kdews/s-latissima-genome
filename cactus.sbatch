@@ -3,21 +3,12 @@
 #SBATCH -p shared
 #SBATCH --mem=0
 #SBATCH --time=7-0
-#SBATCH --cpus-per-task=16
 #SBATCH -o %x.log
 
 ## NOTE: if oneweek Discovery partition, use: --constraint=xeon-2640v3
 
 # Print date and time
 date
-
-# Load Python module and Cactus virtualenv
-module purge
-# module load gcc/11.3.0 python/3.9.12 git/2.36.1
-module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
-env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/venv-cactus-v2.6.7/bin/activate"
-[[ -a "$env_path" ]] && source "$env_path" || \
-{ echo "Error on source of $env_path"; exit 1; }
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -26,7 +17,9 @@ then
 Runs Cactus alignment of multiple genomes from different species to generate a
 HAL file. Can create a Cactus-formatted seqFile from a Newick tree and species
 list, if provided.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch [species] [tree]
+Usage: 
+  Base: sbatch cactus.sbatch [species] [tree]
+  Slurm-enabled: sbatch -J cactus_slurm --mem=1gb cactus.sbatch [species] [tree]
 
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
@@ -35,7 +28,15 @@ Requires:
   exit 0
 fi
 
+# Load Python module and Cactus virtualenv
+module purge
+module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
+# module load gcc/11.3.0 python/3.9.12 git/2.36.1
+env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
+[[ -a "$env_path" ]] && source "$env_path" || \
+{ echo "Error on source of $env_path"; exit 1; }
 
+# Input file(s)
 seqfile="s_lat_alignment.txt"
 # If needed, generates formatted seqFile, i.e.,
 # NEWICK tree
@@ -63,34 +64,48 @@ else
   exit 1
 fi
 
-
 # Define variables
-ncor="${SLURM_CPUS_PER_TASK}"
-seqfile_no_ext=$(basename "${seqfile%.*}")
-tmp="${SLURM_JOB_NAME}_tmp"
 js="${SLURM_JOB_NAME}_jobstore"
-msgs="${SLURM_JOB_NAME}_msgs"
-# Output HAL file name
+seqfile_no_ext=$(basename "${seqfile%.*}")
 hal="${seqfile_no_ext}.hal"
-# Create local temporary work directory
-mkdir -p $tmp
-
-
-# Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
-# Set name of partition to use for parallel Toil jobs
-export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
 
 # Run Cactus multialignment
-# cleans="--clean never --stats --cleanWorkDir never"
-# logs2="--disableCaching --noStdOutErr --writeLogs $wklg"
+if [[ "$SLURM_JOB_NAME" == "cactus" ]]
+then
+  # Base Cactus
+  cmd="cactus $js $seqfile $hal --realTimeLogging"
+  echo "$cmd"
+  $cmd
+elif [[ "$SLURM_JOB_NAME" == "cactus_slurm" ]]
+then
+  # SLURM-enabled Cactus
+  # Set SLURM arguments for Toil
+  export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
+  # Set name of partition to use for parallel Toil jobs
+  export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
+  # max memory per node on shared partition = 60 gb
+  slurm_opts1="--batchSystem slurm --binariesMode local"
+  slurm_opts2="--consMemory 60gb --consCores 16 --configFile config-slurm.xml"
+  morelogs="--logDebug"
+  nohardlink="--noMoveExports --noLinkImports"
+  toilopts="--disableCaching --disableAutoDeployment"
+  res="--restart"
+  # opts="$slurm_opts1 $slurm_opts2 $morelogs $nohardlink $toilopts $res"
+  opts="--realTimeLogging $slurm_opts1 $slurm_opts2"
+  cmd="cactus $js $seqfile $hal $opts"
+  echo "$cmd"
+  $cmd
+else
+  echo "Error: job name (${SLURM_JOB_NAME}) not recognized."
+fi
+
+
+# Extra options
+# Create local temporary work directory
+# tmp="${SLURM_JOB_NAME}_tmp"
+# mkdir -p $tmp
+# tmp_opt="--workDir $tmp"
 # might lead to max allocated mem errors: --maxLocalJobs 100
-res="--restart"
-slurm_opts1="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-slurm_opts2="--binariesMode local --defaultMemory 4G"
-logs="--workDir $tmp --logDebug --writeMessages $msgs --realTimeLogging"
-nohardlink="--noMoveExports --noLinkImports --disableCaching"
-opts="$slurm_opts1 $slurm_opts2 $logs $nohardlink"
-cmd="cactus $res $opts $js $seqfile $hal"
-echo "$cmd"
-$cmd
+# msgs="${SLURM_JOB_NAME}_msgs"
+# logs2="--writeMessages $msgs --disableCaching --noStdOutErr --writeLogs $wklg"
+# cleans="--clean never --stats --cleanWorkDir never"

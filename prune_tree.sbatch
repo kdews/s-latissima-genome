@@ -34,7 +34,7 @@ fi
 # Define variables
 script_dir="s-latissima-genome"
 [[ -d $script_dir ]] && script_dir="${script_dir}/"
-r_script=${SLURM_JOB_NAME}.R
+r_script="${SLURM_JOB_NAME}.R"
 species="$1"
 (( $# > 1 )) && tree="$2"
 if [[ ! -f $tree ]] && [[ $tree == http?(s)://*.txt ]]

@@ -25,9 +25,14 @@ samtools --version
 # Run samtools index tool on each FASTA
 for fasta in "${fastas[@]}"
 do
-    cmd="samtools faidx $fasta"
-    echo "$cmd"
-    $cmd
+    if [[ -f "${fasta}.fai" ]]
+    then
+        echo "Found file ${fasta}.fai, skipping samtools faidx step."
+    else
+        cmd="samtools faidx $fasta"
+        echo "$cmd"
+        $cmd
+    fi
 done
 
 # Plot and filter assembly indices
@@ -36,9 +41,14 @@ module purge
 module load gcc/11.3.0 openblas/0.3.20 r/4.3.1
 Rscript --version
 # Run Rscript to plot and filter contigs
-cmd="Rscript --vanilla $r_script $species_file $for_seqtk"
-echo "$cmd"
-$cmd
+if [[ -f "$for_seqtk" ]]
+then
+    echo "Found file $for_seqtk, skipping Rscript step."
+else
+    cmd="Rscript --vanilla $r_script $species_file $for_seqtk"
+    echo "$cmd"
+    $cmd
+fi
 
 # Extract "chromosomes" from assembly FASTAs
 # Load conda environment for seqtk
@@ -46,9 +56,11 @@ conda activate seqtk
 # Create subsetted assembly FASTAs
 assemblies=($(awk -F '\t' '{print $2}' "$for_seqtk"))
 contig_lists=($(awk -F '\t' '{print $3}' "$for_seqtk"))
-for i in "$(seq 0 $((${#assemblies[@]}-1)))"
+for i in $(seq 0 $((${#assemblies[@]}-1)))
 do
+    out="${contig_lists[i]%.*}.fasta"
+    echo "$out"
     cmd="seqtk subseq ${assemblies[i]} ${contig_lists[i]}"
-    echo "$cmd"
-    $cmd
+    echo "$cmd > $out"
+    $cmd > "$out"
 done
