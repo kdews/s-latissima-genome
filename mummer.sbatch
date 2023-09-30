@@ -50,10 +50,11 @@ else
   contig_ids="$3"
   contig_id="$(sed -n ${num}p $contig_ids)"
   query_prefix="${num}_${assembly_no_ext}_${contig_id}"
-  query="${query_prefix}.fasta"
+  tempquery="${query_prefix}.fasta"
+  query="$tempquery"
+  tempfile="mummer_temp_${num}.txt"
 fi
 mum_prefix="mummer_${query_prefix}_vs_${ref_no_ext}"
-tempfile="mummer_temp_${num}.txt"
 
 # Subset contig
 if [[ -z "$contig_id" ]]
@@ -89,11 +90,22 @@ else
   $cmd
 fi
 
+# Output coordinates from delta file
+cmd="show-coords -Trcl ${mum_prefix}.delta"
+echo "$cmd > ${mum_prefix}.coords"
+$cmd > "${mum_prefix}.coords"
+
 # Generate MUMmerplot 
 opts="-f -l --png --large -R $ref -Q $query"
 cmd="mummerplot $opts -p $mum_prefix -t $mum_prefix ${mum_prefix}.delta"
 echo "$cmd"
 $cmd
 
-# # Remove temporary files unless error occured
-# [[ $? -eq 0 ]] && rm $tempfile $query || echo "Error code: $?"
+# Remove temporary files unless error occured
+if [[ $? -eq 0 ]]
+then
+  [[ -f "$tempfile" ]] && rm "$tempfile"
+  [[ -f "$tempquery" ]] && rm "$tempquery"
+else
+  echo "Error code: $?"
+fi

@@ -16,9 +16,9 @@ cond=~/.conda_for_sbatch.sh
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Uses a list of FASTA file IDs to subset from a multi-fasta file. Output FASTA is
+Uses a list of FASTA file IDs to subset from a multiFASTA file. Output FASTA is
 named after list and FASTA file prefixes.
-Usage: sbatch seqtk_subseq.sbatch <list> <multifasta>
+Usage: sbatch seqtk_subseq.sbatch <list> <multiFASTA>
 Requires: seqtk (https://github.com/lh3/seqtk)"
   exit 0
 fi
@@ -39,8 +39,18 @@ cmd="seqtk subseq $assembly $seqlist"
 echo "$cmd > $subset"
 $cmd > $subset
 
-# Separate contig multifasta into unique files
+# Separate contig multiFASTA into unique files
 int=$(grep -c ">" "$subset")
 cmd="seqtk split -n $int $prefix $subset"
 echo "$cmd"
 $cmd
+
+# Remove subset
+rm "$subset"
+
+# Rename FASTAs by ID
+for fasta in $(ls ${prefix}*.fa)
+do
+  newname=$(grep ">" "$fasta" | sed 's/>//g')
+  mv "$fasta" "${seqlist_no_ext}_${newname}.fasta"
+done
