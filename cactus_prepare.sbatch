@@ -1,24 +1,38 @@
 #!/bin/bash
 #SBATCH -J cactus_prepare
 #SBATCH -p shared
-#SBATCH --mem=0
-#SBATCH --time=7-0
-#SBATCH --cpus-per-task=16
+#SBATCH --mem=50mb
+#SBATCH --time=00:30:00
 #SBATCH -o %x.log
-
-## NOTE: if oneweek Discovery partition, use: --constraint=xeon-2640v3
 
 # Print date and time
 date
 
+# Help message
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+then
+  echo "\
+Prepares commands for Cactus alignment of multiple genomes. Can create a Cactus-
+formatted seqFile from a Newick tree and species list, if provided.
+Usage:
+    no seqFile mode: sbatch ${SLURM_JOB_NAME}.sbatch <species> <tree>
+    seqFile mode: sbatch ${SLURM_JOB_NAME}.sbatch <seqFile>
+
+Requires:
+ - virtualenv (https://virtualenv.pypa.io/en/latest)
+ - Toil (https://toil.readthedocs.io/en/latest)
+ - Cactus (https://github.com/ComparativeGenomicsToolkit/cactus)"
+  exit 0
+fi
+
 # Load Python module and Cactus virtualenv
 module purge
-module load gcc/11.3.0 python/3.9.12 git/2.36.1
-env_path="/home1/kdeweese/cactus-bin-v2.5.0/cactus_env/bin/activate"
+module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
+env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
 
-seqfile="s_lat_alignment.txt"
+# Input file(s)
 # If needed, generates formatted seqFile, i.e.,
 # NEWICK tree
 #
@@ -26,47 +40,67 @@ seqfile="s_lat_alignment.txt"
 # name2 path2
 # ...
 # nameN pathN
-(( $# > 0 )) && {  species="$1"; tree="$2"; }
-if [[ -f $seqfile ]]
+# Default seqFile
+seqFile="s_lat_alignment.txt"
+if (( $# == 1 ))
 then
-  echo "Found seqfile: $seqfile"
-elif [[ -v tree ]] && [[ -v species ]]
+    seqFile="$1"
+    [[ -f $seqFile ]] && echo "Found seqFile: $seqFile"
+elif (( $# == 2 ))
 then
-  echo "Species list: $species."
-  echo "Newick tree: $tree"
-  [[ -f $species ]] || { echo "Error: species list not found."; exit 1; }
-  [[ -f $tree ]] || { echo "Error: tree not found."; exit 1; }
-  echo "Generating formatted seqFile ($seqfile)..."
-  cp $tree $seqfile
-  echo "" >> $seqfile
-  cat $species >> $seqfile
+    species="$1"
+    tree="$2"
+    echo "Species list: $species."
+    echo "Newick tree: $tree"
+    [[ -f $species ]] || { echo "Error: Species list not found."; exit 1; }
+    [[ -f $tree ]] || { echo "Error: Tree not found."; exit 1; }
+    echo "Generating formatted seqFile ($seqFile)..."
+    cp "$tree" "$seqFile"
+    echo "" >> "$seqFile"
+    cat "$species" >> "$seqFile"
+elif [[ -f $seqFile ]]
+then
+    echo "Using default seqFile: $seqFile"
 else
-  echo "Error: no seqFile ($seqfile), tree ($tree) or species list ($species)."
+  echo "Error: no seqFile ($seqFile), tree ($tree) or species list ($species)."
   exit 1
 fi
+js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
+seqFile_no_ext=$(basename "${seqFile%.*}")
+hal="${seqFile_no_ext}.hal"
+outdir="--outDir cactus-steps-output"
+outseq="--outSeqFile cactus-steps-output/${seqFile}"
+outhal="--outHal cactus-steps-output/$hal"
+opts1="--defaultCores 14 --preprocessCores 14 --blastCores 14 --alignCores 14"
+opts2="--defaultMemory 15G --preprocessMemory 15G --blastMemory 15G --alignMemory 15G"
+opts="$opts1 $opts2"
+cmd_file="cactus_prepare_commands.txt"
 
-
-# Define variables
-ncor="${SLURM_CPUS_PER_TASK}"
-seqfile_no_ext=$(basename "${seqfile%.*}")
-tmp="${SLURM_JOB_NAME}_tmp"
-js="${SLURM_JOB_NAME}_jobstore"
-msgs="${SLURM_JOB_NAME}_msgs"
-# Output HAL file name
-hal="${seqfile_no_ext}.hal"
-# Create local temporary work directory
-mkdir -p $tmp
-
-# Set SLURM arguments for Toil
-export TOIL_SLURM_ARGS="-t 1-0 -q normal -p shared"
-# Set name of partition to use for parallel Toil jobs
-export TOIL_SLURM_PE="${SLURM_JOB_PARTITION}"
-
-# Run Cactus multialignment
-slurm_opts1="--batchSystem slurm --consCores $ncor --disableAutoDeployment"
-slurm_opts2="--defaultMemory 4G"
-logs="--workDir $tmp --logDebug --writeMessages $msgs --realTimeLogging"
-opts="--binariesMode local --outHal $hal"
-cmd="cactus-prepare-toil $opts $slurm_opts1 $logs file:./$js $seqfile"
+# Run cactus-prepare
+cmd="cactus-prepare $opts $js $outdir $outseq $outhal $seqFile"
 echo "$cmd"
-$cmd
+$cmd > $cmd_file
+
+# Split each command into separate SBATCH file in $prep_dir
+prep_dir="cactus_prepare_scripts"
+mkdir -p "$prep_dir"
+commands="$(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')"
+num=$(echo "$commands" | wc -l)
+for i in $(seq 1 "$num")
+do
+    # Iterate through each command
+    cmd_text=$(echo "$commands" | sed -n ${i}p)
+    cmd_name="${i}_${cmd_text%% *}"
+    cmd_path="${prep_dir}/${cmd_name}.sbatch"
+    echo "Writing $cmd_path"
+    # Add text to SBATCH file
+    echo "#!/bin/bash" > "$cmd_path"
+    echo "#SBATCH -J $cmd_name" >> "$cmd_path"
+    echo "#SBATCH -o %x.log" >> "$cmd_path"
+    echo "#SBATCH -t 1-0" >> "$cmd_path"
+    echo "#SBATCH --mem=20gb" >> "$cmd_path"
+    echo "#SBATCH -c 16" >> "$cmd_path"
+    echo " " >> "$cmd_path"
+    echo "date" >> "$cmd_path"
+    echo "$cmd_text" >> "$cmd_path"
+done
