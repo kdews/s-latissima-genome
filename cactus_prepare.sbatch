@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J cactus_prepare
 #SBATCH -p shared
-#SBATCH --mem=50mb
+#SBATCH --mem=1gb
 #SBATCH --time=00:30:00
 #SBATCH -o %x.log
 
@@ -33,6 +33,8 @@ env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
 { echo "Error on source of $env_path"; exit 1; }
 
 # Input file(s)
+# Default seqFile
+seqFile="s_lat_alignment.txt"
 # If needed, generates formatted seqFile, i.e.,
 # NEWICK tree
 #
@@ -40,8 +42,6 @@ env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
 # name2 path2
 # ...
 # nameN pathN
-# Default seqFile
-seqFile="s_lat_alignment.txt"
 if (( $# == 1 ))
 then
     seqFile="$1"
@@ -65,19 +65,27 @@ else
   echo "Error: no seqFile ($seqFile), tree ($tree) or species list ($species)."
   exit 1
 fi
+# Other required inputs
 js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
 seqFile_no_ext=$(basename "${seqFile%.*}")
 hal="${seqFile_no_ext}.hal"
 outdir="--outDir cactus-steps-output"
 outseq="--outSeqFile cactus-steps-output/${seqFile}"
 outhal="--outHal cactus-steps-output/$hal"
-opts1="--defaultCores 14 --preprocessCores 14 --blastCores 14 --alignCores 14"
-opts2="--defaultMemory 15G --preprocessMemory 15G --blastMemory 15G --alignMemory 15G"
+# Memory (in GB) and CPU options
+reqmem=35
+reqcpus=16
+# Leave 20% of memory for overhead
+mem="$((reqmem * 4 / 5))G"
+# Leave 2 cores of overhead
+cpus="$((reqcpus - 2))"
+opts1="--defaultCores $cpus --preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
+opts2="--defaultMemory $mem --preprocessMemory $mem --blastMemory $mem --alignMemory $mem"
 opts="$opts1 $opts2"
 cmd_file="cactus_prepare_commands.txt"
 
 # Run cactus-prepare
-cmd="cactus-prepare $opts $js $outdir $outseq $outhal $seqFile"
+cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
 echo "$cmd"
 $cmd > $cmd_file
 
@@ -98,8 +106,8 @@ do
     echo "#SBATCH -J $cmd_name" >> "$cmd_path"
     echo "#SBATCH -o %x.log" >> "$cmd_path"
     echo "#SBATCH -t 1-0" >> "$cmd_path"
-    echo "#SBATCH --mem=20gb" >> "$cmd_path"
-    echo "#SBATCH -c 16" >> "$cmd_path"
+    echo "#SBATCH --mem=${reqmem}G" >> "$cmd_path"
+    echo "#SBATCH -c $reqcpus" >> "$cmd_path"
     echo " " >> "$cmd_path"
     echo "date" >> "$cmd_path"
     echo "$cmd_text" >> "$cmd_path"
