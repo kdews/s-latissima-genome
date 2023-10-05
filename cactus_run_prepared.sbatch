@@ -15,25 +15,44 @@ env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
 [[ -a "$env_path" ]] && source "$env_path" || \
 { echo "Error on source of $env_path"; exit 1; }
 
+# Define functions
+# Function to check given logfile for prior successful run
+check_prior () {
+    local ok_mess="Successfully deleted the job store"
+    # If already run, take old job ID
+    if [[ -f "$1" ]] && [[ $(grep "$ok_mess" "$1") ]]
+    then
+        local id=$(grep "SLURM_JOB_ID" "$logfile" | sed 's/SLURM_JOB_ID = //g')
+        echo "$id"
+    fi
+}
+# Function to write sbatch command
+submit () {
+    part="$SLURM_JOB_PARTITION"
+    [[ $(echo $@ | grep "align") ]] && part="meb_largemem"
+    cmd="sbatch --parsable -p $part $@"
+    echo "$cmd"
+}
+
 # Run cactus step-by-step with dependent SLURM jobs
 prep_dir="cactus_prepare_scripts"
 num=$(ls "$prep_dir" | wc -l)
-sbatch="sbatch --parsable -p ${SLURM_JOB_PARTITION}"
-#mem_opts="-t 1-0 --mem=20gb -c 10"
 for i in $(seq 1 "$num")
 do
     sfile=$(ls "$prep_dir" | sed -n ${i}p)
+    echo "$sfile"
+    cmd_name="${sfile%%.sbatch}"
+    logfile="${cmd_name}.log"
     sfile="${prep_dir}/${sfile}"
-    if (( $i == 1 ))
-    then
-        cmd="$sbatch $sfile"
-        echo "$cmd"
-        jobid=$($cmd)
-        echo "Submitted $sfile with Slurm job ID: $jobid"
-    else
-        cmd="$sbatch --dependency=afterok:$jobid $sfile"
-        echo "$cmd"
-        jobid=$($cmd)
-        echo "Submitted $sfile with Slurm job ID: $jobid"
-    fi
+    # Check if job has already run successfully
+    oldid="$(check_prior $logfile)"
+    [[ -z "$oldid" ]] || echo "check_prior found successful run $oldid for $cmd_name"
+    dep="--dependency=afterok:$jobid"
+    # No dependency for first job
+    (( i == 1 )) && dep=""
+    cmd="$(submit $dep $sfile)"
+    [[ -z "$oldid" ]] && { echo "$cmd"; jobid="$($cmd)"; } || jobid="$oldid"
+    [[ $? -ne 0 ]] && exit $?
+    echo "$cmd_name job ID: $jobid"
+    echo ""
 done

@@ -73,14 +73,12 @@ outdir="--outDir cactus-steps-output"
 outseq="--outSeqFile cactus-steps-output/${seqFile}"
 outhal="--outHal cactus-steps-output/$hal"
 # Memory (in GB) and CPU options
-reqmem=35
-reqcpus=16
-# Leave 20% of memory for overhead
-mem="$((reqmem * 4 / 5))G"
-# Leave 2 cores of overhead
-cpus="$((reqcpus - 2))"
-opts1="--defaultCores $cpus --preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
-opts2="--defaultMemory $mem --preprocessMemory $mem --blastMemory $mem --alignMemory $mem"
+premem=20
+blastmem=35
+alnmem=150
+cpus=14
+opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
+opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
 opts="$opts1 $opts2"
 cmd_file="cactus_prepare_commands.txt"
 
@@ -100,15 +98,26 @@ do
     cmd_text=$(echo "$commands" | sed -n ${i}p)
     cmd_name="${i}_${cmd_text%% *}"
     cmd_path="${prep_dir}/${cmd_name}.sbatch"
+    # Default memory allocation
+    mem=20
+    # Choose correct memory allocation
+    [[ $(echo "$cmd_name" | grep "preprocess") ]] && mem="$premem"
+    [[ $(echo "$cmd_name" | grep "blast") ]] && mem="$blastmem"
+    [[ $(echo "$cmd_name" | grep "align") ]] && mem="$alnmem"
+    # Add 10% more memory for overhead
+    reqmem="$((mem * 10 / 9))G"
+    # Add 2 cores of overhead
+    reqcpus="$((cpus + 2))"
     echo "Writing $cmd_path"
     # Add text to SBATCH file
     echo "#!/bin/bash" > "$cmd_path"
     echo "#SBATCH -J $cmd_name" >> "$cmd_path"
     echo "#SBATCH -o %x.log" >> "$cmd_path"
     echo "#SBATCH -t 1-0" >> "$cmd_path"
-    echo "#SBATCH --mem=${reqmem}G" >> "$cmd_path"
+    echo "#SBATCH --mem=$reqmem" >> "$cmd_path"
     echo "#SBATCH -c $reqcpus" >> "$cmd_path"
-    echo " " >> "$cmd_path"
+    echo "" >> "$cmd_path"
     echo "date" >> "$cmd_path"
+    echo "" >>  "$cmd_path"
     echo "$cmd_text" >> "$cmd_path"
 done
