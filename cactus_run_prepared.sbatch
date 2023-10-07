@@ -29,8 +29,8 @@ check_prior () {
 # Function to write sbatch command
 submit () {
     part="$SLURM_JOB_PARTITION"
-    [[ $(echo $@ | grep "align") ]] && part="meb_largemem"
-    cmd="sbatch --parsable -p $part $@"
+    [[ $(echo $* | grep "align") ]] && part="meb_largemem"
+    cmd="sbatch --parsable -p $part $*"
     echo "$cmd"
 }
 
