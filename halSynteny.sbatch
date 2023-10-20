@@ -29,7 +29,7 @@ env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
 { echo "Error on source of $env_path"; exit 1; }
 
 # Input variable(s)
-inHal="s_lat_alignment.hal"
+inHal="cactus-steps-output/s_lat_alignment.hal"
 [[ -z "$1" ]] || inHal="$1"
 inHal_no_ext=$(basename "${inHal%.*}")
 
