@@ -154,7 +154,7 @@ for (spc in unique(idx_filt$Species)) {
   assembly_list <- append(assembly_list, fname)
   outlist <- append(outlist, outfile)
 }
-# Create dataframe of assemblies and respective contig lists
+# Create data frame of assemblies and respective contig lists
 df_for_subset <- data.frame(species=unique(idx_filt$Species),
                             assembly=assembly_list,
                             contig_list=outlist)
