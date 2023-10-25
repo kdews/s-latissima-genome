@@ -5,6 +5,7 @@ rm(list = ls())
 library(tidyverse, quietly = T, warn.conflicts = F)
 library(ggpubr, quietly = T)
 library(RColorBrewer, quietly = T)
+library(ComplexHeatmap, quietly = T)
 # library(gridExtra, quietly = T)
 if (require(showtext, quietly = T)) {
   showtext_auto()
@@ -12,11 +13,28 @@ if (require(showtext, quietly = T)) {
 }
 
 # Functions
-# Convert contig IDs to factors and use to order data frame
+# Gets genome name from "genome_vs_genome" character
+getGen <- function(df_name, gen_type) {
+  if (gen_type == "query") {
+    n <- 1
+  } else if (gen_type == "target") {
+    n <- 2
+  } else {
+    stop("Error: <gen_type> must be either 'query' or 'target'.")
+  }
+  gen_name <- unlist(strsplit(df_name, "_vs_"))[[n]]
+  return(gen_name)
+}
+# Fixes Undaria chromosome labels for plotting
+fixUndaria <- function(contigs) {
+  contigs <- gsub("\\..*", "", gsub("JABAKD0100000", "chr_", contigs))
+  return(contigs)
+}
+# Order PSL data frame by contig size by converting contig names to factors
 orderPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
-  query <- unlist(strsplit(df_name, "_vs_"))[[1]]
-  target <- unlist(strsplit(df_name, "_vs_"))[[2]]
+  query <- getGen(df_name, "query")
+  target <- getGen(df_name, "target")
   df <- df %>%
     mutate(qName=factor(qName, levels = contig_ids[[query]][["ID"]]),
            tName=factor(tName, levels = contig_ids[[target]][["ID"]])) %>%
@@ -26,32 +44,84 @@ orderPsl <- function(df_name, df_list) {
 # Summarize PSL table by summing matches for each contig pair
 sumPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
-  query <- unlist(strsplit(df_name, "_vs_"))[[1]]
-  target <- unlist(strsplit(df_name, "_vs_"))[[2]]
+  query <- getGen(df_name, "query")
+  target <- getGen(df_name, "target")
   df_sum <- df %>%
     group_by(qName, tName) %>%
     summarize(total_matches=as.numeric(sum(matches)))
-  # target_lens <- contig_ids[[target]][,c("ID", "Length")]
   df2 <- merge(df_sum, unique(df[,c("qName", "qSize")]),
                by = "qName", sort = F)
   df2 <- df2 %>%
-    mutate(tPercent=total_matches/qSize*100)
+    mutate(qPercent=total_matches/qSize*100)
   return(df2)
+}
+# Pull out maximal matching contigs
+maxMatches <- function(df_name, df_list) {
+  df <- df_list[[df_name]]
+  query <- getGen(df_name, "query")
+  target <- getGen(df_name, "target")
+  df_sum <- df %>% 
+    group_by(qName) %>%
+    filter(qPercent == max(qPercent)) %>%
+    ungroup()
+  return(df_sum)
 }
 # Convert PSL summary into matrix for heatmap
 matPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
-  query <- unlist(strsplit(df_name, "_vs_"))[[1]]
-  target <- unlist(strsplit(df_name, "_vs_"))[[2]]
-  mat <- as.matrix(df %>%
+  query <- getGen(df_name, "query")
+  target <- getGen(df_name, "target")
+  mat <- as.matrix(df %>% mutate(qName=fixUndaria(qName),
+                                 tName=fixUndaria(tName)) %>%
                      pivot_wider(id_cols = qName,
                                  names_from = tName,
-                                 values_from = tPercent,
+                                 values_from = qPercent,
                                  values_fill = 0) %>%
-                     column_to_rownames(var = "qName") %>%
-                     select(any_of(contig_ids[[target]][["ID"]])))
+                     column_to_rownames(var = "qName"))
+                     # select(any_of(contig_ids[[target]][["ID"]])))
   return(mat)
 }
+# Plot heatmap of given matrix
+heatPsl <- function(mat_name, mat_list) {
+  mat <- mat_list[[mat_name]]
+  query <- getGen(mat_name, "query")
+  target <- getGen(mat_name, "target")
+  x_label <- paste("target:", gsub("_", " ", target))
+  y_label <- paste("query:", gsub("_", " ", query))
+  fname <- paste0(mat_name, "_heatmap.png")
+  h_colors <- colorRampPalette(brewer.pal(8, "YlOrRd"))
+  png(file = fname, units = "in", width = 5, height = 5, res = 150)
+  heatmap(mat, main = "Query contig coverage %",
+          xlab = x_label, ylab = y_label, col = h_colors(25))
+  dev.off()
+}
+# Subset data for dotplots
+dotFilt <- function(df_name, df_list, df2_list) {
+  df <- df_list[[df_name]]
+  df2 <- df2_list[[df_name]]
+  match_list <- paste0(df2$qName, df2$tName)
+  target <- getGen(df_name, "target")
+  query <- getGen(df_name, "query")
+  subset_cols <- c("qName", "tName", "strand",
+                   "qSize", "qStart", "qEnd",
+                   "tSize", "tStart", "tEnd")
+  df_sub <- df[,subset_cols]
+  df_sub <- df_sub %>%
+    filter(paste0(qName, tName) %in% match_list)
+  return(df_sub)
+}
+# Dotplots
+dotPlot <- function(df_name, df_list) {
+  df <- df_list[[df_name]]
+  target <- getGen(df_name, "target")
+  query <- getGen(df_name, "query")
+  fname <- paste0(df_name, "_dotplot.png")
+  p <- ggplot(data = df, mapping = aes(x = tStart, y = qStart)) +
+    geom_point() +
+    facet_grid(rows = vars(qName), cols = vars(tName))
+  ggsave(filename = fname, plot = p)
+}
+
 
 # Input
 # Only take command line input if not running interactively
@@ -95,22 +165,15 @@ names(psl_list) <- gsub(".*ment_|.psl", "", names(psl_list))
 psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 
 # Analysis
+# Summarize by contig vs. contig of each syntenic comparison
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
+# Matrices of syntenic blocks by contig for heatmaps
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
-
-# Plotting
-heatmap(psl_mats[[1]])
-heatmap(psl_mats[[2]])
-heatmap(psl_mats[[3]])
-
-subset_cols <- c("qName", "tName", "strand",
-                 "qSize", "qStart", "qEnd",
-                 "tSize", "tStart", "tEnd")
-test <- psl_list[[1]][,subset_cols]
-colnames(test)
-head(test)
-
-
-
-
+# Heatmaps of genome vs. genome
+lapply(names(psl_mats), heatPsl, psl_mats)
+# Subset data for dotplots
+psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
+# Dotplots of genome vs. genome
+sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
 
