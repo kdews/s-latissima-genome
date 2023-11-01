@@ -111,9 +111,13 @@ dotFilt <- function(df_name, df_list, df2_list) {
   return(df_sub)
 }
 # Dotplots
-dotPlot <- function(df_name, df) {
-# dotPlot <- function(df_name, df_list) {
-  # df <- df_list[[df_name]]
+dotPlot <- function(df_name, df_list) {
+  df <- df_list[[df_name]]
+  df <- df %>%
+    group_by(tName) %>%
+    arrange(tStart, qStart) %>%
+    mutate(qName = factor(qName, levels = unique(qName))) %>%
+    ungroup()
   target <- getGen(df_name, "target")
   query <- getGen(df_name, "query")
   fname <- paste0(df_name, "_dotplot.png")
@@ -121,14 +125,17 @@ dotPlot <- function(df_name, df) {
               mapping = aes(x = qStart, y = tStart, color = strand)) +
     # geom_point() +
     geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
-                 linewidth = 1, lineend = "round") +
+                 linewidth = 2, lineend = "round") +
     facet_grid(cols = vars(qName), rows = vars(tName),
-               switch = "both", space = "free", scale = "free", as.table = F) +
+               switch = "both",
+               space = "free",
+               scale = "free",
+               as.table = F) +
     theme_classic() +
     theme(axis.ticks = element_blank(),
           axis.text = element_blank())
   showtext_opts(dpi = 300)
-  ggsave(filename = fname, plot = p, width = 12, height = 6, units = "in")
+  ggsave(filename = fname, plot = p, width = 40, height = 15, units = "in")
   showtext_opts(dpi = 100)
 }
 
@@ -185,19 +192,18 @@ lapply(names(psl_mats), heatPsl, psl_mats)
 # Subset data for dotplots
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
-sub_tnames <- unique(psl_dot[[2]]$qName)[14]
-df_sub <- psl_dot[[2]] %>%
-  filter(tName %in% sub_tnames) %>%
-  # filter(tName %in% "scaffold_1") %>%
-  group_by(tName) %>%
-  arrange(tStart, qStart) %>%
-  mutate(qName = factor(qName, levels = unique(qName))) %>%
-  ungroup()
+# sub_tnames <- levels(psl_dot[[2]]$tName)[1:10]
+# sub_tnames <- levels(psl_dot[[2]]$tName)[10:20]
+# sub_tnames <- levels(psl_dot[[2]]$tName)[20:30]
+# df_sub <- psl_dot[[3]] %>%
+#   # filter(tName %in% sub_tnames) %>%
+#   # filter(tName %in% "scaffold_1") %>%
+#   group_by(tName) %>%
+#   arrange(tStart, qStart) %>%
+#   mutate(qName = factor(qName, levels = unique(qName))) %>%
+#   ungroup()
 
-dotPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", df_sub)
+# dotPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", df_sub)
 
-scaff_7 <- psl_list[[2]] %>%
-  filter(qName == "scaffold_7")
-unique(scaff_7[,c("qName", "tName")])
-# # Dotplots of genome vs. genome
-# sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
+# Dotplots of genome vs. genome
+sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
