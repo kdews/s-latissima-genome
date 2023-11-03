@@ -113,29 +113,62 @@ dotFilt <- function(df_name, df_list, df2_list) {
 # Dotplots
 dotPlot <- function(df_name, df_list) {
   df <- df_list[[df_name]]
+  # sub1 <- levels(df$tName)[1:5]
   df <- df %>%
+    # filter(tName %in% sub1) %>%
     group_by(tName) %>%
     arrange(tStart, qStart) %>%
     mutate(qName = factor(qName, levels = unique(qName))) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(Zeros = 0)
+  # df <- df %>%
+  #   group_by(qName) %>%
+  #   arrange(qStart, tStart) %>%
+  #   mutate(tName = factor(tName, levels = unique(tName))) %>%
+  #   ungroup()
   target <- getGen(df_name, "target")
+  target_nice <- gsub("_", " ", target)
   query <- getGen(df_name, "query")
+  query_nice <- gsub("_", " ", query)
   fname <- paste0(df_name, "_dotplot.png")
   p <- ggplot(data = df,
-              mapping = aes(x = qStart, y = tStart, color = strand)) +
-    # geom_point() +
-    geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
+              # mapping = aes(x = qStart, y = tStart, color = strand)) +
+              mapping = aes(x = tStart, y = qStart, color = strand)) +
+    # xlab(query_nice) +
+    # ylab(target_nice) +
+    xlab(target_nice) +
+    ylab(query_nice) +
+    labs(title = "Genome synteny by scaffold") +
+    # geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
+    geom_segment(mapping = aes(xend = tEnd, yend = qEnd),
                  linewidth = 2, lineend = "round") +
-    facet_grid(cols = vars(qName), rows = vars(tName),
+    geom_point(mapping = aes(x = tSize, y = qSize),
+               alpha = 0) +
+    geom_point(mapping = aes(x = Zeros, y = Zeros),
+               alpha = 0) +
+    # facet_grid(cols = vars(qName), rows = vars(tName),
+    facet_grid(cols = vars(tName), rows = vars(qName),
                switch = "both",
                space = "free",
                scale = "free",
                as.table = F) +
     theme_classic() +
     theme(axis.ticks = element_blank(),
-          axis.text = element_blank())
+          axis.text = element_blank(),
+          axis.title = element_text(size = rel(2), face = "italic"),
+          legend.title = element_text(size = rel(2)),
+          legend.text = element_text(size = rel(2)),
+          plot.title = element_text(size = rel(4)),
+          strip.clip = "off",
+          panel.border = element_rect(color = "grey", fill = NA),
+          panel.spacing = unit(0, "lines"),
+          strip.text.x.bottom = element_text(angle = 25),
+          strip.text.y.left = element_text(angle = 25),
+          strip.background.x = element_rect(color = NA,  fill=NA),
+          strip.background.y = element_rect(color = NA,  fill=NA)) +
+    coord_cartesian(clip="off")
   showtext_opts(dpi = 300)
-  ggsave(filename = fname, plot = p, width = 40, height = 15, units = "in")
+  ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
   showtext_opts(dpi = 100)
 }
 
@@ -192,18 +225,6 @@ lapply(names(psl_mats), heatPsl, psl_mats)
 # Subset data for dotplots
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
-# sub_tnames <- levels(psl_dot[[2]]$tName)[1:10]
-# sub_tnames <- levels(psl_dot[[2]]$tName)[10:20]
-# sub_tnames <- levels(psl_dot[[2]]$tName)[20:30]
-# df_sub <- psl_dot[[3]] %>%
-#   # filter(tName %in% sub_tnames) %>%
-#   # filter(tName %in% "scaffold_1") %>%
-#   group_by(tName) %>%
-#   arrange(tStart, qStart) %>%
-#   mutate(qName = factor(qName, levels = unique(qName))) %>%
-#   ungroup()
-
-# dotPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", df_sub)
-
 # Dotplots of genome vs. genome
 sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
+# dotPlot(names(psl_dot)[2], psl_dot)
