@@ -78,7 +78,6 @@ matPsl <- function(df_name, df_list) {
                                  values_from = qPercent,
                                  values_fill = 0) %>%
                      column_to_rownames(var = "qName"))
-                     # select(any_of(contig_ids[[target]][["ID"]])))
   return(mat)
 }
 # Plot heatmap of given matrix
@@ -108,67 +107,114 @@ dotFilt <- function(df_name, df_list, df2_list) {
   df_sub <- df[,subset_cols]
   df_sub <- df_sub %>%
     filter(paste0(qName, tName) %in% match_list)
-  return(df_sub)
-}
-# Dotplots
-dotPlot <- function(df_name, df_list) {
-  df <- df_list[[df_name]]
-  # sub1 <- levels(df$tName)[1:5]
-  df <- df %>%
-    # filter(tName %in% sub1) %>%
+  df_sub <- df_sub %>%
     group_by(tName) %>%
     arrange(tStart, qStart) %>%
     mutate(qName = factor(qName, levels = unique(qName))) %>%
-    ungroup() %>%
-    mutate(Zeros = 0)
-  # df <- df %>%
-  #   group_by(qName) %>%
-  #   arrange(qStart, tStart) %>%
-  #   mutate(tName = factor(tName, levels = unique(tName))) %>%
-  #   ungroup()
+    ungroup()
+  return(df_sub)
+}
+# Dotplots
+dotPlot <- function(df_name, df_list, filter_ids = NULL) {
+  df <- df_list[[df_name]]
+  if (missing(filter_ids)) {
+  } else {
+    if (all(filter_ids %in% df$tName)) {
+      df <- df %>%
+        filter(tName %in% filter_ids)
+    } else {
+      print(filter_ids %in% df$tName)
+      print(filter_ids)
+      print(class(filter_ids))
+      print(unique(df$tName))
+      print(class(df$tName))
+      stop("Error: ensure all 'filter_ids' are present in 'tName' column.")
+    }
+  } 
+  df <- df %>%
+    mutate(Zeros = 0,
+           qSize = qSize/1000000,
+           qStart = qStart/1000000,
+           qEnd = qEnd/1000000,
+           tSize = tSize/1000000,
+           tStart = tStart/1000000,
+           tEnd = tEnd/1000000)
   target <- getGen(df_name, "target")
   target_nice <- gsub("_", " ", target)
   query <- getGen(df_name, "query")
   query_nice <- gsub("_", " ", query)
   fname <- paste0(df_name, "_dotplot.png")
   p <- ggplot(data = df,
-              # mapping = aes(x = qStart, y = tStart, color = strand)) +
               mapping = aes(x = tStart, y = qStart, color = strand)) +
-    # xlab(query_nice) +
-    # ylab(target_nice) +
-    xlab(target_nice) +
-    ylab(query_nice) +
-    labs(title = "Genome synteny by scaffold") +
-    # geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
     geom_segment(mapping = aes(xend = tEnd, yend = qEnd),
-                 linewidth = 2, lineend = "round") +
+                 # linewidth = 2,
+                 lineend = "round") +
     geom_point(mapping = aes(x = tSize, y = qSize),
                alpha = 0) +
     geom_point(mapping = aes(x = Zeros, y = Zeros),
                alpha = 0) +
-    # facet_grid(cols = vars(qName), rows = vars(tName),
     facet_grid(cols = vars(tName), rows = vars(qName),
                switch = "both",
                space = "free",
                scale = "free",
                as.table = F) +
+    coord_cartesian(clip="off") +
     theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_blank(),
-          axis.title = element_text(size = rel(2), face = "italic"),
-          legend.title = element_text(size = rel(2)),
-          legend.text = element_text(size = rel(2)),
-          plot.title = element_text(size = rel(4)),
-          strip.clip = "off",
-          panel.border = element_rect(color = "grey", fill = NA),
-          panel.spacing = unit(0, "lines"),
-          strip.text.x.bottom = element_text(angle = 25),
-          strip.text.y.left = element_text(angle = 25),
+    theme(axis.title = element_text(face = "italic"),
+          # strip.clip = "off",
+          strip.placement = "outside",
+          strip.text.y.left = element_text(angle = 0),
           strip.background.x = element_rect(color = NA,  fill=NA),
           strip.background.y = element_rect(color = NA,  fill=NA)) +
-    coord_cartesian(clip="off")
+    xlab("") +
+    ylab("")
+  if (missing(filter_ids)) {
+    p <- p +
+      xlab(target_nice) +
+      ylab(query_nice) +
+      labs(title = "Genome synteny by scaffold") +
+      theme(axis.ticks = element_blank(),
+            axis.text = element_blank(),
+            # axis.title = element_text(size = rel(3)),
+            # legend.title = element_text(size = rel(3)),
+            # legend.text = element_text(size = rel(3)),
+            # plot.title = element_text(size = rel(4)),
+            panel.border = element_rect(color = "grey", fill = NA),
+            panel.spacing = unit(0, "lines"),
+            strip.text.x.bottom = element_text(size = rel(0.75), angle = 90),
+            strip.text.y.left = element_text(size = rel(0.75), angle = 0))
+            # strip.text.x.bottom = element_text(size = rel(2), angle = 45),
+            # strip.text.y.left = element_text(size = rel(2), angle = 0))
+  }
+  # showtext_opts(dpi = 300)
+  # ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
+  # showtext_opts(dpi = 100)
+  return(p)
+}
+# Segmented synteny plots
+sepDots <-  function(df_name, df_list) {
+  df <- df_list[[df_name]]
+  tIds <- levels(df$tName)[levels(df$tName) %in% unique(df$tName)]
+  sep_list <- list()
+  for (i in 1:length(tIds)) {
+    p <- dotPlot(df_name, df_list, tIds[i])
+    sep_list[[i]] <- p
+  }
+  return(sep_list)
+}
+# Plot list of ggplots in one figure
+plotList <- function(plot_list, ttl) {
+  p <- ggarrange(plotlist = plot_list, common.legend = T)
+  p <- annotate_figure(p, fig.lab = ttl)
+  return(p)
+}
+# Function to use ggsave on plots
+plotSave <- function(plot_name, plot_list, width, height) {
+  p <- plot_list[[plot_name]]
+  fname <- paste0(plot_name, "_dotplot.png")
   showtext_opts(dpi = 300)
-  ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
+  ggsave(filename = fname, plot = p, 
+         width = width, height = height, units = "in")
   showtext_opts(dpi = 100)
 }
 
@@ -221,10 +267,26 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 # Heatmaps of genome vs. genome
-lapply(names(psl_mats), heatPsl, psl_mats)
+# lapply(names(psl_mats), heatPsl, psl_mats)
 # Subset data for dotplots
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
 # Dotplots of genome vs. genome
-sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-# dotPlot(names(psl_dot)[2], psl_dot)
+p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
+# seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
+# sep_list <- sapply(seps, plotList, "Genome synteny by contig", simplify = F)
+sapply(names(p_list), plotSave, p_list, 10, 10, simplify = F)
+plotSave(names(p_list)[2], p_list, 10, 15)
+# sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
+test <- psl_dot[[1]] %>%
+  filter(tName == "JABAKD010000001.1")
+ggplot(data = test) +
+  facet_grid(cols = vars(tName), rows = vars(qName)) +
+  geom_segment(aes(x = 0, y = 0, xend = tSize, yend = 0)) +
+  geom_segment(aes(x = 0, y = 1, xend = qSize, yend = 1)) +
+  geom_segment(aes(x = tStart, y = 0, xend = qStart, yend = 1, color = strand),
+               alpha = 0.2)
+
+# showtext_opts(dpi = 300)
+# ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
+# showtext_opts(dpi = 100)
