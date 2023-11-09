@@ -145,15 +145,15 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
   query_nice <- gsub("_", " ", query)
   fname <- paste0(df_name, "_dotplot.png")
   p <- ggplot(data = df,
-              mapping = aes(x = tStart, y = qStart, color = strand)) +
-    geom_segment(mapping = aes(xend = tEnd, yend = qEnd),
+              mapping = aes(x = qStart, y = tStart, color = strand)) +
+    geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
                  # linewidth = 2,
                  lineend = "round") +
-    geom_point(mapping = aes(x = tSize, y = qSize),
+    geom_point(mapping = aes(x = qSize, y = tSize),
                alpha = 0) +
     geom_point(mapping = aes(x = Zeros, y = Zeros),
                alpha = 0) +
-    facet_grid(cols = vars(tName), rows = vars(qName),
+    facet_grid(cols = vars(qName), rows = vars(tName),
                switch = "both",
                space = "free",
                scale = "free",
@@ -170,8 +170,8 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
     ylab("")
   if (missing(filter_ids)) {
     p <- p +
-      xlab(target_nice) +
-      ylab(query_nice) +
+      xlab(query_nice) +
+      ylab(target_nice) +
       labs(title = "Genome synteny by scaffold") +
       theme(axis.ticks = element_blank(),
             axis.text = element_blank(),
@@ -179,7 +179,7 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
             # legend.title = element_text(size = rel(3)),
             # legend.text = element_text(size = rel(3)),
             # plot.title = element_text(size = rel(4)),
-            panel.border = element_rect(color = "grey", fill = NA),
+            panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.1),
             panel.spacing = unit(0, "lines"),
             strip.text.x.bottom = element_text(size = rel(0.75), angle = 90),
             strip.text.y.left = element_text(size = rel(0.75), angle = 0))
@@ -203,8 +203,10 @@ sepDots <-  function(df_name, df_list) {
   return(sep_list)
 }
 # Plot list of ggplots in one figure
-plotList <- function(plot_list, ttl) {
-  p <- ggarrange(plotlist = plot_list, common.legend = T)
+plotList <- function(plot_name, plot_list) {
+  plots <- plot_list[[plot_name]]
+  ttl <- gsub("_", " ", plot_name)
+  p <- ggarrange(plotlist = plots, common.legend = T)
   p <- annotate_figure(p, fig.lab = ttl)
   return(p)
 }
@@ -273,19 +275,20 @@ psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
 # Dotplots of genome vs. genome
 p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-# seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
-# sep_list <- sapply(seps, plotList, "Genome synteny by contig", simplify = F)
-sapply(names(p_list), plotSave, p_list, 10, 10, simplify = F)
-plotSave(names(p_list)[2], p_list, 10, 15)
+seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
+sep_list <- sapply(names(seps), plotList, seps, simplify = F)
+sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
 # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
-test <- psl_dot[[1]] %>%
-  filter(tName == "JABAKD010000001.1")
-ggplot(data = test) +
-  facet_grid(cols = vars(tName), rows = vars(qName)) +
-  geom_segment(aes(x = 0, y = 0, xend = tSize, yend = 0)) +
-  geom_segment(aes(x = 0, y = 1, xend = qSize, yend = 1)) +
-  geom_segment(aes(x = tStart, y = 0, xend = qStart, yend = 1, color = strand),
-               alpha = 0.2)
+
+
+# test <- psl_dot[[1]] %>%
+#   filter(tName == "JABAKD010000001.1")
+# ggplot(data = test) +
+#   facet_grid(cols = vars(tName), rows = vars(qName)) +
+#   geom_segment(aes(x = 0, y = 0, xend = tSize, yend = 0)) +
+#   geom_segment(aes(x = 0, y = 1, xend = qSize, yend = 1)) +
+#   geom_segment(aes(x = tStart, y = 0, xend = qStart, yend = 1, color = strand),
+#                alpha = 0.2)
 
 # showtext_opts(dpi = 300)
 # ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
