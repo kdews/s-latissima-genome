@@ -10,10 +10,16 @@
 # Print date and time
 date
 
-# Load conda and BUSCO env
+# Load conda
 cond=~/.conda_for_sbatch.sh
-[[ -a "$cond" ]] && source "$cond" || \
-{ echo "Error on source of $cond"; exit 1; }
+if [[ -a "$cond" ]]
+then
+  source "$cond"
+else
+  echo "Error on source of $cond"
+  exit 1
+fi
+# Load BUSCO env
 conda activate busco
 # Load GNU Parallel
 module load parallel

@@ -22,8 +22,13 @@ fi
 
 # Load conda
 cond=~/.conda_for_sbatch.sh
-[[ -a "$cond" ]] && source "$cond" || \
-{ echo "Error on source of $cond"; exit 1; }
+if [[ -a "$cond" ]]
+then
+  source "$cond"
+else
+  echo "Error on source of $cond"
+  exit 1
+fi
 
 # Load multiqc
 conda activate multiqc
