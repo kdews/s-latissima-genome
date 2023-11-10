@@ -5,16 +5,31 @@ if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Runs BUSCO and QUAST on list of genome assemblies.
-Usage: bash genome_stats.sbatch <script.sbatch>
+Usage: bash genome_stats.sbatch <assembly_file>
 Requires: 
   - BUSCO (https://busco.ezlab.org)
   - QUAST (https://quast.sourceforge.net)"
   exit 0
 fi
 
+# Iterate through all assemblies in list
+if [[ -z "$1" ]]
+then
+  assembly_file="assemblies/pretty_names.txt"
+else
+  assembly_file="$1"
+fi
 
-# Iterate through all genome assemblies in directory
-for assembly in $(ls assemblies | grep "\.fasta")
+assembly_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}') )
+script_dir="s-latissima-genome"
+# script_list=( "aug_busco.sbatch" "quast.sbatch" "busco_compare.sbatch")
+script_list=( "quast.sbatch" )
+# Prepend script directory to all script names
+script_list=( "${script_list[@]/#/$script_dir/}" )
+
+# # Iterate through all genome assemblies in directory
+# for assembly in $(ls assemblies | grep "\.fasta")
+for assembly in "${assembly_list[@]}"
 do
   if [[ -f assemblies/"$assembly" ]]
   then
@@ -23,7 +38,7 @@ do
     echo "Error: assembly $assembly not found."
     exit 1
   fi
-  for script in "$@"
+  for script in "${script_list[@]}"
   do
     if [[ -f "$script" ]]
     then

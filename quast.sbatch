@@ -9,6 +9,16 @@
 # Print date and time
 date
 
+# Help message
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+then
+  echo "\
+Runs QUAST on a given assembly 
+Usage: sbatch quast.sbatch <assembly.fasta>
+Requires: QUAST (https://quast.sourceforge.net)"
+  exit 0
+fi
+
 # Load conda and BUSCO env
 cond=~/.conda_for_sbatch.sh
 if [[ -a "$cond" ]]
@@ -22,15 +32,6 @@ conda activate quast
 # Load GNU Parallel
 module load parallel
 
-# Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
-then
-  echo "\
-Runs QUAST on a given assembly 
-Usage: sbatch quast.sbatch <assembly.fasta>
-Requires: QUAST (https://quast.sourceforge.net)"
-  exit 0
-fi
 
 
 # Define variables
@@ -43,7 +44,7 @@ nthrd="$SLURM_CPUS_PER_TASK"
 out="${job}_${assembly_no_ext}"
 
 # quast="quast --large -k -b --report-all-metrics --threads $nthrd -o $out"
-quast="quast --large -k -b --threads $nthrd -o $out"
+quast="quast --large -k --threads $nthrd -o $out"
 cmd="$quast $assembly"
 echo "$cmd"
 $cmd
