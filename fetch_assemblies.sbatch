@@ -18,25 +18,12 @@ Requires: NCBI Datasets CLI (https://www.ncbi.nlm.nih.gov/datasets/docs/v2/downl
   exit 0
 fi
 
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
-# # Load unzip module
-# module load gcc/11.3.0 gcc/12.3.0 gcc/8.3.0 intel/19.0.4 unzip
+# Load curl module
+module purge
+module load gcc/12.3.0 curl/8.1.2
 
-# Input accession(s)
-if [[ -z "$1" ]]
-then
-  portal_file="assemblies/portal_list.txt"
-else
-  portal_file="$1"
-fi
+# Input portal(s)
+portal_file="assemblies/portal_names.txt"
 if [[ -f "$portal_file" ]]
 then
   portal_list=( $(cat "$portal_file") )
@@ -44,30 +31,57 @@ else
   echo "Error: $portal_file not found."
   exit 1
 fi
+# Input username and password
+if [[ "$#" -eq 0 ]]
+then
+  echo "Error: username and password requred."
+  exit 1
+else
+  user="$1"
+  pass="$2"
+fi
+# JGI login
+login="jgi_login"
+user="$1"
+pass="$2"
+opts="-L --data-urlencode login=$user --data-urlencode password=$pass -c $login"
+if [[ -f "$login" ]]
+then
+  echo "Using login file: $login"
+else
+  cmd="curl $opts https://signon.jgi.doe.gov/signon/create"
+  echo "$cmd > /dev/null"
+  $cmd > /dev/null
+fi
+# Base JGI url
+u1="https://genome.jgi.doe.gov/portal/ext-api/downloads/get-directory?organism="
 # Output directory
 outdir="assemblies"
 mkdir -p "$outdir"
 
 # Download both genome and GFF3 feature file for each accession
-for acc in "${portal_list[@]}"
+for portal in "${portal_list[@]}"
 do
-  curl 'https://signon.jgi.doe.gov/signon/create' --data-urlencode 'login=kdeweese@usc.edu' --data-urlencode 'password=That1214!' -c cookies > /dev/null
-  curl 'https://genome.jgi.doe.gov/portal/ext-api/downloads/get-directory?organism=Ectsil1' -b cookies > Ectsil1.xml
-  fname="${outdir}/${acc}.zip"
-  cmd="datasets download genome accession $acc $opts --filename $fname"
+  # XML file
+  xml="${outdir}/${portal}.xml"
+  cmd="curl -L -b $login -o $xml ${u1}${portal}"
   echo "$cmd"
   $cmd
-  newdir="${outdir}/${acc}"
-  cmd="mkdir -p $newdir"
+  # Masked genome file
+  ptn="Repeatmasked\.fasta.*fileType=\"Assembly\""
+  u2=$(grep "$ptn" "$xml" | sed 's/.* url="//g' | sed 's/".*//g' | sed 's/amp;//g')
+  u2="https://genome.jgi.doe.gov${u2}"
+  out="${outdir}"/$(basename "$u2")
+  cmd="curl -L -b $login -o $out $u2"
   echo "$cmd"
   $cmd
-  cmd="unzip $fname -d $newdir"
+  # Feature file
+  ptn="GeneCatalog.*gff3.*fileType=\"Annotation\""
+  u3=$(grep "$ptn" "$xml" | sed 's/.* url="//g' | sed 's/".*//g' | sed 's/amp;//g')
+  u3="https://genome.jgi.doe.gov${u3}"
+  out="${outdir}"/$(basename "$u3")
+  cmd="curl -L -b $login -o $out $u3"
   echo "$cmd"
   $cmd
-  # cmd="mv ${newdir}/ncbi_dataset/data/${acc}/* $outdir"
-  # echo "$cmd"
-  # $cmd
-  # cmd="rm -r $newdir"
-  # echo "$cmd"
-  # $cmd
 done
+
