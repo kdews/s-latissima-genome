@@ -68,8 +68,8 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 }
 
 # Read in data
-species_tab <- read.table(species_file)
-colnames(species_tab) <- c("Species", "Assembly")
+species_tab <- read.table(species_file, sep = "\t")
+colnames(species_tab) <- c("Species", "Assembly", "Annotation")
 species_tab$Species <- gsub("_"," ", species_tab$Species)
 species <- species_tab$Species
 fns <- paste0(species_tab$Assembly, ".fai")
@@ -89,8 +89,9 @@ idx <- idx %>%
   mutate(`Length (Mb)`= Length/1000000) %>%
   select(ID, `Length (Mb)`, Species) %>%
   group_by(Species) %>%
-  arrange(desc(`Length (Mb)`), .by_group = T) %>%
-  filter(Species != "Saccharina japonica")
+  arrange(desc(`Length (Mb)`), .by_group = T) 
+  # %>%
+  # filter(Species != "Saccharina japonica")
 # Summarize data frame
 sum_idx <- sumDf(idx)
 # Filter contigs/scaffolds by size (>4 Mb)

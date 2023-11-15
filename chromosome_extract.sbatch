@@ -22,8 +22,12 @@ fi
 r_script="s-latissima-genome/faidx_plots.R"
 for_seqtk="for_seqtk.txt"
 species_file="$1"
-[[ -z "$species_file" ]] && species_file="species.txt"
-fastas=($(awk '{print $2}' "$species_file"))
+if [[ -z "$species_file" ]] 
+then
+    species_file="assemblies/species_table.txt"
+fi
+
+fastas=( $(awk '{print $2}' "$species_file") )
 # Load samtools conda env
 conda activate samtools
 samtools --version
@@ -59,9 +63,9 @@ fi
 # Load conda environment for seqtk
 conda activate seqtk
 # Create subsetted assembly FASTAs
-assemblies=($(awk -F '\t' '{print $2}' "$for_seqtk"))
-contig_lists=($(awk -F '\t' '{print $3}' "$for_seqtk"))
-for i in $(seq 0 $((${#assemblies[@]}-1)))
+assemblies=( $(awk -F '\t' '{print $2}' "$for_seqtk") )
+contig_lists=( $(awk -F '\t' '{print $3}' "$for_seqtk") )
+for i in "${!assemblies[@]}"
 do
     out="${contig_lists[i]%.*}.fasta"
     echo "$out"
