@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH -J chromosome_extract
-#SBATCH --mem=100mb
+#SBATCH -p main
+#SBATCH --mem=2gb
 #SBATCH --time=01:00:00
 #SBATCH -o %x.log
 
@@ -21,13 +22,21 @@ fi
 # Input
 r_script="s-latissima-genome/faidx_plots.R"
 for_seqtk="for_seqtk.txt"
+# Species table file
 species_file="$1"
+# Species of interest
+spc_int="$2"
 if [[ -z "$species_file" ]] 
 then
     species_file="assemblies/species_table.txt"
 fi
+if [[ -z "$spc_int" ]] 
+then
+    spc_int="Saccharina_latissima"
+fi
 
-fastas=( $(awk '{print $2}' "$species_file") )
+# fastas=( $(awk '{print $2}' "$species_file") )
+mapfile -t fastas < <(awk -F '\t' '{print $2}' "$species_file")
 # Load samtools conda env
 conda activate samtools
 samtools --version
@@ -54,7 +63,7 @@ if [[ -f "$for_seqtk" ]]
 then
     echo "Found file $for_seqtk, skipping Rscript step."
 else
-    cmd="Rscript --vanilla $r_script $species_file $for_seqtk"
+    cmd="Rscript --vanilla $r_script $species_file $for_seqtk $spc_int"
     echo "$cmd"
     $cmd
 fi
