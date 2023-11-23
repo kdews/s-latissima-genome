@@ -7,6 +7,16 @@
 # Print date and time
 date
 
+# Help message
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+then
+  echo "\
+Generates plot(s) with conda-installed BUSCO generate_plot.py.
+Usage: sbatch busco_compare.sbatch <assembly_file>
+Requires: BUSCO (https://busco.ezlab.org)"
+  exit 0
+fi
+
 # Load conda
 cond=~/.conda_for_sbatch.sh
 if [[ -a "$cond" ]]
@@ -17,80 +27,65 @@ else
   exit 1
 fi
 
-# Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
-then
-  echo "\
-Generates plot(s) with conda-installed BUSCO generate_plot.py.
-Usage: sbatch busco_compare.sbatch
-Requires: BUSCO (https://busco.ezlab.org)"
-  exit 0
-fi
-
-
 # Define variables
-[[ -z $1 ]] && sum_dir="busco_summaries" || sum_dir="$1"
-lineages=("eukaryota_odb10" "stramenopiles_odb10" "quast")
-
+R_mod_file="s-latissima-genome/modules_for_Rscript.txt"
+sum_dir="busco_summaries"
+lineages=("eukaryota_odb10" "stramenopiles_odb10")
+if [[ -z "$1" ]]
+then
+  assembly_file="assemblies/species_table.txt"
+else
+  assembly_file="$1"
+fi
+if [[ -f "$assembly_file" ]]
+then
+  mapfile -t assembly_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
+else
+  echo "Error: assembly file ($assembly_file) not found."
+fi
 
 # Compile BUSCO summary text files (if needed)
 mkdir -p "$sum_dir"
 for lineage in "${lineages[@]}"
 do
-  wd="${sum_dir}/${lineage}/"
+  wd="${sum_dir}/${lineage}"
   mkdir -p "$wd"
   # Clear any old text files from working directory
-  rm ${wd}/*.txt
-  if [[ -n $(ls *${lineage}*/short_summary*.txt) ]]
-  then
-    cmd="cp -u *${lineage}*/short_summary*.txt $wd"
-  elif [[ -n $(ls *${lineage}*/busco_stats/short_summary*.txt) ]]
-  then
-    cmd="cp -u *${lineage}*/busco_stats/short_summary*.txt $wd"
-  else
-    echo "Error, $lineage BUSCO summary file not found."
-    exit 1
-  fi
-  echo "$cmd"
-  $cmd
-  cd "$wd"
-  for file in $(ls *.txt)
+  rm "${wd}"/*.txt
+  # Copy BUSCO results for each lineage and assembly into summary directory
+  for assembly in "${assembly_list[@]}"
   do
-    new="${file//*short_summary_/}"
-    new="${new//*aug_busco_/}"
-    # new="${new//Macpyr2/Mac_pyr2}"
-    # new="$(echo $new | awk -F_ '{print $1,$2}' | sed 's/ /_/g')"
-    if [[ "$lineage" == "quast" ]]
+    assembly_base=$(basename "${assembly%.*}")
+    busco_base="aug_busco_${assembly_base}_${lineage}"
+    sum_file="$busco_base/short_summary.specific.${lineage}.${busco_base}.txt"
+    # Clean up BUSCO summary filename
+    new="${sum_file//*aug_busco_/}"
+    new_file="short_summary.specific.${lineage}.${new}"
+    if [[ -f "$sum_file" ]]
     then
-      cmd="mv $file short_summary_${new}"
+      cmd="cp -u $sum_file ${wd}/${new_file}"
+      echo "$cmd"
+      $cmd
     else
-      cmd="mv $file short_summary.specific.${lineage}.${new}"
+      echo "Error: $lineage BUSCO summary file not found for $assembly_base"
+      exit 1
     fi
-    echo "$cmd"
-    $cmd
   done
-  cd ../..
-done
-
-
-# For directory in $sum_dir, generate BUSCO graph
-for dir in $(ls "$sum_dir")
-do
-  wd="${sum_dir}/${dir}"
+  # Run BUSCO's generate_plot.py on each lineage
+  # Activate BUSCO conda env
+  conda activate busco
   cmd="generate_plot.py -wd $wd --no_r"
-  if [[ "$dir" == "quast" ]]
-  then
-    conda activate busco_for_quast
-  else
-    conda activate busco
-  fi
   echo "$cmd"
   $cmd
-  # Clean up BUSCO graph
-  # module load gcc/11.3.0 openblas/0.3.20 r/4.2.2
-  mods="$(cat ${scripts_dir}/modules_for_Rscript.txt)"
-  module load $mods
-  cmd="Rscript s-latissima-genome/pretty_busco.R $wd"
-  echo $cmd
+  # Deactivate env
+  conda activate
+  # Clean up BUSCO graphs
+  # Load modules for Rscript
+  IFS=" " read -r -a R_mods <<< "$(cat $R_mod_file)"
+  module load "${R_mods[@]}"
+  cmd="Rscript s-latissima-genome/pretty_busco.R $wd $assembly_file"
+  echo "$cmd"
   $cmd
+  # Unload modules
+  module purge
 done

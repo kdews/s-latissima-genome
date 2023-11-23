@@ -6,18 +6,25 @@ if (require(showtext, quietly = TRUE)) {
   if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
 }
 # Import files
-if (length(commandArgs(trailingOnly = TRUE))>0) {
+if (interactive()) {
+  setwd("/scratch2/kdeweese/latissima/genome_stats")
+  line_args <- c("busco_summaries/eukaryota_odb10",
+                 "assemblies/species_table.txt")
+} else if (length(commandArgs(trailingOnly = TRUE)) == 2) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {
-  line_args <- c("busco_summaries/eukaryota_odb10")
+  stop("2 positional arguments expected.")
 }
 wd <- line_args[1]
+spec_file <- line_args[2]
 lineage <- unlist(strsplit(wd, "/"))[2]
 # Source BUSCO-generated R script
 source(paste(wd, "busco_figure.R", sep = "/"))
 # Read table of species names and FASTA file names
-spec_names <- read.table("assemblies/pretty_names.txt", sep = "\t")
+spec_names <- read.table(spec_file, sep = "\t")[,1:2]
 names(spec_names) <- c("Species", "my_species")
+# Wrap species names for plot
+spec_names$Species <- str_wrap(spec_names$Species, width = 20)
 
 ## Data
 # Strip lineage names from species
@@ -25,7 +32,7 @@ lvls <- gsub(paste0("_", lineage), "", levels(df$my_species))
 df$my_species <- factor(gsub(paste0("_", lineage), "", df$my_species),
                         levels = lvls)
 # Match FASTA file names to BUSCO species names for merge
-spec_names$my_species <- gsub("\\..*", "", spec_names$my_species)
+spec_names$my_species <- tools::file_path_sans_ext(basename(spec_names$my_species))
 spec_names$my_species <- factor(spec_names$my_species, levels = lvls)
 df <- merge(df, spec_names, sort = FALSE)
 # Labels for figure legend
@@ -74,7 +81,7 @@ busc_plot <- ggplot(data = df,
         plot.subtitle = element_text(hjust = 0.5),
         legend.position = "top",
         legend.title = element_blank(),
-        text = element_text(size = 16),
+        text = element_text(size = 15),
         axis.text = element_text(color = "black"),
         axis.text.y = element_text(face = "italic")) +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE))

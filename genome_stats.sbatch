@@ -21,14 +21,16 @@ else
 fi
 if [[ -f "$assembly_file" ]]
 then
-  assembly_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}') )
-  annot_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}') )
+  # assembly_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}') )
+  mapfile -t assembly_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
+  # annot_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}') )
+  mapfile -t annot_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}')
 else
   echo "Error: assembly file ($assembly_file) not found."
 fi
 script_dir="s-latissima-genome"
-script_list=( "aug_busco.sbatch" "quast.sbatch" )
-# script_list=( "busco_compare.sbatch" )
+# script_list=( "aug_busco.sbatch" "quast.sbatch" )
+script_list=( "busco_compare.sbatch" )
 # Prepend script directory to all script names
 script_list=( "${script_list[@]/#/$script_dir/}" )
 
@@ -56,7 +58,7 @@ do
       script_no_ext=$(basename "${script%.*}")
       if [[ "$script_no_ext" == "busco_compare" ]]
       then
-        submission="sbatch $script busco_summaries"
+        submission="sbatch $script $assembly_file"
         echo "$submission"
         $submission
         exit 0

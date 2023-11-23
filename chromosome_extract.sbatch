@@ -35,12 +35,11 @@ then
     spc_int="Saccharina_latissima"
 fi
 
-# fastas=( $(awk '{print $2}' "$species_file") )
-mapfile -t fastas < <(awk -F '\t' '{print $2}' "$species_file")
 # Load samtools conda env
 conda activate samtools
 samtools --version
 # Run samtools index tool on each FASTA
+mapfile -t fastas < <(awk -F '\t' '{print $2}' "$species_file")
 for fasta in "${fastas[@]}"
 do
     if [[ -f "${fasta}.fai" ]]
@@ -72,8 +71,8 @@ fi
 # Load conda environment for seqtk
 conda activate seqtk
 # Create subsetted assembly FASTAs
-assemblies=( $(awk -F '\t' '{print $2}' "$for_seqtk") )
-contig_lists=( $(awk -F '\t' '{print $3}' "$for_seqtk") )
+mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$for_seqtk")
+mapfile -t contig_lists < <(awk -F '\t' '{print $3}' "$for_seqtk")
 for i in "${!assemblies[@]}"
 do
     out="${contig_lists[i]%.*}.fasta"
