@@ -9,14 +9,14 @@ sbatch fetch_assemblies.sbatch <portal_list> [username] [password]
 # Give pre-generated curl login file for JGI
 sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
 ```
-Upon successful download, output directory ```assemblies/``` and ```assembly_file``` (default: ```assemblies/species_table.txt```) will be created.
+Upon successful download, output directory ```assemblies/``` and ```<assembly_file>``` (default: ```assemblies/species_table.txt```) will be created.
 Assembly file format:
 ```
 Species_name	Genome_PATH	Annotation_PATH
 ```
 
 ## 2. Genome scoring with BUSCO and QUAST
-Run BUSCO and QUAST on each assembly listed in ```assembly_file```:
+Run BUSCO and QUAST on each assembly listed in ```<assembly_file>```:
 ```
 bash genome_stats.sh <assembly_file> aug_busco.sbatch quast.sbatch
 ```
