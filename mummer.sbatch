@@ -31,9 +31,9 @@ Aligns with MUMmer's NUCmer in two modes:
 ...and generates a dotplot of the alignment.
 Usage:
   Multi-FASTA mode
-    sbatch -a 0 mummer.sbatch <ref.fasta> <query.fasta>
+    sbatch -a 0 ${SLURM_JOB_NAME}.sbatch <ref.fasta> <query.fasta>
   Single-FASTA mode
-    sbatch -a 1-<int> mummer.sbatch <ref.fasta> <query.fasta> <contig_list.txt>
+    sbatch -a 1-<int> ${SLURM_JOB_NAME}.sbatch <ref.fasta> <query.fasta> <contig_list.txt>
 Requires:
  - seqtk (https://github.com/lh3/seqtk)
  - MUMmer (https://github.com/mummer4/mummer)

@@ -15,7 +15,7 @@ then
 Generates MultiQC report from files in directories named ${prefixes[@]}...,
 where by default prefixes=("busco" "quast").
 
-Usage: sbatch multiqc.sbatch [prefixes]
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch [prefixes]
 Requires: MultiQC (https://multiqc.info)"
   exit 0
 fi

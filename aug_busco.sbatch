@@ -31,7 +31,7 @@ then
   echo "\
 Runs BUSCO on given assembly using eukaryota_odb10 and stramenopiles_odb10
 lineages.
-Usage: sbatch busco_augustus.sbatch <assembly.fasta>
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch <assembly.fasta>
 Requires: BUSCO (https://busco.ezlab.org)"
   exit 0
 fi

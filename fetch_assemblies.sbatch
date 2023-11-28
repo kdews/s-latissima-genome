@@ -9,12 +9,14 @@
 date
 
 # Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 2 ))
 then
   echo "\
 Downloads assembly and associated feature file from given GCA accession(s).
-Usage: sbatch fetch_assemblies.sbatch <portal_list>
-Requires: NCBI Datasets CLI (https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/)"
+Usage:
+  sbatch ${SLURM_JOB_NAME}.sbatch <portal_list> [username] [password]
+  sbatch ${SLURM_JOB_NAME}.sbatch <portal_list> [curl_login_file]
+Requires: curl"
   exit 0
 fi
 
@@ -23,42 +25,36 @@ module purge
 module load gcc/12.3.0 curl/8.1.2
 
 # Input
-# Portal names
-portal_file="assemblies/portal_names.txt"
-if [[ -f "$portal_file" ]]
-then
-  portal_list=( $(cat "$portal_file") )
-else
-  echo "Error: $portal_file not found."
-  exit 1
-fi
 # Username and password or curl login file
 # Default curl login filename
 login="jgi_login"
-if [[ "$#" -eq 0 ]]
+if [[ "$#" -eq 2 ]]
 then
-  echo "Error: provide either username and password or curl login file."
-  exit 1
-elif [[ "$#" -eq 1 ]]
+  portal_file="$1"
+  login="$2"
+  echo "Portal file set to: $portal_file"
+  echo "Curl login file set to: $login"
+elif [[ "$#" -eq 3 ]]
 then
-  echo "Curl login file set to: $1"
-  login="$1"
-  if ! [[ -f "$login" ]]
-  then
-    echo "Error: curl login file ($login) not found."
-    exit 1
-  fi
-elif [[ "$#" -eq 2 ]]
-then
+  portal_file="$1"
+  user="$2"
+  pass="$3"
   echo "Creating curl login file ($login) using given username and password."
-  user="$1"
-  pass="$2"
   # Options for curl login
   log="--data-urlencode login=$user --data-urlencode password=$pass -c $login"
   cmd="curl -L $log https://signon.jgi.doe.gov/signon/create"
   $cmd > /dev/null
 else
   echo "Error: too many positional arguments given."
+  exit 1
+fi
+[[ -f "$login" ]] || { echo "Error: curl login file ($login) not found."; exit 1; }
+# Portal names (assemblies/portal_names.txt)
+if [[ -f "$portal_file" ]]
+then
+  mapfile -t portal_list < <(cat "$portal_file")
+else
+  echo "Error: $portal_file not found."
   exit 1
 fi
 # Base JGI url

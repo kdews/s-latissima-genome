@@ -13,25 +13,54 @@ if(length(commandArgs(trailingOnly = TRUE)) > 0) {
   # Set working dir
   setwd("/scratch2/kdeweese/latissima/genome_stats")
   line_args <- c(
-    "species_chrom.txt",
-    "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
-  )
+    "assemblies/species_table.txt",
+    "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt",
+    "s_lat_alignment.txt"
+    )
 }
 species_file <- line_args[1]
 tree_file <- line_args[2]
+seq_file <- line_args[3]
 # Split filename for output naming
 tree_name <- tools::file_path_sans_ext(basename(tree_file))
 tree_ext <- tools::file_ext(tree_file)
 out_tree <- paste0(tree_name, "_pruned.", tree_ext)
 
 ## Data
-# Import tree and species list
-species <- read.table(species_file)[,1]
+# Import species list
+spc_tab <- read.table(species_file, sep = "\t")
+species <- spc_tab[,1]
+assembs <- spc_tab[,2]
+# Format species to match tree names
+spcFmt <- function(spc) {
+  spc <- unlist(strsplit(spc, " "))[1:2]
+  spc <- paste(spc, collapse = "_")
+  return(spc)
+}
+species <- sapply(species, spcFmt)
+# Output species table (names matched to tree labels)
+spc_tab2 <- data.frame(Species=species, Genome=assembs)
+# Import tree
 t <- read.tree(tree_file)
+# Error if not all species in tree
+if (!(any(species %in% t$tip.label))) {
+  stop("Error: not all species found in tree.")
+}
 # Prune tree
 tp <- keep.tip(t, species)
 write.tree(tp, out_tree)
 print(paste("Pruned tree written to:", out_tree))
+# Generate formatted seqFile for Cactus, i.e.,
+# NEWICK tree
+# name1 path1
+# name2 path2
+# ...
+# nameN pathN
+write.tree(tp, seq_file)
+write.table(spc_tab2, seq_file,
+            append = T, sep = "\t",
+            col.names = F, row.names = F, quote = F)
+print(paste("Cactus-formated seqFile written to:", seq_file))
 
 ## Plot phylogenetic trees
 trees <- list(t, tp)

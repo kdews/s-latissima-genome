@@ -1,38 +1,34 @@
 #!/bin/bash
 
 # Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 2 ))
 then
   echo "\
 Runs BUSCO and QUAST on list of genome assemblies.
-Usage: bash genome_stats.sbatch <assembly_file>
+Usage:
+  bash genome_stats.sh <assembly_file> aug_busco.sbatch quast.sbatch
+  bash genome_stats.sh <assembly_file> busco_compare.sbatch
 Requires: 
   - BUSCO (https://busco.ezlab.org)
   - QUAST (https://quast.sourceforge.net)"
   exit 0
 fi
 
-# List of assemblies
-if [[ -z "$1" ]]
-then
-  assembly_file="assemblies/species_table.txt"
-else
-  assembly_file="$1"
-fi
+# Input
+# List of assemblies (assemblies/species_table.txt)
+assembly_file="$1"
 if [[ -f "$assembly_file" ]]
 then
-  # assembly_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}') )
+  echo "Using assembly file: $assembly_file"
   mapfile -t assembly_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
-  # annot_list=( $(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}') )
   mapfile -t annot_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}')
+  echo "Found ${#assembly_list[@]} assemblies and ${#annot_list[@]} annotations."
 else
   echo "Error: assembly file ($assembly_file) not found."
 fi
-script_dir="s-latissima-genome"
-# script_list=( "aug_busco.sbatch" "quast.sbatch" )
-script_list=( "busco_compare.sbatch" )
-# Prepend script directory to all script names
-script_list=( "${script_list[@]/#/$script_dir/}" )
+# Scripts to run (all positional arguments after first one)
+script_list=("${@:2}")
+echo "Running ${#script_list[@]} scripts: ${script_list[*]}"
 
 # Iterate through given genome assemblies
 for i in "${!assembly_list[@]}"

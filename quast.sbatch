@@ -14,7 +14,7 @@ if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Runs QUAST on a given assembly 
-Usage: sbatch quast.sbatch <assembly.fasta>
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch <assembly.fasta>
 Requires: QUAST (https://quast.sourceforge.net)"
   exit 0
 fi

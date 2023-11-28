@@ -12,7 +12,7 @@ if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Generates plot(s) with conda-installed BUSCO generate_plot.py.
-Usage: sbatch busco_compare.sbatch <assembly_file>
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch <assembly_file>
 Requires: BUSCO (https://busco.ezlab.org)"
   exit 0
 fi
