@@ -36,9 +36,13 @@ Output ```<seqFile>``` formatted for Cactus: ```s_lat_alignment.txt```
 
 ### Run Cactus aligner
 #### Prepare scripts for stepwise pipeline
-
 ```
 sbatch cactus_prepare.sbatch <seqFile>
 ```
+#### Run scripts sequentially
+```
+sbatch cactus_run_prepared.sbatch
+```
 
-### Run scripts sequentially
+### Visualize alignment
+

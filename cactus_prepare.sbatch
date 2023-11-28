@@ -12,8 +12,8 @@ date
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Prepares commands for Cactus alignment of multiple genomes. Can create a Cactus-
-formatted seqFile from a Newick tree and species list, if provided.
+Prepares commands for Cactus alignment of multiple genomes. Requires a Cactus-
+formatted seqFile (Newick tree and species list).
 Usage: sbatch ${SLURM_JOB_NAME}.sbatch <seqFile>
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
@@ -34,93 +34,96 @@ else
   exit 1
 fi
 
-# Input file(s)
-# Default seqFile
-seqFile="s_lat_alignment.txt"
-# If needed, generates formatted seqFile, i.e.,
+# Input
+# Requires Cactus-formatted seqFile, i.e.,
 # NEWICK tree
 #
 # name1 path1
 # name2 path2
 # ...
 # nameN pathN
-if (( $# == 1 ))
+# seqFile: (s_lat_alignment.txt)
+if [[ "$#" -eq 1 ]]
 then
     seqFile="$1"
-    [[ -f $seqFile ]] && echo "Found seqFile: $seqFile"
-elif (( $# == 2 ))
-then
-    species="$1"
-    tree="$2"
-    echo "Species list: $species."
-    echo "Newick tree: $tree"
-    [[ -f $species ]] || { echo "Error: Species list not found."; exit 1; }
-    [[ -f $tree ]] || { echo "Error: Tree not found."; exit 1; }
-    echo "Generating formatted seqFile ($seqFile)..."
-    cp "$tree" "$seqFile"
-    echo "" >> "$seqFile"
-    cat "$species" >> "$seqFile"
-elif [[ -f $seqFile ]]
-then
-    echo "Using default seqFile: $seqFile"
+    if [[ -f "$seqFile" ]]
+    then
+      echo "Using seqFile: $seqFile"
+    else
+      echo "Error: no seqFile found ($seqFile)."
+      exit 1
+    fi
 else
-  echo "Error: no seqFile ($seqFile), tree ($tree) or species list ($species)."
+  echo "Error: one positional argument expected."
   exit 1
 fi
 
-# # Other required inputs
-# js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
-# seqFile_no_ext=$(basename "${seqFile%.*}")
-# hal="${seqFile_no_ext}.hal"
-# outdir="--outDir cactus-steps-output"
-# outseq="--outSeqFile cactus-steps-output/${seqFile}"
-# outhal="--outHal cactus-steps-output/$hal"
-# # Memory (in GB) and CPU options
-# premem=20
-# blastmem=35
-# alnmem=150
-# cpus=14
-# opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
-# opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
-# opts="$opts1 $opts2"
-# cmd_file="cactus_prepare_commands.txt"
+# elif (( $# == 2 ))
+# then
+#     species="$1"
+#     tree="$2"
+#     echo "Species list: $species."
+#     echo "Newick tree: $tree"
+#     [[ -f $species ]] || { echo "Error: Species list not found."; exit 1; }
+#     [[ -f $tree ]] || { echo "Error: Tree not found."; exit 1; }
+#     echo "Generating formatted seqFile ($seqFile)..."
+#     cp "$tree" "$seqFile"
+#     echo "" >> "$seqFile"
+#     cat "$species" >> "$seqFile"
 
-# # Run cactus-prepare
-# cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
-# echo "$cmd"
-# $cmd > $cmd_file
+# Other required inputs
+js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
+seqFile_no_ext=$(basename "${seqFile%.*}")
+hal="${seqFile_no_ext}.hal"
+outdir="--outDir cactus-steps-output"
+outseq="--outSeqFile cactus-steps-output/${seqFile}"
+outhal="--outHal cactus-steps-output/$hal"
+# Memory (in GB) and CPU options
+premem=20
+blastmem=35
+alnmem=150
+cpus=14
+opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
+opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
+opts="$opts1 $opts2"
+cmd_file="cactus_prepare_commands.txt"
 
-# # Split each command into separate SBATCH file in $prep_dir
-# prep_dir="cactus_prepare_scripts"
-# mkdir -p "$prep_dir"
-# commands="$(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')"
-# num=$(echo "$commands" | wc -l)
-# for i in $(seq 1 "$num")
-# do
-#     # Iterate through each command
-#     cmd_text=$(echo "$commands" | sed -n ${i}p)
-#     cmd_name="${i}_${cmd_text%% *}"
-#     cmd_path="${prep_dir}/${cmd_name}.sbatch"
-#     # Default memory allocation
-#     mem=20
-#     # Choose correct memory allocation
-#     [[ $(echo "$cmd_name" | grep "preprocess") ]] && mem="$premem"
-#     [[ $(echo "$cmd_name" | grep "blast") ]] && mem="$blastmem"
-#     [[ $(echo "$cmd_name" | grep "align") ]] && mem="$alnmem"
-#     # Add 10% more memory for overhead
-#     reqmem="$((mem * 10 / 9))G"
-#     # Add 2 cores of overhead
-#     reqcpus="$((cpus + 2))"
-#     echo "Writing $cmd_path"
-#     # Add text to SBATCH file
-#     echo "#!/bin/bash" > "$cmd_path"
-#     echo "#SBATCH -J $cmd_name" >> "$cmd_path"
-#     echo "#SBATCH -o %x.log" >> "$cmd_path"
-#     echo "#SBATCH -t 1-0" >> "$cmd_path"
-#     echo "#SBATCH --mem=$reqmem" >> "$cmd_path"
-#     echo "#SBATCH -c $reqcpus" >> "$cmd_path"
-#     echo "" >> "$cmd_path"
-#     echo "date" >> "$cmd_path"
-#     echo "" >>  "$cmd_path"
-#     echo "$cmd_text" >> "$cmd_path"
-# done
+# Run cactus-prepare
+cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
+echo "$cmd"
+$cmd > $cmd_file
+
+# Split each command into separate SBATCH file in $prep_dir
+prep_dir="cactus_prepare_scripts"
+mkdir -p "$prep_dir"
+commands="$(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')"
+num=$(echo "$commands" | wc -l)
+for i in $(seq 1 "$num")
+do
+    # Iterate through each command
+    cmd_text=$(echo "$commands" | sed -n ${i}p)
+    cmd_name="${i}_${cmd_text%% *}"
+    cmd_path="${prep_dir}/${cmd_name}.sbatch"
+    # Default memory allocation
+    mem=20
+    # Choose correct memory allocation
+    [[ $(echo "$cmd_name" | grep "preprocess") ]] && mem="$premem"
+    [[ $(echo "$cmd_name" | grep "blast") ]] && mem="$blastmem"
+    [[ $(echo "$cmd_name" | grep "align") ]] && mem="$alnmem"
+    # Add 10% more memory for overhead
+    reqmem="$((mem * 10 / 9))G"
+    # Add 2 cores of overhead
+    reqcpus="$((cpus + 2))"
+    echo "Writing $cmd_path"
+    # Add text to SBATCH file
+    echo "#!/bin/bash" > "$cmd_path"
+    echo "#SBATCH -J $cmd_name" >> "$cmd_path"
+    echo "#SBATCH -o %x.log" >> "$cmd_path"
+    echo "#SBATCH -t 1-0" >> "$cmd_path"
+    echo "#SBATCH --mem=$reqmem" >> "$cmd_path"
+    echo "#SBATCH -c $reqcpus" >> "$cmd_path"
+    echo "" >> "$cmd_path"
+    echo "date" >> "$cmd_path"
+    echo "" >>  "$cmd_path"
+    echo "$cmd_text" >> "$cmd_path"
+done
