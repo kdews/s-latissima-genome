@@ -32,7 +32,7 @@ Default [tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mm
 ```
 sbatch prune_tree.sbatch <assembly_file> [tree]
 ```
-Output ```<seqFile>``` formatted for Cactus will be in ```s_lat_alignment.txt```.
+Output ```<seqFile>``` formatted for Cactus: ```s_lat_alignment.txt```
 
 ### Run Cactus aligner
 #### Prepare scripts for stepwise pipeline
