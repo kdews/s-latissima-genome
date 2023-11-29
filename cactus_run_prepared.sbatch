@@ -25,39 +25,62 @@ fi
 check_prior () {
     local ok_mess="Successfully deleted the job store"
     # If already run, take old job ID
-    if [[ -f "$1" ]] && [[ $(grep "$ok_mess" "$1") ]]
+    if [[ -f "$1" ]] && grep -q "$ok_mess" "$1"
     then
-        local id=$(grep "SLURM_JOB_ID" "$logfile" | sed 's/SLURM_JOB_ID = //g')
-        echo "$id"
+      local id
+      id="$(grep "SLURM_JOB_ID" "$logfile" | sed 's/SLURM_JOB_ID = //g')"
+      echo "$id"
+    else
+      echo "no_id"
     fi
 }
 # Function to write sbatch command
 submit () {
+    local part
+    local cmd
     part="$SLURM_JOB_PARTITION"
-    [[ $(echo $* | grep "align") ]] && part="meb_largemem"
+    # [[ $(echo $* | grep "align") ]] && part="meb_largemem"
+    if echo "$*" | grep -q "align"
+    then 
+      part="meb_largemem"
+    fi
     cmd="sbatch --parsable -p $part $*"
     echo "$cmd"
 }
 
 # Run cactus step-by-step with dependent SLURM jobs
-prep_dir="cactus_prepare_scripts"
-num=$(ls "$prep_dir" | wc -l)
-for i in $(seq 1 "$num")
+sbatch_list_file="cactus_sbatch_list.txt"
+mapfile -t sbatch_list < <(cat "$sbatch_list_file")
+for i in "${!sbatch_list[@]}"
 do
-    sfile=$(ls "$prep_dir" | sed -n ${i}p)
-    echo "$sfile"
-    cmd_name="${sfile%%.sbatch}"
+    sfile="${sbatch_list[i]}"
+    echo "Step: $sfile"
+    cmd_name="$(basename "${sfile%%.sbatch}")"
     logfile="${cmd_name}.log"
-    sfile="${prep_dir}/${sfile}"
     # Check if job has already run successfully
-    oldid="$(check_prior $logfile)"
-    [[ -z "$oldid" ]] || echo "check_prior found successful run $oldid for $cmd_name"
+    oldid="$(check_prior "$logfile")"
+    # [[ -z "$oldid" ]] || echo "check_prior found successful run $oldid for $cmd_name"
+    # [[ "$oldid" == "no_id" ]] || echo "Successful run of ${cmd_name}: $oldid"
     dep="--dependency=afterok:$jobid"
     # No dependency for first job
-    (( i == 1 )) && dep=""
-    cmd="$(submit $dep $sfile)"
-    [[ -z "$oldid" ]] && { echo "$cmd"; jobid="$($cmd)"; } || jobid="$oldid"
-    [[ $? -ne 0 ]] && exit $?
+    (( i == 0 )) && dep=""
+    cmd="$(submit "$dep" "$sfile")"
+    # [[ -z "$oldid" ]] && { echo "$cmd"; jobid="$($cmd)"; } || jobid="$oldid"
+    if [[ "$oldid" == "no_id" ]]
+    then
+      echo "$cmd"
+      # Submit new job
+      if ! jobid="$($cmd)"
+      then
+        echo "Error submitting command: $cmd"
+        exit 1
+      fi
+    else
+      # Use old successful run
+      echo "Using previous successful run of ${cmd_name}: $oldid"
+      jobid="$oldid"
+    fi
+    # [[ "$?" -ne 0 ]] && exit "$?"
     echo "$cmd_name job ID: $jobid"
     echo ""
 done

@@ -37,7 +37,6 @@ fi
 # Input
 # Requires Cactus-formatted seqFile, i.e.,
 # NEWICK tree
-#
 # name1 path1
 # name2 path2
 # ...
@@ -57,20 +56,6 @@ else
   echo "Error: one positional argument expected."
   exit 1
 fi
-
-# elif (( $# == 2 ))
-# then
-#     species="$1"
-#     tree="$2"
-#     echo "Species list: $species."
-#     echo "Newick tree: $tree"
-#     [[ -f $species ]] || { echo "Error: Species list not found."; exit 1; }
-#     [[ -f $tree ]] || { echo "Error: Tree not found."; exit 1; }
-#     echo "Generating formatted seqFile ($seqFile)..."
-#     cp "$tree" "$seqFile"
-#     echo "" >> "$seqFile"
-#     cat "$species" >> "$seqFile"
-
 # Other required inputs
 js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
 seqFile_no_ext=$(basename "${seqFile%.*}")
@@ -87,6 +72,7 @@ opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
 opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
 opts="$opts1 $opts2"
 cmd_file="cactus_prepare_commands.txt"
+sbatch_list_file="cactus_sbatch_list.txt"
 
 # Run cactus-prepare
 cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
@@ -96,34 +82,48 @@ $cmd > $cmd_file
 # Split each command into separate SBATCH file in $prep_dir
 prep_dir="cactus_prepare_scripts"
 mkdir -p "$prep_dir"
-commands="$(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')"
-num=$(echo "$commands" | wc -l)
-for i in $(seq 1 "$num")
+mapfile -t commands < <(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')
+declare -a sbatch_list
+for i in "${!commands[@]}"
 do
     # Iterate through each command
-    cmd_text=$(echo "$commands" | sed -n ${i}p)
+    cmd_text="${commands[i]}"
     cmd_name="${i}_${cmd_text%% *}"
     cmd_path="${prep_dir}/${cmd_name}.sbatch"
     # Default memory allocation
     mem=20
     # Choose correct memory allocation
-    [[ $(echo "$cmd_name" | grep "preprocess") ]] && mem="$premem"
-    [[ $(echo "$cmd_name" | grep "blast") ]] && mem="$blastmem"
-    [[ $(echo "$cmd_name" | grep "align") ]] && mem="$alnmem"
+    if echo "$cmd_name" | grep -q "preprocess"
+    then
+      mem="$premem"
+    elif echo "$cmd_name" | grep -q "blast"
+    then
+      mem="$blastmem"
+    elif echo "$cmd_name" | grep -q "align"
+    then
+      mem="$alnmem"
+    fi
     # Add 10% more memory for overhead
     reqmem="$((mem * 10 / 9))G"
     # Add 2 cores of overhead
     reqcpus="$((cpus + 2))"
-    echo "Writing $cmd_path"
     # Add text to SBATCH file
-    echo "#!/bin/bash" > "$cmd_path"
-    echo "#SBATCH -J $cmd_name" >> "$cmd_path"
-    echo "#SBATCH -o %x.log" >> "$cmd_path"
-    echo "#SBATCH -t 1-0" >> "$cmd_path"
-    echo "#SBATCH --mem=$reqmem" >> "$cmd_path"
-    echo "#SBATCH -c $reqcpus" >> "$cmd_path"
-    echo "" >> "$cmd_path"
-    echo "date" >> "$cmd_path"
-    echo "" >>  "$cmd_path"
-    echo "$cmd_text" >> "$cmd_path"
+    echo "Writing $cmd_path"
+    {
+      echo "#!/bin/bash"
+      echo "#SBATCH -J $cmd_name"
+      echo "#SBATCH -o %x.log"
+      echo "#SBATCH -t 1-0"
+      echo "#SBATCH --mem=$reqmem"
+      echo "#SBATCH -c $reqcpus"
+      echo ""
+      echo "date"
+      echo ""
+      echo "$cmd_text"
+    } > "$cmd_path"
+    sbatch_list[i]="$cmd_path"
 done
+
+# Write ordered list of SBATCH files to text file
+printf "%s\n" "${sbatch_list[@]}" > "$sbatch_list_file"
+echo "List of SBATCH files for cactus_run_prepared in: $sbatch_list_file"
