@@ -64,9 +64,16 @@ outdir="--outDir cactus-steps-output"
 outseq="--outSeqFile cactus-steps-output/${seqFile}"
 outhal="--outHal cactus-steps-output/$hal"
 # Memory (in GB) and CPU options
+# Preprocessing memory: 20 GB
 premem=20
-blastmem=35
-alnmem=150
+# BLAST memory
+# 3 genomes: 35 GB
+# 5 genomes: 65 GB
+blastmem=65
+# Alignment memory
+# 3 genomes: 150 GB
+# 5 genomes: 
+alnmem=300
 cpus=14
 opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
 opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"

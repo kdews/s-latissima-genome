@@ -39,8 +39,8 @@ submit () {
     local part
     local cmd
     part="$SLURM_JOB_PARTITION"
-    # [[ $(echo $* | grep "align") ]] && part="meb_largemem"
-    if echo "$*" | grep -q "align"
+    # Choose larger partition for BLAST and alignment jobs
+    if echo "$*" | grep -q "blast\|align"
     then 
       part="meb_largemem"
     fi
