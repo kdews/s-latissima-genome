@@ -81,7 +81,7 @@ do
   conda activate
   # Clean up BUSCO graphs
   # Load modules for Rscript
-  IFS=" " read -r -a R_mods <<< "$(cat $R_mod_file)"
+  IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
   module load "${R_mods[@]}"
   cmd="Rscript s-latissima-genome/pretty_busco.R $wd $assembly_file"
   echo "$cmd"

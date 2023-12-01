@@ -227,11 +227,12 @@ if (interactive()) {
   wd <- "/scratch2/kdeweese/latissima/genome_stats"
   setwd(wd)
   # paf_file <- "s_lat_alignment.paf"
-  species_file <- "species.txt"
+  # Cactus seqFile
+  seq_file <- "s_lat_alignment.txt"
 } else {
   line_args <- commandArgs(trailingOnly = T)
   # paf_file <- line_args[1]
-  species_file <- line_args[1]
+  seq_file <- line_args[1]
 }
 # # PAF analysis
 # paf <- read_paf(paf_file)
@@ -243,14 +244,15 @@ psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
              "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
              "blockCount", "blockSizes", "qStarts", "tStarts")
 faidx_col <- c("ID", "Length", "Offset", "Linebases", "Linewidth")
-# Import species names, contig IDs and lengths
-species_tab <- read.table(species_file)
+# Import species names
+species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
-sp_prefix <- basename(tools::file_path_sans_ext(species_tab$V2))
-contig_files <- paste0("chromosome_extract_", sp_prefix, ".fasta.fai")
-contig_ids <- sapply(contig_files, read.table, simplify = F,
-                     col.names = faidx_col)
-names(contig_ids) <- species
+# Don't need contig IDs/lengths because info is in PSL data structure
+# fastas <- species_tab$V2
+# contig_files <- paste0(fastas, ".fai")
+# contig_ids <- sapply(contig_files, read.table, simplify = F,
+#                      col.names = faidx_col)
+# names(contig_ids) <- species
 # Import PSL files into data frames
 # Keep only unique species combinations
 species_versus <- lapply(combn(rev(species), 2, simplify = F),
