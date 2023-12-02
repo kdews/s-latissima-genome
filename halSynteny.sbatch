@@ -42,11 +42,16 @@ inHal="cactus-steps-output/s_lat_alignment.hal"
 inHal_no_ext="$(basename "${inHal%.*}")"
 
 # Extract non-ancestral genomes from HAL
-mapfile -t genomes < <(halStats --genomes "$inHal" | sed 's/ /\n/g' | grep -v "Anc")
+mapfile -t gen < <(halStats --genomes "$inHal" | sed 's/ /\n/g' | grep -v "Anc")
 
 # Run halSynteny for each combination of genomes
 njobs="$(parallel --plus "echo {uniq}" ::: "${gen[@]}" ::: "${gen[@]}" | wc -l)"
-parallel="parallel -j $njobs --joblog ${SLURM_JOB_NAME}.joblog"
-srun="srun --exclusive -N 1 -n 1"
-$parallel --plus "$srun halSynteny --queryGenome {1uniq} --targetGenome {2uniq} $inHal ${inHal_no_ext}_{1uniq}_vs_{2uniq}.psl" ::: "${gen[@]}" ::: "${gen[@]}"
+# Use GNU parallel to parallelize jobs
+pll="parallel --plus -j $njobs --joblog ${SLURM_JOB_NAME}.joblog"
+# Toggle for parallel's "dry run" option to preview generated commands
+# pll="$pll --dry-run"
+sr="srun --exclusive -N 1 -n 1"
+# Generate all combinations of species with parallel's "uniq" replacement string
+$pll "$sr halSynteny --queryGenome {1uniq} --targetGenome {2uniq} $inHal \
+${inHal_no_ext}_{1uniq}_vs_{2uniq}.psl" ::: "${gen[@]}" ::: "${gen[@]}"
 
