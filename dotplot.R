@@ -35,10 +35,31 @@ orderPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
+  query_contigs <- df %>%
+    select(qName, qSize) %>%
+    arrange(desc(qSize)) %>%
+    pull(qName) %>%
+    unique()
+  target_contigs <- df %>%
+    select(tName, tSize) %>%
+    arrange(desc(tSize)) %>%
+    pull(tName) %>%
+    unique()
   df <- df %>%
-    mutate(qName=factor(qName, levels = contig_ids[[query]][["ID"]]),
-           tName=factor(tName, levels = contig_ids[[target]][["ID"]])) %>%
+    mutate(qName=factor(qName, levels = query_contigs),
+           tName=factor(tName, levels = target_contigs)) %>%
+    # Filter out extremely small contigs
+    filter(qSize > 1e6 & tSize > 1e6) %>%
+    # Filter out extremely large contigs
+    filter(qSize < 30e6 & tSize < 30e6) %>%
+    # # Keep only 30 largest contigs
+    # filter(qName %in% head(query_contigs, n=30),
+    #        tName %in% head(target_contigs, n=30)) %>%
     arrange(qName)
+  # df <- df %>%
+  #   mutate(qName=factor(qName, levels = contig_ids[[query]][["ID"]]),
+  #          tName=factor(tName, levels = contig_ids[[target]][["ID"]])) %>%
+  #   arrange(qName)
   return(df)
 }
 # Summarize PSL table by summing matches for each contig pair
@@ -133,12 +154,12 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
   } 
   df <- df %>%
     mutate(Zeros = 0,
-           qSize = qSize/1000000,
-           qStart = qStart/1000000,
-           qEnd = qEnd/1000000,
-           tSize = tSize/1000000,
-           tStart = tStart/1000000,
-           tEnd = tEnd/1000000)
+           qSize = qSize/1e6,
+           qStart = qStart/1e6,
+           qEnd = qEnd/1e6,
+           tSize = tSize/1e6,
+           tStart = tStart/1e6,
+           tEnd = tEnd/1e6)
   target <- getGen(df_name, "target")
   target_nice <- gsub("_", " ", target)
   query <- getGen(df_name, "query")
@@ -218,6 +239,7 @@ plotSave <- function(plot_name, plot_list, width, height) {
   ggsave(filename = fname, plot = p, 
          width = width, height = height, units = "in")
   showtext_opts(dpi = 100)
+  return(fname)
 }
 
 
@@ -271,27 +293,14 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 # Heatmaps of genome vs. genome
-# lapply(names(psl_mats), heatPsl, psl_mats)
+lapply(names(psl_mats), heatPsl, psl_mats)
 # Subset data for dotplots
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
 # Dotplots of genome vs. genome
 p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
-sep_list <- sapply(names(seps), plotList, seps, simplify = F)
-sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
+fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
+print(fnames)
+# seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
+# sep_list <- sapply(names(seps), plotList, seps, simplify = F)
 # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
-
-
-# test <- psl_dot[[1]] %>%
-#   filter(tName == "JABAKD010000001.1")
-# ggplot(data = test) +
-#   facet_grid(cols = vars(tName), rows = vars(qName)) +
-#   geom_segment(aes(x = 0, y = 0, xend = tSize, yend = 0)) +
-#   geom_segment(aes(x = 0, y = 1, xend = qSize, yend = 1)) +
-#   geom_segment(aes(x = tStart, y = 0, xend = qStart, yend = 1, color = strand),
-#                alpha = 0.2)
-
-# showtext_opts(dpi = 300)
-# ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
-# showtext_opts(dpi = 100)

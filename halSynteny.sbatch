@@ -14,9 +14,9 @@ date
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Runs halSynteny on given HAL file and outputs a PSL formatted file of synteny
-blocks.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <inHal> [outPsl]
+Runs halSynteny on given HAL file and outputs PSL formatted files of synteny
+blocks for each combination of genomes.
+Usage: sbatch ${SLURM_JOB_NAME}.sbatch <inHal>
 
 Requires:
  - HAL (https://github.com/ComparativeGenomicsToolkit/hal/)"
@@ -45,13 +45,20 @@ inHal_no_ext="$(basename "${inHal%.*}")"
 mapfile -t gen < <(halStats --genomes "$inHal" | sed 's/ /\n/g' | grep -v "Anc")
 
 # Run halSynteny for each combination of genomes
+# Count number of jobs that will be produced
+parallel --plus "echo {uniq}" ::: "${gen[@]}" ::: "${gen[@]}"
 njobs="$(parallel --plus "echo {uniq}" ::: "${gen[@]}" ::: "${gen[@]}" | wc -l)"
 # Use GNU parallel to parallelize jobs
 pll="parallel --plus -j $njobs --joblog ${SLURM_JOB_NAME}.joblog"
+echo "$pll"
 # Toggle for parallel's "dry run" option to preview generated commands
 # pll="$pll --dry-run"
+# Use SLURM srun to schedule each task
 sr="srun --exclusive -N 1 -n 1"
+# Output PSL filename
+outPsl="${inHal_no_ext}_{1uniq}_vs_{2uniq}.psl"
+# halSynteny command
+cmd="$sr halSynteny --queryGenome {1uniq} --targetGenome {2uniq} $inHal $outPsl"
 # Generate all combinations of species with parallel's "uniq" replacement string
-$pll "$sr halSynteny --queryGenome {1uniq} --targetGenome {2uniq} $inHal \
-${inHal_no_ext}_{1uniq}_vs_{2uniq}.psl" ::: "${gen[@]}" ::: "${gen[@]}"
+$pll "echo $cmd && $cmd" ::: "${gen[@]}" ::: "${gen[@]}"
 

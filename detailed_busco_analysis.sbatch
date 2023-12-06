@@ -73,7 +73,7 @@ else
   # Subset list of FASTA IDs into multi-FASTA
   cmd="seqtk subseq $assembly $contig_ids"
   echo "$cmd > $subset"
-  $cmd > $subset
+  $cmd > "$subset"
 fi
 
 # Generate mums with MUMmer for contigs versus reference genome
