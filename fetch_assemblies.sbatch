@@ -20,10 +20,6 @@ Requires: curl"
   exit 0
 fi
 
-# Load curl module
-module purge
-module load gcc/12.3.0 curl/8.1.2
-
 # Input
 # Username and password or curl login file
 # Default curl login filename
@@ -40,6 +36,9 @@ then
   user="$2"
   pass="$3"
   echo "Creating curl login file ($login) using given username and password."
+  # Load curl module
+  module purge
+  module load gcc/12.3.0 curl
   # Options for curl login
   log="--data-urlencode login=$user --data-urlencode password=$pass -c $login"
   cmd="curl -L $log https://signon.jgi.doe.gov/signon/create"
@@ -57,6 +56,10 @@ else
   echo "Error: $portal_file not found."
   exit 1
 fi
+
+# Script variables
+# grep search patterns
+ptns=('Repeatmasked\.fasta' 'GeneCatalog\w+\.gff3' 'KOG\.tab')
 # Base JGI url
 u0="https://genome.jgi.doe.gov"
 # XML base URL
@@ -64,6 +67,9 @@ uxml="/portal/ext-api/downloads/get-directory?organism="
 # Output directory
 outdir="assemblies"
 mkdir -p "$outdir"
+# Output list of species names and list of paths
+spc_list="${outdir}/species_list.txt"
+path_list="${outdir}/path_list.txt"
 # Output table of species paired with filenames
 outtab="${outdir}/species_table.txt"
 
@@ -73,7 +79,8 @@ getUrl () {
   local ptn="$1"
   local xml="$2"
   local url
-  url=$(grep "$ptn" "$xml" | sed 's/.* url="//g' | sed 's/".*//g' | sed 's/amp;//g')
+  # url=$(grep "$ptn" "$xml" | sed 's/.* url="//g' | sed 's/".*//g' | sed 's/amp;//g')
+  url="$(grep -P "$ptn" "$xml" | sed 's/.* url="//g' | sed 's/".*//g' | grep -v "&")"
   if [[ -z "$url" ]]
   then
     echo "Error: no URL found for pattern ($ptn) in XML file ($xml)."
@@ -82,15 +89,31 @@ getUrl () {
   url="${u0}${url}"
   echo "$url"
 }
+# Function to parse MD5 of a file based on pattern in JGI XML file
+getMd5 () {
+  local ptn="$1"
+  local xml="$2"
+  local md5
+  md5="$(grep -P "$ptn" "$xml" | grep "md5" | sed 's/.* md5="//g' | sed 's/".*//g')"
+  if [[ -z "$md5" ]]
+  then
+    echo "Error: no MD5 found for pattern ($ptn) in XML file ($xml)."
+    exit 1  
+  fi
+  echo "$md5"
+}
 # Function to download file with secure curl login given URL and output file
 getFile () {
   local url="$1"
   local out="$2"
+  # Load curl module
+  module purge
+  module load gcc/12.3.0 curl
   local cmd="curl -L -b $login -o $out $url"
   echo "$cmd"
   $cmd
 }
-# Function to check if file is zipped, and unzip if it is, and update filename
+# Function to check if file is zipped, unzip file, and update filename
 checkZip () {
   local fname="$1"
   local ext
@@ -99,7 +122,10 @@ checkZip () {
   then
     if [[ -f "$fname" ]]
     then
-      gunzip -f "$fname"
+      # Load gzip module
+      module purge
+      module load gcc/11.3.0 gzip
+      gunzip -k -f "$fname"
       fname="${fname%%\.gz}"
     else
       echo "Error: file ($fname) not found"
@@ -109,7 +135,7 @@ checkZip () {
   echo "$fname"
 }
 
-# Download both genome and GFF3 feature file for each accession
+# Iterate through given portal names
 for i in "${!portal_list[@]}"
 do
   portal="${portal_list[i]}"
@@ -117,28 +143,61 @@ do
   url="${u0}${uxml}${portal}"
   xml="${outdir}/${portal}.xml"
   getFile "$url" "$xml"
-  # Masked genome file
-  ptn='Repeatmasked\.fasta.*fileType="Assembly"'
-  url=$(getUrl "$ptn" "$xml")
-  gen="${outdir}"/$(basename "$url")
-  getFile "$url" "$gen"
-  gen="$(checkZip "$gen")"
-  # Feature file
-  ptn='GeneCatalog.*gff3.*fileType="Annotation"'
-  url=$(getUrl "$ptn" "$xml")
-  annot="${outdir}"/$(basename "$url")
-  getFile "$url" "$annot"
-  annot="$(checkZip "$annot")"
+  # Download files for each accession based on patterns (see "ptns" array)
+  fnames=()
+  for n in "${!ptns[@]}"
+  do
+    # Get URL and MD5 from XML file with search pattern
+    ptn="${ptns[n]}"
+    url="$(getUrl "$ptn" "$xml")"
+    md5="$(getMd5 "$ptn" "$xml")"
+    # Download file with curl to output file $fname
+    fname="${outdir}"/$(basename "$url")
+    getFile "$url" "$fname"
+    # Check downloaded file against MD5 in XML
+    md5_test="$(md5sum "$fname" | awk '{print $1}')"
+    echo "XML MD5: $md5"
+    echo "$fname MD5: $md5"
+    [[ "$md5" != "$md5_test" ]] && { echo "Error: MD5s differ"; exit 1; }
+    # Unzip downloaded file if needed
+    fname="$(checkZip "$fname")"
+    fnames+=("$fname")
+  done
+  # # Masked genome file
+  # ptn='Repeatmasked\.fasta'
+  # url="$(getUrl "$ptn" "$xml")"
+  # gen="${outdir}"/$(basename "$url")
+  # getFile "$url" "$gen"
+  # gen="$(checkZip "$gen")"
+  # # Feature file
+  # ptn='GeneCatalog\w+\.gff3'
+  # url="$(getUrl "$ptn" "$xml")"
+  # annot="${outdir}"/$(basename "$url")
+  # getFile "$url" "$annot"
+  # annot="$(checkZip "$annot")"
+  # # KOG file
+  # ptn='KOG\.tab'
+  # url="$(getUrl "$ptn" "$xml")"
+  # kog="${outdir}"/$(basename "$url")
+  # getFile "$url" "$kog"
+  # kog="$(checkZip "$kog")"
   # Species name
   ptn='<file label="'
-  spc=$(grep "$ptn" "$xml" | sed "s/$ptn//g" | sed 's/".*//g' | sort -u)
-  # Save specices name to tab-delimited table with genome and annotation paths
+  spc="$(grep -P "$ptn" "$xml" | sed "s/$ptn//g" | sed 's/".*//g' | sort -u)"
   if [[ "$i" -eq 0 ]]
   then
-    printf "%s\t%s\t%s\n" "$spc" "$gen" "$annot" > "$outtab"
+    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$outtab"
+    # Save specices names
+    echo "$spc" > "$spc_list"
+    # Save paths
+    echo "${fnames[*]}" | sed 's/ /\t/g' > "$path_list"
   else
-    printf "%s\t%s\t%s\n" "$spc" "$gen" "$annot" >> "$outtab"
+    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" >> "$outtab"
+    echo "$spc" >> "$spc_list"
+    echo "${fnames[*]}" | sed 's/ /\t/g' >> "$path_list"
   fi
 done
+# Combine species and paths into tab-delimited table
+paste "$spc_list" "$path_list" > "$outtab"
 
 echo "Find table of species and files in: $outtab"
