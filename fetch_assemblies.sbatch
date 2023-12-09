@@ -113,7 +113,7 @@ getFile () {
   echo "$cmd"
   $cmd
 }
-# Function to check if file is zipped, unzip file, and update filename
+# Function to check if file is compressed, uncompress, and update filename
 checkZip () {
   local fname="$1"
   local ext
@@ -122,11 +122,21 @@ checkZip () {
   then
     if [[ -f "$fname" ]]
     then
-      # Load gzip module
-      module purge
-      module load gcc/11.3.0 gzip
-      gunzip -k -f "$fname"
-      fname="${fname%%\.gz}"
+      # Handles GFF3 tarballs and concatenates into genomic GFF3
+      if echo "$fname" | grep -q "\.tar\.gz$"
+      then
+        fname="${fname/\.tar\.gz/}.gff3"
+        mapfile -t gff_list < <(tar -xvf "$fname" | sort -V)
+        grep -h "##\w" "${gff_list[@]}" | sort -uV > "${fname}" 
+        grep -hv "#" "${gff_list[@]}" >> "${fname}"
+        rm "${gff_list[@]}"
+      else
+        # Load gzip module
+        module purge
+        module load gcc/11.3.0 gzip
+        gunzip -k -f "$fname"
+        fname="${fname%%\.gz}"
+      fi
     else
       echo "Error: file ($fname) not found"
       exit 1
@@ -139,51 +149,43 @@ checkZip () {
 for i in "${!portal_list[@]}"
 do
   portal="${portal_list[i]}"
-  # URL and file path of XML
-  url="${u0}${uxml}${portal}"
-  xml="${outdir}/${portal}.xml"
-  getFile "$url" "$xml"
-  # Download files for each accession based on patterns (see "ptns" array)
-  fnames=()
-  for n in "${!ptns[@]}"
-  do
-    # Get URL and MD5 from XML file with search pattern
-    ptn="${ptns[n]}"
-    url="$(getUrl "$ptn" "$xml")"
-    md5="$(getMd5 "$ptn" "$xml")"
-    # Download file with curl to output file $fname
-    fname="${outdir}"/$(basename "$url")
-    getFile "$url" "$fname"
-    # Check downloaded file against MD5 in XML
-    md5_test="$(md5sum "$fname" | awk '{print $1}')"
-    echo "XML MD5: $md5"
-    echo "$fname MD5: $md5"
-    [[ "$md5" != "$md5_test" ]] && { echo "Error: MD5s differ"; exit 1; }
-    # Unzip downloaded file if needed
+  # Handle explicit links
+  if [[ "$portal" == http?(s)://* ]]
+  then
+    fname="$(basename "$portal")"
+    curl -o "$fname" "$portal"
     fname="$(checkZip "$fname")"
-    fnames+=("$fname")
-  done
-  # # Masked genome file
-  # ptn='Repeatmasked\.fasta'
-  # url="$(getUrl "$ptn" "$xml")"
-  # gen="${outdir}"/$(basename "$url")
-  # getFile "$url" "$gen"
-  # gen="$(checkZip "$gen")"
-  # # Feature file
-  # ptn='GeneCatalog\w+\.gff3'
-  # url="$(getUrl "$ptn" "$xml")"
-  # annot="${outdir}"/$(basename "$url")
-  # getFile "$url" "$annot"
-  # annot="$(checkZip "$annot")"
-  # # KOG file
-  # ptn='KOG\.tab'
-  # url="$(getUrl "$ptn" "$xml")"
-  # kog="${outdir}"/$(basename "$url")
-  # getFile "$url" "$kog"
-  # kog="$(checkZip "$kog")"
-  # Species name
-  ptn='<file label="'
-  spc="$(grep -P "$ptn" "$xml" | sed "s/$ptn//g" | sed 's/".*//g' | sort -u)"
+    # Handle fnames with separate links??
+
+  else
+    # URL and file path of XML
+    url="${u0}${uxml}${portal}"
+    xml="${outdir}/${portal}.xml"
+    getFile "$url" "$xml"
+    # Download files for each accession based on patterns (see "ptns" array)
+    fnames=()
+    for n in "${!ptns[@]}"
+    do
+      # Get URL and MD5 from XML file with search pattern
+      ptn="${ptns[n]}"
+      url="$(getUrl "$ptn" "$xml")"
+      md5="$(getMd5 "$ptn" "$xml")"
+      # Download file with curl to output file $fname
+      fname="${outdir}"/$(basename "$url")
+      getFile "$url" "$fname"
+      # Check downloaded file against MD5 in XML
+      md5_test="$(md5sum "$fname" | awk '{print $1}')"
+      echo "XML MD5: $md5"
+      echo "$fname MD5: $md5"
+      [[ "$md5" != "$md5_test" ]] && { echo "Error: MD5s differ"; exit 1; }
+      # Species name
+      ptn='<file label="'
+      spc="$(grep -P "$ptn" "$xml" | sed "s/$ptn//g" | sed 's/".*//g' | sort -u)"
+      # Uncompress downloaded file if needed
+      fname="$(checkZip "$fname")"
+      fnames+=("$fname")
+    done
+  fi
   if [[ "$i" -eq 0 ]]
   then
     # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$outtab"
@@ -197,7 +199,9 @@ do
     echo "${fnames[*]}" | sed 's/ /\t/g' >> "$path_list"
   fi
 done
+
+
 # Combine species and paths into tab-delimited table
 paste "$spc_list" "$path_list" > "$outtab"
-
 echo "Find table of species and files in: $outtab"
+
