@@ -125,8 +125,8 @@ checkZip () {
       # Handles GFF3 tarballs and concatenates into genomic GFF3
       if echo "$fname" | grep -q "\.tar\.gz$"
       then
-        fname="${fname/\.tar\.gz/}.gff3"
         mapfile -t gff_list < <(tar -xvf "$fname" | sort -V)
+        fname="${fname/\.tar\.gz/}.gff3"
         grep -h "##\w" "${gff_list[@]}" | sort -uV > "${fname}" 
         grep -hv "#" "${gff_list[@]}" >> "${fname}"
         rm "${gff_list[@]}"
@@ -135,7 +135,7 @@ checkZip () {
         module purge
         module load gcc/11.3.0 gzip
         gunzip -k -f "$fname"
-        fname="${fname%%\.gz}"
+        fname="${fname%%.gz}"
       fi
     else
       echo "Error: file ($fname) not found"
@@ -146,17 +146,42 @@ checkZip () {
 }
 
 # Iterate through given portal names
+last_i="$((${#portal_list[@]}-1))"
 for i in "${!portal_list[@]}"
 do
   portal="${portal_list[i]}"
   # Handle explicit links
   if [[ "$portal" == http?(s)://* ]]
   then
-    fname="$(basename "$portal")"
+    fname="${outdir}/$(basename "$portal")"
     curl -o "$fname" "$portal"
     fname="$(checkZip "$fname")"
-    # Handle fnames with separate links??
-
+    # Get species name from link
+    last_sname="$sname"
+    sname="$(echo "$portal" | sed 's/.*gdb\/\(.*\)\/.*/\1/g')"
+    if [[ -z "$last_sname" ]]
+    then
+      temp_fnames=()
+      temp_fnames+=("$fname")
+      continue
+    elif [[ "$last_sname" != "$sname" ]]
+    then
+      spc="$last_sname"
+      fnames=("${temp_fnames[@]}")
+      # Clear temporary array for next species
+      temp_fnames=()
+      temp_fnames+=("$fname")
+    # Catch final file in array
+    elif [[ "$i" -eq "$last_i" ]]
+    then
+      spc="$sname"
+      temp_fnames+=("$fname")
+      fnames=("${temp_fnames[@]}")
+    elif [[ "$last_sname" == "$sname" ]]
+    then
+      temp_fnames+=("$fname")
+      continue
+    fi
   else
     # URL and file path of XML
     url="${u0}${uxml}${portal}"
@@ -171,7 +196,7 @@ do
       url="$(getUrl "$ptn" "$xml")"
       md5="$(getMd5 "$ptn" "$xml")"
       # Download file with curl to output file $fname
-      fname="${outdir}"/$(basename "$url")
+      fname="${outdir}/$(basename "$url")"
       getFile "$url" "$fname"
       # Check downloaded file against MD5 in XML
       md5_test="$(md5sum "$fname" | awk '{print $1}')"
@@ -190,12 +215,16 @@ do
   then
     # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$outtab"
     # Save specices names
+    echo "$spc"
     echo "$spc" > "$spc_list"
     # Save paths
+    echo "${fnames[*]}" | sed 's/ /\t/g'
     echo "${fnames[*]}" | sed 's/ /\t/g' > "$path_list"
   else
     # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" >> "$outtab"
+    echo "$spc"
     echo "$spc" >> "$spc_list"
+    echo "${fnames[*]}" | sed 's/ /\t/g'
     echo "${fnames[*]}" | sed 's/ /\t/g' >> "$path_list"
   fi
 done
