@@ -21,6 +21,8 @@ Requires: curl"
 fi
 
 # Input
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # Username and password or curl login file
 # Default curl login filename
 login="jgi_login"
@@ -68,10 +70,10 @@ uxml="/portal/ext-api/downloads/get-directory?organism="
 outdir="assemblies"
 mkdir -p "$outdir"
 # Output list of species names and list of paths
-spc_list="${outdir}/species_list.txt"
-path_list="${outdir}/path_list.txt"
+spc_list="${scripts_dir}species_list.txt"
+path_list="${scripts_dir}path_list.txt"
 # Output table of species paired with filenames
-outtab="${outdir}/species_table.txt"
+assembly_file="${scripts_dir}species_table.txt"
 
 # Functions
 # Function to parse URL of a file based on pattern in JGI XML file
@@ -220,7 +222,7 @@ do
   fi
   if [[ "$i" -eq 0 ]]
   then
-    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$outtab"
+    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$assembly_file"
     # Save specices names
     echo "$spc"
     echo "$spc" > "$spc_list"
@@ -228,7 +230,7 @@ do
     echo "${fnames[*]}" | sed 's/ /\t/g'
     echo "${fnames[*]}" | sed 's/ /\t/g' > "$path_list"
   else
-    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" >> "$outtab"
+    # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" >> "$assembly_file"
     echo "$spc"
     echo "$spc" >> "$spc_list"
     echo "${fnames[*]}" | sed 's/ /\t/g'
@@ -238,6 +240,6 @@ done
 
 
 # Combine species and paths into tab-delimited table
-paste "$spc_list" "$path_list" > "$outtab"
-echo "Find table of species and files in: $outtab"
+paste "$spc_list" "$path_list" > "$assembly_file"
+echo "Find table of species and files in: $assembly_file"
 

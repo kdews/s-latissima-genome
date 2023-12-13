@@ -28,12 +28,14 @@ else
 fi
 
 # Define variables
-R_mod_file="s-latissima-genome/modules_for_Rscript.txt"
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
+R_mod_file="${scripts_dir}modules_for_Rscript.txt"
 sum_dir="busco_summaries"
 lineages=("eukaryota_odb10" "stramenopiles_odb10")
 if [[ -z "$1" ]]
 then
-  assembly_file="assemblies/species_table.txt"
+  assembly_file="${scripts_dir}/species_table.txt"
 else
   assembly_file="$1"
 fi

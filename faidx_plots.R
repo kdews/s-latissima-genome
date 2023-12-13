@@ -13,17 +13,25 @@ if (require(showtext, quietly = T)) {
 if (interactive()) {
   wd <- "/scratch2/kdeweese/latissima/genome_stats"
   setwd(wd)
-  species_file <- "assemblies/species_table.txt"
-  for_seqtk <- "for_seqtk.txt"
+  assembly_file <- "s-latissima-genome/species_table.txt"
+  for_seqtk <- "s-latissima-genome/for_seqtk.txt"
   # Species of interest
   spc_int <- "Saccharina_latissima"
+  # Output directory
+  outdir <- "s-latissima-genome/"
 } else {
   line_args <- commandArgs(trailingOnly = T)
-  species_file <- line_args[1]
+  assembly_file <- line_args[1]
   for_seqtk <- line_args[2]
   # Species of interest
   spc_int <- line_args[3]
+  # Output directory
+  outdir <- line_args[4]
 }
+# Output plot filename
+vio_plot <- "scaffold_sizes_violin.png"
+# Append output directory to plot name (if it exists)
+if (dir.exists(outdir)) vio_plot <- paste0(outdir, vio_plot)
 
 # Functions
 # Summarize index statistics for each assembly
@@ -75,7 +83,7 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 }
 
 # Read in data
-species_tab <- read.table(species_file, sep = "\t", fill = NA, header = F)
+species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
 colnames(species_tab) <- c("Species", "Assembly", "Annotation", "Info", "Info2")
 spc_int <- gsub("_"," ", spc_int)
 species <- species_tab$Species
@@ -142,7 +150,7 @@ p2 <- violinPlot(idx_filt, "Size filtered", n50 = T)
 ps <- ggarrange(p1, p2, common.legend = T, legend = "bottom")
 # Save plots
 showtext_opts(dpi = 300)
-ggsave("scaffold_sizes_violin.png", ps, width = 13, height = 6, bg = "white")
+ggsave(vio_plot, ps, width = 13, height = 6, bg = "white")
 # Export filtered lists of contigs for each species
 assembly_list <- c()
 outlist <- c()

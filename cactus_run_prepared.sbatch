@@ -49,7 +49,9 @@ submit () {
 }
 
 # Run cactus step-by-step with dependent SLURM jobs
-sbatch_list_file="cactus_sbatch_list.txt"
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
+sbatch_list_file="${scripts_dir}cactus_sbatch_list.txt"
 mapfile -t sbatch_list < <(cat "$sbatch_list_file")
 for i in "${!sbatch_list[@]}"
 do
@@ -82,5 +84,5 @@ do
     fi
     # [[ "$?" -ne 0 ]] && exit "$?"
     echo "$cmd_name job ID: $jobid"
-    echo ""
+    echo
 done

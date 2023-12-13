@@ -1,0 +1,10 @@
+Undpi1
+Macpyr2
+SlaSLCT1FG3_1
+https://bioinformatics.psb.ugent.be/gdb/ectocarpusV2/EctsiV2_genome.fasta.gz
+https://bioinformatics.psb.ugent.be/gdb/ectocarpusV2/EctsiV2_gff3_LATEST.tar.gz
+https://bioinformatics.psb.ugent.be/gdb/ectocarpusV2/EctsiV2_gene_info_LATEST.txt.gz
+https://bioinformatics.psb.ugent.be/gdb/ectocarpusV2/GeneIDs_correspondence_list.txt
+https://bioinformatics.psb.ugent.be/gdb/Saccharina/SJ.v6.2.chromosome.fa.gz
+https://bioinformatics.psb.ugent.be/gdb/Saccharina/Sacja_gff3_LATEST.tar.gz
+https://bioinformatics.psb.ugent.be/gdb/Saccharina/Sacja_gene_info_LATEST.txt.gz

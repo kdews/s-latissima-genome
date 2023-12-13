@@ -250,11 +250,13 @@ if (interactive()) {
   setwd(wd)
   # paf_file <- "s_lat_alignment.paf"
   # Cactus seqFile
-  seq_file <- "s_lat_alignment.txt"
+  seq_file <- "s-latissima-genome/s_lat_alignment.txt"
+  outdir <- "s-latissima-genome/"
 } else {
   line_args <- commandArgs(trailingOnly = T)
   # paf_file <- line_args[1]
   seq_file <- line_args[1]
+  outdir <- line_args[2]
 }
 # # PAF analysis
 # paf <- read_paf(paf_file)
@@ -287,6 +289,8 @@ names(psl_list) <- gsub(".*ment_|.psl", "", names(psl_list))
 psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 
 # Analysis
+# Change to output directory for plots (if it exists)
+if (dir.exists(outdir)) setwd(outdir)
 # Summarize by contig vs. contig of each syntenic comparison
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)

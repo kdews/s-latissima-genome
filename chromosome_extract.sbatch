@@ -21,28 +21,30 @@ fi
 
 # Index assemblies
 # Input
-r_script="s-latissima-genome/faidx_plots.R"
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
+r_script="${scripts_dir}faidx_plots.R"
 # Species table file
-species_file="$1"
+assembly_file="$1"
 # Species of interest
 spc_int="$2"
-if [[ -z "$species_file" ]] 
+if [[ -z "$assembly_file" ]] 
 then
-    species_file="assemblies/species_table.txt"
+    assembly_file="${scripts_dir}species_table.txt"
 fi
 if [[ -z "$spc_int" ]] 
 then
     spc_int="Saccharina_latissima"
 fi
 # Output
-for_seqtk="for_seqtk.txt"
-filt_assemb="filt_species_table.txt"
+for_seqtk="${scripts_dir}for_seqtk.txt"
+filt_assemb="${scripts_dir}filt_species_table.txt"
 
 # Load samtools conda env
 conda activate samtools
 samtools --version
 # Run samtools index tool on each FASTA
-mapfile -t fastas < <(awk -F '\t' '{print $2}' "$species_file")
+mapfile -t fastas < <(awk -F '\t' '{print $2}' "$assembly_file")
 for fasta in "${fastas[@]}"
 do
     if [[ -f "${fasta}.fai" ]]
@@ -66,7 +68,7 @@ if [[ -f "$for_seqtk" ]]
 then
     echo "Found file $for_seqtk, skipping Rscript step."
 else
-    cmd="Rscript --vanilla $r_script $species_file $for_seqtk $spc_int"
+    cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $scripts_dir"
     echo "$cmd"
     $cmd
 fi
@@ -100,3 +102,4 @@ do
         paste <(echo "${species[i]}") <(echo "$out") >> "$filt_assemb"
     fi
 done
+echo "Filtered assembly file: $filt_assemb"

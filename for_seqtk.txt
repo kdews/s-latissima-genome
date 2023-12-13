@@ -1,0 +1,5 @@
+Ectocarpus siliculosus Ec 32 V2	assemblies/EctsiV2_genome.fasta	chromosome_extract_EctsiV2_genome.txt
+Macrocystis pyrifera CI_03 v1.0	assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta	chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.txt
+Saccharina japonica str. Ja	assemblies/SJ.v6.2.chromosome.fa	chromosome_extract_SJ.v6.2.chromosome.txt
+Saccharina latissima SL-CT1-FG3 v1.0	assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta	chromosome_extract_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.txt
+Undaria pinnatifida M23	assemblies/Undpi1_AssemblyScaffolds_Repeatmasked.fasta	chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.txt

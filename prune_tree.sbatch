@@ -32,10 +32,10 @@ Default Newick tree: Kelp phylogeny from Starko, S. et al. 2019 ($tree)"
 fi
 
 # Define variables
-seqFile="s_lat_alignment.txt"
-def_script_dir="s-latissima-genome"
-[[ -d $def_script_dir ]] && script_dir="${def_script_dir}/"
-r_script="${script_dir}${SLURM_JOB_NAME}.R"
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
+seqFile="${scripts_dir}s_lat_alignment.txt"
+r_script="${scripts_dir}${SLURM_JOB_NAME}.R"
 assembly_file="$1"
 (( $# > 1 )) && tree="$2"
 if [[ ! -f "$tree" ]] && [[ "$tree" == http?(s)://*.txt ]]

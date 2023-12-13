@@ -15,7 +15,9 @@ Requires:
 fi
 
 # Input
-# List of assemblies (assemblies/species_table.txt)
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
+# List of assemblies (s-latissima-genome/species_table.txt)
 assembly_file="$1"
 if [[ -f "$assembly_file" ]]
 then

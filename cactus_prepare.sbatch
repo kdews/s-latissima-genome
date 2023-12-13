@@ -35,13 +35,15 @@ else
 fi
 
 # Input
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # Requires Cactus-formatted seqFile, i.e.,
 # NEWICK tree
 # name1 path1
 # name2 path2
 # ...
 # nameN pathN
-# seqFile: (s_lat_alignment.txt)
+# seqFile: (s-latissima-genome/s_lat_alignment.txt)
 if [[ "$#" -eq 1 ]]
 then
     seqFile="$1"
@@ -78,18 +80,20 @@ cpus=14
 opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
 opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
 opts="$opts1 $opts2"
-cmd_file="cactus_prepare_commands.txt"
-sbatch_list_file="cactus_sbatch_list.txt"
+
+# Output
+cmd_file="${scripts_dir}cactus_prepare_commands.txt"
+sbatch_list_file="${scripts_dir}cactus_sbatch_list.txt"
+prep_dir="${scripts_dir}cactus_prepare_scripts"
 
 # Run cactus-prepare
 cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
 echo "$cmd"
-$cmd > $cmd_file
+$cmd > "$cmd_file"
 
 # Split each command into separate SBATCH file in $prep_dir
-prep_dir="cactus_prepare_scripts"
 mkdir -p "$prep_dir"
-mapfile -t commands < <(grep -v '#' $cmd_file | sed '/^[[:space:]]*$/d')
+mapfile -t commands < <(grep -v '#' "$cmd_file" | sed '/^[[:space:]]*$/d')
 declare -a sbatch_list
 for i in "${!commands[@]}"
 do

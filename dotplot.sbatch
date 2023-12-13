@@ -26,21 +26,21 @@ module purge
 module load gcc/11.3.0 openblas/0.3.20 r
 
 # Input
+scripts_dir_name="s-latissima-genome"
+[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # Cactus-formatted seqFile, i.e.,
 # NEWICK tree
 # name1 path1
 # name2 path2
 # ...
 # nameN pathN
-# seqFile: (s_lat_alignment.txt)
-seqFile="s_lat_alignment.txt"
+# seqFile: (s-latissima-genome/s_lat_alignment.txt)
+seqFile="${scripts_dir}s_lat_alignment.txt"
 [[ -z "$1" ]] || seqFile="$1"
 # Rscript file
-scripts_dir="s-latissima-genome"
-r_script="${SLURM_JOB_NAME}.R"
-[[ -f "${scripts_dir}/${r_script}" ]] && r_script="${scripts_dir}/${r_script}"
+r_script="${scripts_dir}${SLURM_JOB_NAME}.R"
 
 # Run Rscript
-cmd="Rscript $r_script $seqFile"
+cmd="Rscript $r_script $seqFile $scripts_dir"
 echo "$cmd"
 $cmd

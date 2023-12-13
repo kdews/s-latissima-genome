@@ -1,0 +1,5 @@
+Ectocarpus siliculosus Ec 32 V2	chromosome_extract_EctsiV2_genome.fasta
+Macrocystis pyrifera CI_03 v1.0	chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina japonica str. Ja	chromosome_extract_SJ.v6.2.chromosome.fasta
+Saccharina latissima SL-CT1-FG3 v1.0	chromosome_extract_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+Undaria pinnatifida M23	chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
