@@ -5,26 +5,34 @@ if (require(showtext, quietly = TRUE)) {
   showtext_auto()
 }
 
-# Set filename(s)
-png_file <- "phylo_prune.png"
+# Input
 if(length(commandArgs(trailingOnly = TRUE)) > 0) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {
   # Set working dir
   setwd("/scratch2/kdeweese/latissima/genome_stats")
   line_args <- c(
-    "assemblies/species_table.txt",
+    "s-latissima-genome/species_table.txt",
     "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt",
-    "s_lat_alignment.txt"
+    "s-latissima-genome/s_lat_alignment.txt",
+    "s-latissima-genome/"
     )
 }
 species_file <- line_args[1]
 tree_file <- line_args[2]
 seq_file <- line_args[3]
+outdir <- line_args[4]
+# Set filename(s)
+png_file <- "phylo_prune.png"
 # Split filename for output naming
 tree_name <- tools::file_path_sans_ext(basename(tree_file))
 tree_ext <- tools::file_ext(tree_file)
 out_tree <- paste0(tree_name, "_pruned.", tree_ext)
+# Append output directory to output filenames (if it exists)
+if (dir.exists(outdir)) {
+  png_file <- paste0(outdir, png_file)
+  out_tree <- paste0(outdir, out_tree)
+}
 
 ## Data
 # Import species list

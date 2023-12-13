@@ -60,6 +60,6 @@ echo "Input Newick tree: $tree"
 # name2 path2
 # ...
 # nameN pathN
-cmd="Rscript $r_script $assembly_file $tree $seqFile"
+cmd="Rscript $r_script $assembly_file $tree $seqFile $scripts_dir"
 echo "$cmd"
 $cmd
