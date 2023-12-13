@@ -211,6 +211,13 @@ do
       fnames+=("$fname")
     done
   fi
+  if echo "${fnames[*]}" | grep -iq "ectsiv2"
+  then
+    spc="Ectocarpus siliculosus Ec 32 V2"
+  elif echo "${fnames[*]}" | grep -iq "sacja"
+  then
+    spc="Saccharina japonica str. Ja"
+  fi
   if [[ "$i" -eq 0 ]]
   then
     # printf "%s\t%s\t%s\n" "$spc" "${fnames[0]}" "${fnames[1]}" > "$outtab"

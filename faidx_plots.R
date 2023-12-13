@@ -75,8 +75,8 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 }
 
 # Read in data
-species_tab <- read.table(species_file, sep = "\t")
-colnames(species_tab) <- c("Species", "Assembly", "Annotation")
+species_tab <- read.table(species_file, sep = "\t", fill = NA, header = F)
+colnames(species_tab) <- c("Species", "Assembly", "Annotation", "Info", "Info2")
 spc_int <- gsub("_"," ", spc_int)
 species <- species_tab$Species
 fns <- paste0(species_tab$Assembly, ".fai")

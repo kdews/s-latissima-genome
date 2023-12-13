@@ -28,7 +28,7 @@ out_tree <- paste0(tree_name, "_pruned.", tree_ext)
 
 ## Data
 # Import species list
-spc_tab <- read.table(species_file, sep = "\t")
+spc_tab <- read.table(species_file, sep = "\t", fill = NA, header = F)
 species <- spc_tab[,1]
 assembs <- spc_tab[,2]
 # Format species to match tree names

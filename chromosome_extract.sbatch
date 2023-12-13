@@ -7,6 +7,7 @@
 
 # Print date and time
 date
+echo
 
 # Load conda
 cond=~/.conda_for_sbatch.sh
@@ -21,7 +22,6 @@ fi
 # Index assemblies
 # Input
 r_script="s-latissima-genome/faidx_plots.R"
-for_seqtk="for_seqtk.txt"
 # Species table file
 species_file="$1"
 # Species of interest
@@ -34,6 +34,9 @@ if [[ -z "$spc_int" ]]
 then
     spc_int="Saccharina_latissima"
 fi
+# Output
+for_seqtk="for_seqtk.txt"
+filt_assemb="filt_species_table.txt"
 
 # Load samtools conda env
 conda activate samtools
@@ -53,6 +56,7 @@ do
 done
 
 # Plot and filter assembly indices
+echo
 # Load R module
 module purge
 module load gcc/11.3.0 openblas/0.3.20 r/4.3.1
@@ -68,11 +72,19 @@ else
 fi
 
 # Extract "chromosomes" from assembly FASTAs
+echo
 # Load conda environment for seqtk
 conda activate seqtk
+if [[ -f "$for_seqtk" ]]
+then
+    mapfile -t species < <(awk -F '\t' '{print $1}' "$for_seqtk")
+    mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$for_seqtk")
+    mapfile -t contig_lists < <(awk -F '\t' '{print $3}' "$for_seqtk")
+else
+    echo "Error: no input file ($for_seqtk) found for seqtk step."
+    exit 1
+fi
 # Create subsetted assembly FASTAs
-mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$for_seqtk")
-mapfile -t contig_lists < <(awk -F '\t' '{print $3}' "$for_seqtk")
 for i in "${!assemblies[@]}"
 do
     out="${contig_lists[i]%.*}.fasta"
@@ -80,4 +92,11 @@ do
     cmd="seqtk subseq ${assemblies[i]} ${contig_lists[i]}"
     echo "$cmd > $out"
     $cmd > "$out"
+    # Tabulate species and filtered FASTAs
+    if [[ "$i" -eq 0 ]]
+    then
+        paste <(echo "${species[i]}") <(echo "$out") > "$filt_assemb"
+    else
+        paste <(echo "${species[i]}") <(echo "$out") >> "$filt_assemb"
+    fi
 done
