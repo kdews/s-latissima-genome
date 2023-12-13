@@ -27,6 +27,8 @@ Note: Ensure `<species_of_interest>` is in the format "Genus_specificname" and d
 
 Resulting filtered genomes will be tabulated in `filt_species_table.txt`, and contig sizes before and after filtering will be plotted in `scaffold_sizes_violin.png`.
 
+![alt text](https://github.com/kdews/s-latissima-genomes/blob/main/scaffold_sizes_violin.png)
+
 ## 3. Genome scoring with BUSCO and QUAST
 Run BUSCO and QUAST on each assembly listed in `<assembly_file>`:
 ```
