@@ -57,8 +57,7 @@ sbatch prune_tree.sbatch <assembly_file> [tree]
 # Example
 sbatch prune_tree.sbatch s-latissima-genome/species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
 ```
-Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`
-Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
+Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`. Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/phylo_prune.png)
 
 ### Run Cactus aligner
