@@ -6,9 +6,9 @@ Fetch assemblies and annotations from JGI website and ORCAE given a list of JGI 
 ```
 # Usage: give JGI username and password, or give pre-generated curl login file for JGI
 sbatch fetch_assemblies.sbatch <portal_list> [username] [password]
-```
-```
 sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
+```
+```
 # Example
 sbatch fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
 ```
