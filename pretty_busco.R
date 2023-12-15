@@ -5,11 +5,12 @@ if (require(showtext, quietly = TRUE)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
 }
-# Import files
+# Input
 if (interactive()) {
   setwd("/scratch2/kdeweese/latissima/genome_stats")
   line_args <- c("busco_summaries/eukaryota_odb10",
-                 "assemblies/species_table.txt")
+                 "s-latissima-genome/species_table.txt",
+                 "s-latissima-genome/")
 } else if (length(commandArgs(trailingOnly = TRUE)) == 2) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {
@@ -17,7 +18,14 @@ if (interactive()) {
 }
 wd <- line_args[1]
 spec_file <- line_args[2]
+outdir <- line_args[3]
+# Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
+busc_plot <- paste0("busco", lineage, ".png")
+# Append output directory to plot name (if it exists)
+if (dir.exists(outdir)) busc_plot <- paste0(outdir, busc_plot)
+
+## Data wrangling
 # Source BUSCO-generated R script
 source(paste(wd, "busco_figure.R", sep = "/"))
 # Read table of species names and FASTA file names
@@ -25,8 +33,6 @@ spec_names <- read.table(spec_file, sep = "\t")[,1:2]
 names(spec_names) <- c("Species", "my_species")
 # Wrap species names for plot
 spec_names$Species <- str_wrap(spec_names$Species, width = 20)
-
-## Data
 # Strip lineage names from species
 lvls <- gsub(paste0("_", lineage), "", levels(df$my_species))
 df$my_species <- factor(gsub(paste0("_", lineage), "", df$my_species),
@@ -86,6 +92,6 @@ busc_plot <- ggplot(data = df,
         axis.text.y = element_text(face = "italic")) +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE))
 # Save plot with message to user
-print(paste("Saving pretty BUSCO plot of", lineage, "to", my_output))
-ggsave(file = my_output, plot = busc_plot,
+print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot))
+ggsave(file = busc_plot, plot = busc_plot,
        width = my_width, height = my_height, units = my_unit)

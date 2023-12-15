@@ -8,14 +8,14 @@ Fetch assemblies and annotations from JGI website and ORCAE given a list of JGI 
 sbatch fetch_assemblies.sbatch <portal_list> [username] [password]
 sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
 ```
-```
-# Example
-sbatch fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
-```
 Upon successful download, output directory (`assemblies/`) and `<assembly_file>` (`species_table.txt`) will be created.
 Assembly file format:
 ```
 Species_name	Genome_PATH	Annotation_PATH	Gene_Info_PATH
+```
+```
+# Example
+sbatch fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
 ```
 
 ## 2. Evaluation of scaffoldedness and contig size filtering
@@ -24,14 +24,13 @@ Generates violin plots of contig size for each genome, then filters out extremel
 # Usage
 sbatch chromosome_extract.sbatch <assembly_file> <species_of_interest>
 ```
+Note: Ensure `<species_of_interest>` is in the format "Genus_specificname" and does not contain spaces.
+
+Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
 ```
 # Example
 sbatch chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima
 ```
-Note: Ensure `<species_of_interest>` is in the format "Genus_specificname" and does not contain spaces.
-
-Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
-
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/scaffold_sizes_violin.png)
 
 ## 3. Genome scoring with BUSCO and QUAST
@@ -51,10 +50,14 @@ Visualize BUSCO results.
 # Usage
 bash genome_stats.sh <assembly_file> busco_compare.sbatch
 ```
+For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
 ```
 # Example
 bash genome_stats.sh s-latissima-genome/species_table.txt busco_compare.sbatch
 ```
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_eukaryota_odb10.png)
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_stramenopiles_odb10.png)
+
 
 ## 4. Multi-species whole genome alignment with Cactus Progressive Aligner
 ### Prune brown macroalgae phylogeny to include only species in analysis
