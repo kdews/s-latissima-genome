@@ -11,11 +11,11 @@ sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
 Upon successful download, output directory (`assemblies/`) and `<assembly_file>` (`species_table.txt`) will be created.
 Assembly file format:
 ```
-Species_name	Genome_PATH	Annotation_PATH	Gene_Info_PATH
+Species_name	Genome_PATH	Annotation_PATH	Proteins_PATH	Gene_Info_PATH	...
 ```
 ```
 # Example
-sbatch fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
+sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
 ```
 
 ## 2. Evaluation of scaffoldedness and contig size filtering
@@ -29,7 +29,7 @@ Note: Ensure `<species_of_interest>` is in the format "Genus_specificname" and d
 Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
 ```
 # Example
-sbatch chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima
+sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima
 ```
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/scaffold_sizes_violin.png)
 
@@ -37,23 +37,23 @@ sbatch chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina
 Run BUSCO and QUAST on each assembly listed in `<assembly_file>`:
 ```
 # Usage
-bash genome_stats.sh <assembly_file> aug_busco.sbatch quast.sbatch
+bash genome_stats.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.sbatch]
 ```
 ```
 # Examples
-bash genome_stats.sh s-latissima-genome/species_table.txt aug_busco.sbatch quast.sbatch
-bash genome_stats.sh s-latissima-genome/filt_species_table.txt aug_busco.sbatch quast.sbatch
+bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch quast.sbatch
+bash s-latissima-genome/genome_stats.sh s-latissima-genome/filt_species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 ```
 
 Visualize BUSCO results.
 ```
 # Usage
-bash genome_stats.sh <assembly_file> busco_compare.sbatch
+bash genome_stats.sh <assembly_file> [path/to/busco_compare.sbatch]
 ```
 For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
 ```
 # Example
-bash genome_stats.sh s-latissima-genome/species_table.txt busco_compare.sbatch
+bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_eukaryota_odb10.png)
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_stramenopiles_odb10.png)
@@ -68,7 +68,7 @@ sbatch prune_tree.sbatch <assembly_file> [tree]
 ```
 ```
 # Example
-sbatch prune_tree.sbatch s-latissima-genome/species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
+sbatch s-latissima-genome/prune_tree.sbatch s-latissima-genome/species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
 ```
 Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`. Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/phylo_prune.png)
@@ -81,7 +81,7 @@ sbatch cactus_prepare.sbatch <seqFile>
 ```
 ```
 # Example
-sbatch cactus_prepare.sbatch s-latissima-genome/s_lat_alignment.txt
+sbatch s-latissima-genome/cactus_prepare.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
 #### Run scripts sequentially
 ```

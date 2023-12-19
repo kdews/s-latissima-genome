@@ -61,7 +61,7 @@ fi
 
 # Script variables
 # grep search patterns
-ptns=('Repeatmasked\.fasta' 'GeneCatalog\w+\.gff3' 'KOG\.tab')
+ptns=('Repeatmasked\.fasta' 'GeneCatalog\w+\.gff3' 'GeneCatalog.*\.aa\.fasta' 'KOG\.tab')
 # Base JGI url
 u0="https://genome.jgi.doe.gov"
 # XML base URL

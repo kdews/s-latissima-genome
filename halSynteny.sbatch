@@ -9,6 +9,7 @@
 
 # Print date and time
 date
+echo
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]

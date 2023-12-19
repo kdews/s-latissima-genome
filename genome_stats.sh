@@ -6,8 +6,8 @@ then
   echo "\
 Runs BUSCO and QUAST on list of genome assemblies.
 Usage:
-  bash genome_stats.sh <assembly_file> aug_busco.sbatch quast.sbatch
-  bash genome_stats.sh <assembly_file> busco_compare.sbatch
+  bash genome_stats.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.sbatch]
+  bash genome_stats.sh <assembly_file> [path/to/busco_compare.sbatch]
 Requires: 
   - BUSCO (https://busco.ezlab.org)
   - QUAST (https://quast.sourceforge.net)"
