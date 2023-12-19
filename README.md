@@ -41,7 +41,7 @@ bash genome_stats.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.s
 ```
 ```
 # Examples
-bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch quast.sbatch
+bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/filt_species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 ```
 

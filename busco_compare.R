@@ -27,9 +27,9 @@ if (dir.exists(outdir)) busc_plot <- paste0(outdir, busc_plot)
 
 ## Data wrangling
 # Source BUSCO-generated R script
-source(paste(wd, "busco_figure.R", sep = "/"))
+suppressWarnings(source(paste(wd, "busco_figure.R", sep = "/")))
 # Read table of species names and FASTA file names
-spec_names <- read.table(spec_file, sep = "\t")[,1:2]
+spec_names <- read.table(spec_file, sep = "\t", fill = NA, header = F)[,1:2]
 names(spec_names) <- c("Species", "my_species")
 # Wrap species names for plot
 spec_names$Species <- str_wrap(spec_names$Species, width = 20)

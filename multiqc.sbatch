@@ -31,20 +31,25 @@ fi
 conda activate multiqc
 multiqc --version
 
-# Create text file to rename samples
-samples_file="${scripts_dir}species_table.txt"
-mqc_samples="${scripts_dir}multiqc_$(basename "$samples_file")"
+# Create text file to rename samples (if needed)
+assembly_file="${scripts_dir}species_table.txt"
+mqc_samples="${scripts_dir}multiqc_$(basename "$assembly_file")"
 if [[ -f $mqc_samples ]]
 then
   echo "Found file for sample naming: $mqc_samples"
 else
   echo "Creating sample name file: $mqc_samples"
-  echo "MultiQC Names	Proper Names" >> "$mqc_samples"
-  # awk -F '\t' -v OFS='\t' '{print ".*"$2, $1}' $samples_file | sed "s/#//g" | \
-  awk -F '\t' -v OFS='\t' '{print $2, $1}' "$samples_file" | sed "s/#//g" | \
-  sed "s/\.fasta//g" >> "$mqc_samples"
+  # Set headers
+  paste <(echo "MultiQC Names") <(echo "Proper Names") > "$mqc_samples"
+  mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$assembly_file")
+  mapfile -t species < <(awk -F '\t' '{print $1}' "$assembly_file")
+  for i in "${!assemblies[@]}"
+  do
+    # Extract assembly FASTA prefix
+    assemb="$(basename "${assemblies[i]%.fa*}")"
+    paste <(echo "$assemb") <(echo "${species[i]}") >> "$mqc_samples"
+  done
 fi
-
 
 # Arguments to MultiQC
 opts="-f"

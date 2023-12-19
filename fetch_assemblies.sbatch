@@ -137,12 +137,21 @@ checkZip () {
         module purge
         module load gcc/11.3.0 gzip
         gunzip -k -f "$fname"
-        fname="${fname%%.gz}"
+        fname="${fname%.gz}"
       fi
     else
       echo "Error: file ($fname) not found"
       exit 1
     fi
+  fi
+  # Replace all periods (.) with underscores (_) besides before file extension
+  if [[ -f "$fname" ]]
+  then
+    old_name="$fname"
+    ext="$(basename "${fname##*.}")"
+    fname_base="${fname%."$ext"}"
+    fname="${fname_base//./_}.${ext}"
+    mv "$old_name" "$fname"
   fi
   echo "$fname"
 }

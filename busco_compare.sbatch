@@ -31,7 +31,7 @@ else
 fi
 if [[ -f "$assembly_file" ]]
 then
-  mapfile -t assembly_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
+  mapfile -t assemblies < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
 else
   echo "Error: assembly file ($assembly_file) not found."
 fi
@@ -42,10 +42,10 @@ for lineage in "${lineages[@]}"
 do
   wd="${sum_dir}/${lineage}"
   mkdir -p "$wd"
-  # Clear any old text files from working directory
-  rm "${wd}"/*.txt
+  # Clear any old text files from working directory (if they exist)
+  [[ $(ls "${wd}"/*.txt 2>/dev/null) ]] && rm "${wd}"/*.txt
   # Copy BUSCO results for each lineage and assembly into summary directory
-  for assembly in "${assembly_list[@]}"
+  for assembly in "${assemblies[@]}"
   do
     assembly_base=$(basename "${assembly%.*}")
     busco_base="aug_busco_${assembly_base}_${lineage}"
@@ -59,7 +59,7 @@ do
       echo "$cmd"
       $cmd
     else
-      echo "Error: $lineage BUSCO summary file not found for $assembly_base"
+      echo "Error: $lineage BUSCO summary file ($sum_file) not found for $assembly_base"
       exit 1
     fi
   done
