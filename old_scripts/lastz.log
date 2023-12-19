@@ -1,0 +1,10 @@
+==========================================
+SLURM_JOB_ID = 16535557
+SLURM_JOB_NODELIST = e10-12
+TMPDIR = /tmp/SLURM_16535557
+==========================================
+Wed Aug 30 16:53:33 PDT 2023
+lastz (version 1.04.22 released 20220807)
+  score=int, sequence=31-bit, alloc=32-bit, allowBackToBackGaps=OFF
+  built with gcc-12.3.0 "12.3.0"
+lastz assemblies/s_lat_genome.fasta[multiple] assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta[multiple] --format=maf --step=20 --nogapped --output=s_lat_genome_vs_Macpyr2_AssemblyScaffolds_Repeatmasked.maf

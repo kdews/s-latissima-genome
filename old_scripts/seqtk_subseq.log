@@ -1,0 +1,8 @@
+==========================================
+SLURM_JOB_ID = 16926984
+SLURM_JOB_NODELIST = d05-37
+TMPDIR = /tmp/SLURM_16926984
+==========================================
+Fri Sep 29 15:36:20 PDT 2023
+seqtk subseq assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked_renamed_by_size.fasta Sacc_by_chrom.list > Sacc_by_chrom_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked_renamed_by_size.fasta
+seqtk split -n 21 Sacc_by_chrom_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked_renamed_by_size Sacc_by_chrom_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked_renamed_by_size.fasta

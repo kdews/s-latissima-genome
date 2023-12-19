@@ -1,0 +1,477 @@
+==========================================
+SLURM_JOB_ID = 15509635
+SLURM_JOB_NODELIST = e14-21
+TMPDIR = /tmp/SLURM_15509635
+==========================================
+Tue Sep  5 16:19:54 PDT 2023
+Usage: last-dotplot --help
+   or: last-dotplot [options] maf-or-tab-alignments dotplot.png
+   or: last-dotplot [options] maf-or-tab-alignments dotplot.gif
+   or: ...
+
+Draw a dotplot of pair-wise sequence alignments in MAF or tabular format.
+
+Options:
+  -h, --help            show this help message and exit
+  -v, --verbose         show progress messages & data about the plot
+  -x INT, --width=INT   maximum width in pixels (default: 1000)
+  -y INT, --height=INT  maximum height in pixels (default: 1000)
+  -m M, --maxseqs=M     maximum number of horizontal or vertical sequences
+                        (default=100)
+  -1 PATTERN, --seq1=PATTERN
+                        which sequences to show from the 1st genome
+  -2 PATTERN, --seq2=PATTERN
+                        which sequences to show from the 2nd genome
+  --alignments=FILE     secondary alignments
+  --sort1=N             genome1 sequence order: 0=input order, 1=name order,
+                        2=length order, 3=alignment order (default=1)
+  --sort2=N             genome2 sequence order: 0=input order, 1=name order,
+                        2=length order, 3=alignment order (default=1)
+  --strands1=N          genome1 sequence orientation: 0=forward orientation,
+                        1=alignment orientation (default=0)
+  --strands2=N          genome2 sequence orientation: 0=forward orientation,
+                        1=alignment orientation (default=0)
+  --max-gap1=FRAC       maximum unaligned (end,mid) gap in genome1: fraction
+                        of aligned length (default=0.5,2)
+  --max-gap2=FRAC       maximum unaligned (end,mid) gap in genome2: fraction
+                        of aligned length (default=0.5,2)
+  --pad=FRAC            pad length when cutting unaligned gaps: fraction of
+                        aligned length (default=0.04)
+  -j N, --join=N        join: 0=nothing, 1=alignments adjacent in genome1,
+                        2=alignments adjacent in genome2 (default=0)
+  --border-pixels=INT   number of pixels between sequences (default=1)
+  -a FILE, --bed1=FILE, --rmsk1=FILE, --genePred1=FILE, --gap1=FILE
+                        read genome1 annotations
+  -b FILE, --bed2=FILE, --rmsk2=FILE, --genePred2=FILE, --gap2=FILE
+                        read genome2 annotations
+
+  Text options:
+    -f FILE, --fontfile=FILE
+                        TrueType or OpenType font file
+    -s SIZE, --fontsize=SIZE
+                        TrueType or OpenType font size (default: 14)
+    --labels1=N         genome1 labels: 0=name, 1=name:length,
+                        2=name:start:length, 3=name:start-end (default=0)
+    --labels2=N         genome2 labels: 0=name, 1=name:length,
+                        2=name:start:length, 3=name:start-end (default=0)
+    --rot1=ROT          text rotation for the 1st genome (default=h)
+    --rot2=ROT          text rotation for the 2nd genome (default=v)
+
+  Color options:
+    -c COLOR, --forwardcolor=COLOR
+                        color for forward alignments (default: red)
+    -r COLOR, --reversecolor=COLOR
+                        color for reverse alignments (default: blue)
+    --border-color=COLOR
+                        color for pixels between sequences (default=black)
+    --margin-color=COLOR
+                        margin color
+    --exon-color=COLOR  color for exons (default=PaleGreen)
+    --cds-color=COLOR   color for protein-coding regions (default=LimeGreen)
+    --bridged-color=COLOR
+                        color for bridged gaps (default: yellow)
+    --unbridged-color=COLOR
+                        color for unbridged gaps (default: orange)
+last-dotplot s_lat_genome_vs_Macpyr2_AssemblyScaffolds_Repeatmasked.maf s_lat_genome_vs_Macpyr2_AssemblyScaffolds_Repeatmasked.png
+last-dotplot: too many sequences - discarding the smallest ones
+last-dotplot: too many sequences - discarding the smallest ones
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
+/home1/kdeweese/mambaforge/envs/last/bin/last-dotplot:435: DeprecationWarning: textsize is deprecated and will be removed in Pillow 10 (2023-07-01). Use textbbox or textlength instead.
+  x, y = textDraw.textsize(text, font=font)
