@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J aug_busco
-#SBATCH -p oneweek
-#SBATCH --mem-per-cpu=2gb
+#SBATCH -p gpu
+#SBATCH --mem-per-cpu=4gb
 #SBATCH --time=10:00:00
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
