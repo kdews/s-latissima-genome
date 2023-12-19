@@ -5,8 +5,9 @@
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 2 ))
@@ -14,15 +15,14 @@ then
   echo "\
 Downloads assembly and associated feature file from given GCA accession(s).
 Usage:
-  sbatch ${SLURM_JOB_NAME}.sbatch <portal_list> [username] [password]
-  sbatch ${SLURM_JOB_NAME}.sbatch <portal_list> [curl_login_file]
-Requires: curl"
+  sbatch ${job_name}.sbatch <portal_list> [username] [password]
+  sbatch ${job_name}.sbatch <portal_list> [curl_login_file]
+Requires:
+ - curl (https://curl.se/)"
   exit 0
 fi
 
 # Input
-scripts_dir_name="s-latissima-genome"
-[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # Username and password or curl login file
 # Default curl login filename
 login="jgi_login"

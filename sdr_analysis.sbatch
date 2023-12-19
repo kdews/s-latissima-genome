@@ -7,16 +7,16 @@
 #SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
-# Print date and time
-date
-echo
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
-if [ $1 = "-h" ] || [ $1 = "--help" ]
+if [[ "$1" = "-h" ]] || [[ "$1" = "--help" ]]
 then
   echo "\
 Takes as input protein FASTAs intended for OrthoFinder.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch </path/to/ortho_dirs>
+Usage: sbatch ${job_name}.sbatch </path/to/ortho_dirs>
 
 Requires:
  - OrthoFinder (https://github.com/davidemms/OrthoFinder)"
@@ -33,7 +33,7 @@ path_to_ortho_dirs=$1
 cd $path_to_ortho_dirs
 
 # Use GNU parallel to parallelize jobs
-pll="parallel -j $SLURM_NTASKS --joblog ${SLURM_JOB_NAME}.joblog"
+pll="parallel -j $SLURM_NTASKS --joblog ${job_name}.joblog"
 # Allocate single core to the set of threads defined by $SLURM_CPUS_PER_TASK
 sr="srun --exclusive -N 1 -n $SLURM_CPUS_PER_TASK"
 cmd="$sr orthofinder -t $SLURM_CPUS_PER_TASK -f {}"

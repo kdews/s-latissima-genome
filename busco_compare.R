@@ -11,17 +11,17 @@ if (interactive()) {
   line_args <- c("busco_summaries/eukaryota_odb10",
                  "s-latissima-genome/species_table.txt",
                  "s-latissima-genome/")
-} else if (length(commandArgs(trailingOnly = TRUE)) == 2) {
+} else if (length(commandArgs(trailingOnly = TRUE)) == 3) {
   line_args <- commandArgs(trailingOnly = TRUE)
 } else {
-  stop("2 positional arguments expected.")
+  stop("3 positional arguments expected.")
 }
 wd <- line_args[1]
 spec_file <- line_args[2]
 outdir <- line_args[3]
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
-busc_plot <- paste0("busco", lineage, ".png")
+busc_plot <- paste0("busco_", lineage, ".png")
 # Append output directory to plot name (if it exists)
 if (dir.exists(outdir)) busc_plot <- paste0(outdir, busc_plot)
 

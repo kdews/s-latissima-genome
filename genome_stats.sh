@@ -1,22 +1,24 @@
 #!/bin/bash
 
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
+
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 2 ))
 then
   echo "\
 Runs BUSCO and QUAST on list of genome assemblies.
 Usage:
-  bash genome_stats.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.sbatch]
-  bash genome_stats.sh <assembly_file> [path/to/busco_compare.sbatch]
-Requires: 
+  bash ${job_name}.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.sbatch]
+  bash ${job_name}.sh <assembly_file> [path/to/busco_compare.sbatch]
+Requires:
   - BUSCO (https://busco.ezlab.org)
   - QUAST (https://quast.sourceforge.net)"
   exit 0
 fi
 
 # Input
-scripts_dir_name="s-latissima-genome"
-[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # List of assemblies (s-latissima-genome/species_table.txt)
 assembly_file="$1"
 if [[ -f "$assembly_file" ]]

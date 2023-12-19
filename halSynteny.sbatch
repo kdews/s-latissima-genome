@@ -7,9 +7,9 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH -o %x.log
 
-# Print date and time
-date
-echo
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -17,7 +17,7 @@ then
   echo "\
 Runs halSynteny on given HAL file and outputs PSL formatted files of synteny
 blocks for each combination of genomes.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <inHal>
+Usage: sbatch ${job_name}.sbatch <inHal>
 
 Requires:
  - HAL (https://github.com/ComparativeGenomicsToolkit/hal/)"
@@ -50,7 +50,7 @@ mapfile -t gen < <(halStats --genomes "$inHal" | sed 's/ /\n/g' | grep -v "Anc")
 parallel --plus "echo {uniq}" ::: "${gen[@]}" ::: "${gen[@]}"
 njobs="$(parallel --plus "echo {uniq}" ::: "${gen[@]}" ::: "${gen[@]}" | wc -l)"
 # Use GNU parallel to parallelize jobs
-pll="parallel --plus -j $njobs --joblog ${SLURM_JOB_NAME}.joblog"
+pll="parallel --plus -j $njobs --joblog ${job_name}.joblog"
 echo "$pll"
 # Toggle for parallel's "dry run" option to preview generated commands
 # pll="$pll --dry-run"

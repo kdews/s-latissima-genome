@@ -5,18 +5,9 @@
 #SBATCH --time=02:00:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
-
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -36,7 +27,7 @@ Filters input VCF using the following specifications:
    - Site called in ≥90% of individuals
    - Mean depth per site ≥3 reads
 
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <in.vcf> [reference.fasta]
+Usage: sbatch ${job_name}.sbatch <in.vcf> [reference.fasta]
 Requires:
  - GATK (https://gatk.broadinstitute.org/)
  - VCFtools (https://vcftools.github.io/)"
@@ -49,7 +40,7 @@ conda activate gatk
 gatk --version
 # Input data
 vcf="$1"
-vcf_no_ext="$(basename ${vcf%.*})"
+vcf_no_ext="$(basename "${vcf%.*}")"
 # Check for existence of VCF index file, and index if necessary
 if [[ -f "${vcf}.tbi" ]]
 then
@@ -65,7 +56,7 @@ data="-V $vcf -O $temp1"
 [[ $# -eq 2 ]] && data="$data -R $2"
 # Mark variants that don't pass given filters
 echo "Marking variants that don't pass filters."
-gatk VariantFiltration --verbosity ERROR $data \
+gatk VariantFiltration --verbosity ERROR "$data" \
 --filter-name "QD_2" --filter-expression "QD < 2.0" \
 --filter-name "MQ_40" --filter-expression "MQ < 40.0" \
 --filter-name "FS_60" --filter-expression "FS > 60.0" \

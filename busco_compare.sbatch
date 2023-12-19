@@ -4,33 +4,22 @@
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Generates plot(s) with conda-installed BUSCO generate_plot.py.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <assembly_file>
+Usage: sbatch ${job_name}.sbatch <assembly_file>
 Requires: BUSCO (https://busco.ezlab.org)"
   exit 0
 fi
 
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
-
 # Define variables
-scripts_dir_name="s-latissima-genome"
-[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
-r_script="${scripts_dir}pretty_busco.R"
+r_script="${scripts_dir}${job_name}.R"
 R_mod_file="${scripts_dir}modules_for_Rscript.txt"
 sum_dir="busco_summaries"
 lineages=("eukaryota_odb10" "stramenopiles_odb10")

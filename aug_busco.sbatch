@@ -8,18 +8,10 @@
 #SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
-# Print date and time
-date
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
 # Load BUSCO env
 conda activate busco
 # Load GNU Parallel
@@ -31,7 +23,7 @@ then
   echo "\
 Runs BUSCO on given assembly using eukaryota_odb10 and stramenopiles_odb10
 lineages.
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <assembly.fasta>
+Usage: sbatch ${job_name}.sbatch <assembly.fasta>
 Requires: BUSCO (https://busco.ezlab.org)"
   exit 0
 fi
@@ -43,13 +35,11 @@ L1=eukaryota_odb10
 L2=stramenopiles_odb10
 assembly=$1
 assembly_no_ext=$(basename "${assembly%.*}")
-# Shorten SLURM output variables
-job="$SLURM_JOB_NAME"
+# Shorten SLURM output variable(s)
 ntsk="$SLURM_NTASKS"
 nthrd="$SLURM_CPUS_PER_TASK"
 # Output name
-out="${job}_${assembly_no_ext}"
-
+out="${job_name}_${assembly_no_ext}"
 
 # Invoke parallel with jobs=$SLURM_NTASKS and a joblog file
 # srun gives 1 core to the set of threads defined by $SLURM_CPUS_PER_TASK

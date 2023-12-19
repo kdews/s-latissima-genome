@@ -5,8 +5,9 @@
 #SBATCH --time=00:30:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -14,7 +15,7 @@ then
   echo "\
 Prepares commands for Cactus alignment of multiple genomes. Requires a Cactus-
 formatted seqFile (Newick tree and species list).
-Usage: sbatch ${SLURM_JOB_NAME}.sbatch <seqFile>
+Usage: sbatch ${job_name}.sbatch <seqFile>
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
@@ -35,8 +36,6 @@ else
 fi
 
 # Input
-scripts_dir_name="s-latissima-genome"
-[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 # Requires Cactus-formatted seqFile, i.e.,
 # NEWICK tree
 # name1 path1
@@ -59,7 +58,7 @@ else
   exit 1
 fi
 # Other required inputs
-js="--jobStore ${SLURM_JOB_NAME}_steps_jobstore"
+js="--jobStore ${job_name}_steps_jobstore"
 seqFile_no_ext=$(basename "${seqFile%.*}")
 hal="${seqFile_no_ext}.hal"
 outdir="--outDir cactus-steps-output"

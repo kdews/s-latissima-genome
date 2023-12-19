@@ -6,18 +6,9 @@
 #SBATCH -o %x_%a.log
 #SBATCH -p htcondor
 
-# Print date and time
-date
-
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -31,9 +22,9 @@ Aligns with MUMmer's NUCmer in two modes:
 ...and generates a dotplot of the alignment.
 Usage:
   Multi-FASTA mode
-    sbatch -a 0 ${SLURM_JOB_NAME}.sbatch <ref.fasta> <query.fasta>
+    sbatch -a 0 ${job_name}.sbatch <ref.fasta> <query.fasta>
   Single-FASTA mode
-    sbatch -a 1-<int> ${SLURM_JOB_NAME}.sbatch <ref.fasta> <query.fasta> <contig_list.txt>
+    sbatch -a 1-<int> ${job_name}.sbatch <ref.fasta> <query.fasta> <contig_list.txt>
 Requires:
  - seqtk (https://github.com/lh3/seqtk)
  - MUMmer (https://github.com/mummer4/mummer)
