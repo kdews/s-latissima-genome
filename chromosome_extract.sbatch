@@ -5,24 +5,11 @@
 #SBATCH --time=01:00:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
-echo
+# Initialize script
+init="s-latissima-genome/script_init.sh"
+if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Load conda
-cond=~/.conda_for_sbatch.sh
-if [[ -a "$cond" ]]
-then
-  source "$cond"
-else
-  echo "Error on source of $cond"
-  exit 1
-fi
-
-# Index assemblies
 # Input
-scripts_dir_name="s-latissima-genome"
-[[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 r_script="${scripts_dir}faidx_plots.R"
 # Species table file
 assembly_file="$1"
@@ -45,6 +32,7 @@ conda activate samtools
 samtools --version
 # Run samtools index tool on each FASTA
 mapfile -t fastas < <(awk -F '\t' '{print $2}' "$assembly_file")
+# Index assemblies
 for fasta in "${fastas[@]}"
 do
     if [[ -f "${fasta}.fai" ]]
