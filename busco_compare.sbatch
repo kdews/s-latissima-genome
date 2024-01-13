@@ -59,6 +59,7 @@ do
       echo "$cmd"
       $cmd
     else
+      pwd
       echo "Error: $lineage BUSCO summary file ($sum_file) not found for $assembly_base"
       exit 1
     fi
