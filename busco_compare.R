@@ -7,7 +7,7 @@ if (require(showtext, quietly = TRUE)) {
 }
 # Input
 if (interactive()) {
-  setwd("/scratch2/kdeweese/latissima/genome_stats")
+  setwd("/scratch1/kdeweese/latissima/genome_stats")
   line_args <- c("busco_summaries/eukaryota_odb10",
                  "s-latissima-genome/species_table.txt",
                  "s-latissima-genome/")
@@ -21,9 +21,9 @@ spec_file <- line_args[2]
 outdir <- line_args[3]
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
-busc_plot <- paste0("busco_", lineage, ".png")
+busc_plot_file <- paste0("busco_", lineage, ".png")
 # Append output directory to plot name (if it exists)
-if (dir.exists(outdir)) busc_plot <- paste0(outdir, busc_plot)
+if (dir.exists(outdir)) busc_plot_file <- paste0(outdir, busc_plot_file)
 
 ## Data wrangling
 # Source BUSCO-generated R script
@@ -92,6 +92,6 @@ busc_plot <- ggplot(data = df,
         axis.text.y = element_text(face = "italic")) +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE))
 # Save plot with message to user
-print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot))
-ggsave(file = busc_plot, plot = busc_plot,
+print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
+ggsave(file = busc_plot_file, plot = busc_plot,
        width = my_width, height = my_height, units = my_unit)

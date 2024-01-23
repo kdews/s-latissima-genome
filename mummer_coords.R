@@ -11,7 +11,7 @@ if (require(showtext, quietly = T)) {
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 
-wd <- "/scratch2/kdeweese/latissima/genome_stats"
+wd <- "/scratch1/kdeweese/latissima/genome_stats"
 setwd(wd)
 coord_file <- "mummer_0_chromosome_extract_4MB_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked_renamed_by_size_vs_chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.coords"
 coords <- read.table(coord_file, skip = 4, header = F, sep = "\t")

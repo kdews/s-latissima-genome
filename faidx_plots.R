@@ -11,7 +11,7 @@ if (require(showtext, quietly = T)) {
 
 # Input
 if (interactive()) {
-  wd <- "/scratch2/kdeweese/latissima/genome_stats"
+  wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
   assembly_file <- "s-latissima-genome/species_table.txt"
   for_seqtk <- "s-latissima-genome/for_seqtk.txt"

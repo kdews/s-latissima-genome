@@ -246,7 +246,7 @@ plotSave <- function(plot_name, plot_list, width, height) {
 # Input
 # Only take command line input if not running interactively
 if (interactive()) {
-  wd <- "/scratch2/kdeweese/latissima/genome_stats"
+  wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
   # paf_file <- "s_lat_alignment.paf"
   # Cactus seqFile

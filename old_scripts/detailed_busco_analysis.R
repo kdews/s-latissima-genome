@@ -10,7 +10,7 @@ if (require(showtext, quietly = TRUE)) {
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 # Set working directory
-setwd("/scratch2/kdeweese/latissima/genome_stats/")
+setwd("/scratch1/kdeweese/latissima/genome_stats/")
 # BUSCO status codes and colors
 codes_busco <- c("Missing", "Fragmented", "Complete", "Duplicated")
 colors_busco <- c("#F04442", "#F0E442", "#56B4E9", "#3492C7")
