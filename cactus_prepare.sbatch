@@ -9,6 +9,12 @@
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
+# Script output variables
+outdir="cactus-steps-output"
+cmd_file="cactus_prepare_commands.txt"
+prep_dir="cactus_prepare_scripts"
+sbatch_list_file="cactus_sbatch_list.txt"
+
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
@@ -16,6 +22,14 @@ then
 Prepares commands for Cactus alignment of multiple genomes. Requires a Cactus-
 formatted seqFile (Newick tree and species list).
 Usage: sbatch ${job_name}.sbatch <seqFile>
+
+Output: 
+ - $cmd_file (raw output of cactus-prepare)
+ - ${prep_dir}/ (directory containing Cactus commands split into SBATCH files)
+   - n_stepname.sbatch (where n=step number)
+   - ...
+ - $sbatch_list_file (ordered list of all paths to SBATCH files)
+
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
  - Toil (https://toil.readthedocs.io/en/latest)
@@ -61,9 +75,9 @@ fi
 js="--jobStore ${job_name}_steps_jobstore"
 seqFile_no_ext=$(basename "${seqFile%.*}")
 hal="${seqFile_no_ext}.hal"
-outdir="--outDir cactus-steps-output"
-outseq="--outSeqFile cactus-steps-output/${seqFile}"
-outhal="--outHal cactus-steps-output/$hal"
+outdirflag="--outDir $outdir"
+outseq="--outSeqFile ${outdir}/$seqFile"
+outhal="--outHal ${outdir}/$hal"
 # Memory (in GB) and CPU options
 # Preprocessing memory: 20 GB
 premem=20
@@ -80,13 +94,13 @@ opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"
 opts2="--preprocessMemory ${premem}G --blastMemory ${blastmem}G --alignMemory ${alnmem}G"
 opts="$opts1 $opts2"
 
-# Output
-cmd_file="${scripts_dir}cactus_prepare_commands.txt"
-sbatch_list_file="${scripts_dir}cactus_sbatch_list.txt"
-prep_dir="${scripts_dir}cactus_prepare_scripts"
+# Redirect important outputs to $scripts_dir
+cmd_file="${scripts_dir}${cmd_file}"
+sbatch_list_file="${scripts_dir}${sbatch_list_file}"
+prep_dir="${scripts_dir}${prep_dir}"
 
 # Run cactus-prepare
-cmd="cactus-prepare $seqFile $js $outdir $outseq $outhal $opts"
+cmd="cactus-prepare $seqFile $js $outdirflag $outseq $outhal $opts"
 echo "$cmd"
 $cmd > "$cmd_file"
 
