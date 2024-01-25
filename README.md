@@ -90,8 +90,30 @@ sbatch s-latissima-genome/cactus_prepare.sbatch s-latissima-genome/s_lat_alignme
 ```
 #### Run scripts sequentially
 ```
-sbatch cactus_run_prepared.sbatch
+sbatch cactus_run_prepared.sbatch [sbatch_list_file]
 ```
-
-### Visualize alignment
-
+##### Example
+```
+sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/sbatch_list_file.txt
+```
+### Visualize alignments
+#### Run halSynteny to extract syntenic blocks between each genome pair
+##### Usage
+```
+sbatch halSynteny.sbatch <inHal>
+```
+##### Example
+```
+sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.hal
+```
+#### Generate heatmaps and dotplots of pairwise halSynteny PSL files
+##### Usage
+```
+sbatch dotplot.sbatch <seqFile>
+```
+##### Example
+```
+sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
+```
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_vs_Macrocystis_pyrifera_heatmap.png)
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_vs_Macrocystis_pyrifera_dotplot.png)

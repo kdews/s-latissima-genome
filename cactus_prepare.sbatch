@@ -9,7 +9,7 @@
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Script output variables
+# Script environment variables
 outdir="cactus-steps-output"
 cmd_file="cactus_prepare_commands.txt"
 prep_dir="cactus_prepare_scripts"
@@ -20,15 +20,23 @@ if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
 Prepares commands for Cactus alignment of multiple genomes. Requires a Cactus-
-formatted seqFile (Newick tree and species list).
+formatted seqFile as input.
 Usage: sbatch ${job_name}.sbatch <seqFile>
 
+Required input:
+  seqFile   Cactus-formatted seqFile containing a Newick tree and species list
+            i.e.:   NEWICK tree
+                    name1 path1
+                    name2 path2
+                    ...
+                    nameN pathN
+
 Output: 
- - $cmd_file (raw output of cactus-prepare)
- - ${prep_dir}/ (directory containing Cactus commands split into SBATCH files)
-   - n_stepname.sbatch (where n=step number)
-   - ...
- - $sbatch_list_file (ordered list of all paths to SBATCH files)
+  $cmd_file (raw output of cactus-prepare)
+  ${prep_dir}/ (directory containing Cactus commands split into SBATCH files)
+    n_stepname.sbatch (where n=step number)
+    ...
+  $sbatch_list_file (ordered list of all paths to SBATCH files)
 
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
