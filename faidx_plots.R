@@ -65,7 +65,7 @@ filtCurve <- function(spc_lens, spc_int, opt_n, real_n) {
     annotate(geom = "label", x = opt_n*2, y = opt_len,
              label = paste("Target length =", round(opt_len), "Mb"),
              color = "magenta") +
-    annotate(geom = "label", x = real_n*2, y = real_len,
+    annotate(geom = "label", x = real_n*3, y = real_len,
              label = paste("Real length =", round(real_len), "Mb"),
              color = "blue") +
     labs(title = ttl, x = "Number of scaffolds", y = "Genome length (Mb)") +
