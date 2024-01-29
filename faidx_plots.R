@@ -62,7 +62,7 @@ filtCurve <- function(spc_lens, spc_int, opt_n, real_n) {
              x = opt_n, y = opt_len) +
     annotate(geom = "point", shape = 23, size = 3, fill = "blue",
              x = real_n, y = real_len) +
-    annotate(geom = "label", x = opt_n*2.5, y = opt_len,
+    annotate(geom = "label", x = opt_n*2, y = opt_len,
              label = paste("Target length =", round(opt_len), "Mb"),
              color = "magenta") +
     annotate(geom = "label", x = real_n*2.5, y = real_len,
