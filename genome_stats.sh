@@ -14,7 +14,8 @@ Usage:
   bash ${job_name}.sh <assembly_file> [path/to/busco_compare.sbatch]
 Requires:
   - BUSCO (https://busco.ezlab.org)
-  - QUAST (https://quast.sourceforge.net)"
+  - QUAST (https://quast.sourceforge.net)
+  - R (https://www.r-project.org)"
   exit 0
 fi
 

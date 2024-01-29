@@ -23,15 +23,16 @@ sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_name
 Generates violin plots of contig size for each genome, then filters out extremely large or small (>1 Mb) contigs.
 ##### Usage
 ```
-sbatch chromosome_extract.sbatch <assembly_file> <species_of_interest>
+sbatch chromosome_extract.sbatch <assembly_file> <species_of_interest> <outgroup_species>
 ```
-Note: Ensure `<species_of_interest>` is in the format "Genus_specificname" and does not contain spaces.
+Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
 
-Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
+Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. A curve of filtered length and contig number for the species of interest will be saved to `<species_of_interest>_filtering.png`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
 ##### Example
 ```
-sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima
+sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
 ```
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_filtering.png)
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/scaffold_sizes_violin.png)
 
 ## 3. Genome scoring with BUSCO and QUAST

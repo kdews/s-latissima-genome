@@ -17,6 +17,8 @@ if (interactive()) {
   for_seqtk <- "s-latissima-genome/for_seqtk.txt"
   # Species of interest
   spc_int <- "Saccharina_latissima"
+  # Outgroup species
+  out_spc <- "Ectocarpus_siliculosus"
   # Output directory
   outdir <- "s-latissima-genome/"
 } else {
@@ -25,14 +27,19 @@ if (interactive()) {
   for_seqtk <- line_args[2]
   # Species of interest
   spc_int <- line_args[3]
+  # Outgroup species
+  out_spc <- line_args[4]
   # Output directory
-  outdir <- line_args[4]
+  outdir <- line_args[5]
 }
-# Output plot filename
+# Output plot filenames
+filt_plot <- paste0(spc_int, "_filtering.png")
 vio_plot <- "scaffold_sizes_violin.png"
 # Append output directory to plot name (if it exists)
-if (dir.exists(outdir)) vio_plot <- paste0(outdir, vio_plot)
-
+if (dir.exists(outdir)) {
+  filt_plot <- paste0(outdir, filt_plot)
+  vio_plot <- paste0(outdir, vio_plot)
+}
 # Functions
 # Summarize index statistics for each assembly
 sumDf <- function(df) {
@@ -43,6 +50,27 @@ sumDf <- function(df) {
               total = sum(`Length (Mb)`),
               n = n())
   return(sum_df)
+}
+# Create annotated curve
+filtCurve <- function(spc_lens, spc_int, opt_n, real_n) {
+  opt_len <- spc_lens[opt_n, "total_len"]
+  real_len <- spc_lens[real_n, "total_len"]
+  ttl <- paste(spc_int, "contigs filtered to approximate target genome length")
+  p0 <- ggplot(data = spc_lens, aes(x = n, y = total_len)) + 
+    geom_line() +
+    annotate(geom = "point", shape = 23, size = 3, fill = "magenta",
+             x = opt_n, y = opt_len) +
+    annotate(geom = "point", shape = 23, size = 3, fill = "blue",
+             x = real_n, y = real_len) +
+    annotate(geom = "label", x = opt_n*1.8, y = opt_len*0.9,
+             label = paste("Target length =", round(opt_len), "Mb"),
+             color = "magenta") +
+    annotate(geom = "label", x = real_n*2.2, y = real_len*0.9,
+             label = paste("Real length =", round(real_len), "Mb"),
+             color = "blue") +
+    labs(title = ttl, x = "Number of scaffolds", y = "Genome length (Mb)") +
+    theme_light()
+  return(p0)
 }
 # Create annotated violin plot of contig lengths by species
 violinPlot <- function(idx, ttl, n50 = NULL) {
@@ -84,8 +112,9 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 
 # Read in data
 species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
-colnames(species_tab) <- c("Species", "Assembly", "Annotation", "Info", "Info2")
+colnames(species_tab) <- c("Species", "Assembly", "Annotation")
 spc_int <- gsub("_"," ", spc_int)
+out_spc <- gsub("_"," ", out_spc)
 species <- species_tab$Species
 fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
@@ -98,7 +127,7 @@ for (i in 1:length(fns)) {
     idx <- rbind(idx, idx_temp)
   }
 }
-# Create grouped data frame and convert "Length" column
+# Create grouped data frame and convert "Length" column from bp to Mb
 colnames(idx) <- c("ID", "Length", "Species")
 idx <- idx %>%
   mutate(`Length (Mb)`= Length/1000000) %>%
@@ -113,14 +142,17 @@ idx_filt <- idx %>%
   filter(`Length (Mb)` >= 4)
 # Summarize filtered data frame
 sum_idx_filt <- sumDf(idx_filt)
-# Calculate average filtered genome length of all other species
+# Retrieve more scaffolds from species of interest
+# Calculate average filtered genome length of all other species, minus outgroup
 target_len <- round(mean(sum_idx_filt %>%
                         filter(!grepl(spc_int, Species)) %>%
+                        filter(!grepl(out_spc, Species)) %>%
                         pull(total)))
 # Retrieve contigs from species of interest to approximate length of related species
 n_contigs <- sum_idx %>% 
-  filter(grepl(spc_int, Species)) %>%
-  pull(total)
+  filter(grepl(spc_int, Species)) %>% 
+  pull(n)
+  # pull(total)
 for (x in 1:n_contigs) {
   temp_len <- sum(idx %>%
                     filter(grepl(spc_int, Species)) %>%
@@ -141,15 +173,22 @@ retrieved_contigs <- idx %>%
   filter(grepl(spc_int, Species)) %>%
   slice_head(n = opt_n) %>%
   filter(`Length (Mb)` >= 1)
+# Save actual n_contigs of species of interest for plotting
+real_n <- dim(retrieved_contigs)[1]
 # Combine retrieved contigs with filtered index
 idx_filt <- unique(rbind(idx_filt, retrieved_contigs))
+sum_idx_filt_2 <- sumDf(idx_filt)
 
+# Plots
+# Plot filtering of species of interest on curve of length vs. n_contigs
+p0 <- filtCurve(spc_lens, spc_int, opt_n, real_n)
 # Plot length distributions using violin plots
 p1 <- violinPlot(idx, "Unfiltered", n50 = T)
 p2 <- violinPlot(idx_filt, "Size filtered", n50 = T)
 ps <- ggarrange(p1, p2, common.legend = T, legend = "bottom")
 # Save plots
 showtext_opts(dpi = 300)
+ggsave(filt_plot, p0)
 ggsave(vio_plot, ps, width = 13, height = 6, bg = "white")
 # Export filtered lists of contigs for each species
 assembly_list <- c()

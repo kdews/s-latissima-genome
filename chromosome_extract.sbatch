@@ -9,12 +9,47 @@
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
+# Script environment variables
+for_seqtk="for_seqtk.txt"
+filt_assemb="filt_species_table.txt"
+
+# Help message
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
+then
+  echo "\
+Extracts longest representative scaffolds of each genome, given a species of
+interest and an outgroup species.
+Usage: sbatch ${job_name}.sbatch <assembly_file> <spc_int> <out_spc>
+
+Required input:
+  assembly_file    tabulated species names and file PATHs
+    Format:
+    Species_name	Genome_PATH	Annotation_PATH	Proteins_PATH	Gene_Info_PATH
+  spc_int          species of interest (string, formatted 'Genus_specificname')
+  out_spc          outgroup species (string, formatted 'Genus_specificname')
+
+Output:
+  $for_seqtk (table grouping FASTAs and list of contigs for filtering)
+  $filt_assemb (filtered assembly_file table)
+
+Requires:
+ - samtools (https://www.htslib.org)
+ - R (https://www.r-project.org)
+ - seqtk (https://github.com/lh3/seqtk)"
+  exit 0
+fi
+
 # Input
+# Redirect to $scripts_dir, if exists
 r_script="${scripts_dir}faidx_plots.R"
+for_seqtk="${scripts_dir}${for_seqtk}"
+filt_assemb="${scripts_dir}${filt_assemb}"
 # Species table file
 assembly_file="$1"
 # Species of interest
 spc_int="$2"
+# Outgroup species
+out_spc="$3"
 if [[ -z "$assembly_file" ]] 
 then
     assembly_file="${scripts_dir}species_table.txt"
@@ -23,9 +58,10 @@ if [[ -z "$spc_int" ]]
 then
     spc_int="Saccharina_latissima"
 fi
-# Output
-for_seqtk="${scripts_dir}for_seqtk.txt"
-filt_assemb="${scripts_dir}filt_species_table.txt"
+if [[ -z "$out_spc" ]] 
+then
+    out_spc="Ectocarpus_siliculosus"
+fi
 
 # Load samtools conda env
 conda activate samtools
@@ -56,7 +92,7 @@ if [[ -f "$for_seqtk" ]]
 then
     echo "Found file $for_seqtk, skipping Rscript step."
 else
-    cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $scripts_dir"
+    cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
     echo "$cmd"
     $cmd
 fi
