@@ -113,6 +113,7 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
 # Read in data
 species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
 colnames(species_tab) <- c("Species", "Assembly", "Annotation")
+species_tab <- species_tab[,na.omit(colnames(species_tab))]
 spc_int <- gsub("_"," ", spc_int)
 out_spc <- gsub("_"," ", out_spc)
 species <- species_tab$Species
