@@ -88,14 +88,17 @@ module purge
 module load gcc/11.3.0 openblas/0.3.20 r/4.3.1
 Rscript --version
 # Run Rscript to plot and filter contigs
-if [[ -f "$for_seqtk" ]]
-then
-    echo "Found file $for_seqtk, skipping Rscript step."
-else
-    cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
-    echo "$cmd"
-    $cmd
-fi
+cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
+echo "$cmd"
+$cmd
+# if [[ -f "$for_seqtk" ]]
+# then
+#     echo "Found file $for_seqtk, skipping Rscript step."
+# else
+#     cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
+#     echo "$cmd"
+#     $cmd
+# fi
 
 # Extract "chromosomes" from assembly FASTAs
 echo
