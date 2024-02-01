@@ -100,33 +100,33 @@ $cmd
 #     $cmd
 # fi
 
-# Extract "chromosomes" from assembly FASTAs
-echo
-# Load conda environment for seqtk
-conda activate seqtk
-if [[ -f "$for_seqtk" ]]
-then
-    mapfile -t species < <(awk -F '\t' '{print $1}' "$for_seqtk")
-    mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$for_seqtk")
-    mapfile -t contig_lists < <(awk -F '\t' '{print $3}' "$for_seqtk")
-else
-    echo "Error: no input file ($for_seqtk) found for seqtk step."
-    exit 1
-fi
-# Create subsetted assembly FASTAs
-for i in "${!assemblies[@]}"
-do
-    out="${contig_lists[i]%.*}.fasta"
-    echo "$out"
-    cmd="seqtk subseq ${assemblies[i]} ${contig_lists[i]}"
-    echo "$cmd > $out"
-    $cmd > "$out"
-    # Tabulate species and filtered FASTAs
-    if [[ "$i" -eq 0 ]]
-    then
-        paste <(echo "${species[i]}") <(echo "$out") > "$filt_assemb"
-    else
-        paste <(echo "${species[i]}") <(echo "$out") >> "$filt_assemb"
-    fi
-done
-echo "Filtered assembly file: $filt_assemb"
+# # Extract "chromosomes" from assembly FASTAs
+# echo
+# # Load conda environment for seqtk
+# conda activate seqtk
+# if [[ -f "$for_seqtk" ]]
+# then
+#     mapfile -t species < <(awk -F '\t' '{print $1}' "$for_seqtk")
+#     mapfile -t assemblies < <(awk -F '\t' '{print $2}' "$for_seqtk")
+#     mapfile -t contig_lists < <(awk -F '\t' '{print $3}' "$for_seqtk")
+# else
+#     echo "Error: no input file ($for_seqtk) found for seqtk step."
+#     exit 1
+# fi
+# # Create subsetted assembly FASTAs
+# for i in "${!assemblies[@]}"
+# do
+#     out="${contig_lists[i]%.*}.fasta"
+#     echo "$out"
+#     cmd="seqtk subseq ${assemblies[i]} ${contig_lists[i]}"
+#     echo "$cmd > $out"
+#     $cmd > "$out"
+#     # Tabulate species and filtered FASTAs
+#     if [[ "$i" -eq 0 ]]
+#     then
+#         paste <(echo "${species[i]}") <(echo "$out") > "$filt_assemb"
+#     else
+#         paste <(echo "${species[i]}") <(echo "$out") >> "$filt_assemb"
+#     fi
+# done
+# echo "Filtered assembly file: $filt_assemb"

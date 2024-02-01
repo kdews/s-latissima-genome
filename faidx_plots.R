@@ -84,22 +84,27 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
              label = paste("n =", sum_idx$n)) +
     annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.05,
              label = paste(round(sum_idx$total, digits = 1), "Mb")) +
+    # scale_x_continuous(expand = expansion(mult = c(0.5, 0.10))) +
+    scale_x_discrete(expand = expansion(mult = c(0.05, 0.15))) +
     scale_fill_viridis_d() +
     scale_color_viridis_d() +
     ggtitle(ttl) +
     theme(axis.text.x = element_blank(),
-          # axis.text.x = element_text(angle = 25),
           axis.title.x = element_blank())
   n50_lab <- paste(paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
                    paste("n>N50 =", sum_idx$noverN50),
                    sep = "\n")
   p_n50 <- p +
+    # Mark N50 with white triangle
     stat_summary(fun = Biostrings::N50,
                  geom = "point", col = "black", fill = "white",
                  size = 3, shape = 25) +
+    # Label N50
     stat_summary(fun = Biostrings::N50, label = n50_lab,
                  geom = "label", col = "black", size = 3,
-                 position = position_nudge(x = 0.35, y = 2))
+                 position = position_nudge(x = 0.45, y = 3)) +
+                 # position = position_nudge(x = 0.35, y = 2)) +
+    coord_cartesian(clip = 'off')
   if (missing(n50)) {
     return(p)
   } else if (n50) {
