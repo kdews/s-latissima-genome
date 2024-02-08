@@ -2,10 +2,11 @@
 rm(list = ls())
 # Required packages
 # library(pafr, quietly=TRUE)
-library(tidyverse, quietly = T, warn.conflicts = F)
+suppressPackageStartupMessages(library(tidyverse,
+                                       quietly = T, warn.conflicts = F))
 library(ggpubr, quietly = T)
 library(RColorBrewer, quietly = T)
-library(ComplexHeatmap, quietly = T)
+suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 # library(gridExtra, quietly = T)
 if (require(showtext, quietly = T)) {
   showtext_auto()
@@ -27,7 +28,7 @@ getGen <- function(df_name, gen_type) {
 }
 # Fixes Undaria chromosome labels for plotting
 fixUndaria <- function(contigs) {
-  contigs <- gsub("\\..*", "", gsub("JABAKD0100000", "chr_", contigs))
+  contigs <- gsub("\\..*", "", gsub("JABAKD01", "chr", contigs))
   return(contigs)
 }
 # Order PSL data frame by contig size by converting contig names to factors
@@ -92,7 +93,8 @@ matPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  mat <- as.matrix(df %>% mutate(qName=fixUndaria(qName),
+  mat <- as.matrix(df %>%
+                     mutate(qName=fixUndaria(qName),
                                  tName=fixUndaria(tName)) %>%
                      pivot_wider(id_cols = qName,
                                  names_from = tName,
@@ -110,7 +112,7 @@ heatPsl <- function(mat_name, mat_list) {
   y_label <- paste("query:", gsub("_", " ", query))
   fname <- paste0(mat_name, "_heatmap.png")
   h_colors <- colorRampPalette(brewer.pal(8, "YlOrRd"))
-  png(file = fname, units = "in", width = 5, height = 5, res = 150)
+  png(file = fname, units = "in", width = 5, height = 5, res = 300)
   heatmap(mat, main = "Query contig coverage %",
           xlab = x_label, ylab = y_label, col = h_colors(25))
   dev.off()
@@ -298,13 +300,14 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 # Heatmaps of genome vs. genome
 lapply(names(psl_mats), heatPsl, psl_mats)
-# Subset data for dotplots
-psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
-# Dotplots of genome vs. genome
-p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
-print(fnames)
+# # Subset data for dotplots
+# psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
+# # Dotplots of genome vs. genome
+# p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
+# fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
+# print(fnames)
+
 # seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
 # sep_list <- sapply(names(seps), plotList, seps, simplify = F)
 # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
