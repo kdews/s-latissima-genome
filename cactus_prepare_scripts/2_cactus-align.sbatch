@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J 2_cactus-align
-#SBATCH -o %x.log
+#SBATCH -o cactus-logs/%x.log
 #SBATCH -t 1-0
 #SBATCH --mem=333G
 #SBATCH -c 16

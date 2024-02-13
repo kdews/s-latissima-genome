@@ -1,7 +1,6 @@
 # Clear environment
 rm(list = ls())
 # Required packages
-# library(pafr, quietly=TRUE)
 suppressPackageStartupMessages(library(tidyverse,
                                        quietly = T, warn.conflicts = F))
 library(ggpubr, quietly = T)
@@ -28,12 +27,14 @@ getGen <- function(df_name, gen_type) {
 }
 # Fixes Undaria chromosome labels for plotting
 fixUndaria <- function(contigs) {
-  contigs <- gsub("\\..*", "", gsub("JABAKD01", "chr", contigs))
+  contigs <- gsub("\\..*", "", gsub("JABAKD01", "scaffold", contigs))
   return(contigs)
 }
 # Order PSL data frame by contig size by converting contig names to factors
 orderPsl <- function(df_name, df_list) {
-  df <- df_list[[df_name]]
+  df <- df_list[[df_name]] %>%
+    mutate(qName=fixUndaria(qName),
+           tName=fixUndaria(tName))
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   query_contigs <- df %>%
@@ -94,8 +95,8 @@ matPsl <- function(df_name, df_list) {
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   mat <- as.matrix(df %>%
-                     mutate(qName=fixUndaria(qName),
-                                 tName=fixUndaria(tName)) %>%
+                     # mutate(qName=fixUndaria(qName),
+                     #             tName=fixUndaria(tName)) %>%
                      pivot_wider(id_cols = qName,
                                  names_from = tName,
                                  values_from = qPercent,
@@ -250,20 +251,14 @@ plotSave <- function(plot_name, plot_list, width, height) {
 if (interactive()) {
   wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
-  # paf_file <- "s_lat_alignment.paf"
   # Cactus seqFile
   seq_file <- "s-latissima-genome/s_lat_alignment.txt"
   outdir <- "s-latissima-genome/"
 } else {
   line_args <- commandArgs(trailingOnly = T)
-  # paf_file <- line_args[1]
   seq_file <- line_args[1]
   outdir <- line_args[2]
 }
-# # PAF analysis
-# paf <- read_paf(paf_file)
-# long_paf <- subset(paf, alen > 1e4 & mapq > 40)
-# dt <- dotplot(long_paf, label_seqs = T, order_by = "qstart")
 # Set column names for PSL data frames
 psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
              "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
@@ -273,12 +268,6 @@ faidx_col <- c("ID", "Length", "Offset", "Linebases", "Linewidth")
 # Import species names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
-# Don't need contig IDs/lengths because info is in PSL data structure
-# fastas <- species_tab$V2
-# contig_files <- paste0(fastas, ".fai")
-# contig_ids <- sapply(contig_files, read.table, simplify = F,
-#                      col.names = faidx_col)
-# names(contig_ids) <- species
 # Import PSL files into data frames
 # Keep only unique species combinations
 species_versus <- lapply(combn(rev(species), 2, simplify = F),
@@ -298,16 +287,17 @@ psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
+# Subset data for dotplots
+psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
+
+# Plots
 # Heatmaps of genome vs. genome
 lapply(names(psl_mats), heatPsl, psl_mats)
-
-# # Subset data for dotplots
-# psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
-# # Dotplots of genome vs. genome
-# p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-# fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
-# print(fnames)
-
+# Dotplots of genome vs. genome
+p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
+fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
+print(fnames)
+# Separate out certain syntenic regions
 # seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
 # sep_list <- sapply(names(seps), plotList, seps, simplify = F)
 # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)

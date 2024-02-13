@@ -13,6 +13,7 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 js="cactus_prepare_steps_jobstore"
 outdir="cactus-steps-output"
 sbatch_list_file="cactus_sbatch_list.txt"
+logdir="cactus-logs"
 # Locate $sbatch_list_file in $scripts_dir, if directory exists
 sbatch_list_file="${scripts_dir}${sbatch_list_file}"
 
@@ -103,7 +104,7 @@ do
     sfile="${sbatch_list[i]}"
     echo "Step: $sfile"
     cmd_name="$(basename "${sfile%%.sbatch}")"
-    logfile="${cmd_name}.log"
+    logfile="$logdir/${cmd_name}.log"
     # Check if job has already run successfully
     oldid="$(check_prior "$logfile")"
     dep="--dependency=afterok:$jobid"

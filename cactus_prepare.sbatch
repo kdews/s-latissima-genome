@@ -14,6 +14,7 @@ outdir="cactus-steps-output"
 cmd_file="cactus_prepare_commands.txt"
 prep_dir="cactus_prepare_scripts"
 sbatch_list_file="cactus_sbatch_list.txt"
+logdir="cactus-logs"
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -37,6 +38,7 @@ Output:
     n_stepname.sbatch (where n=step number)
     ...
   $sbatch_list_file (ordered list of all paths to SBATCH files)
+  ${logdir}/ (empty directory for logs from future Cactus run)
 
 Requires:
  - virtualenv (https://virtualenv.pypa.io/en/latest)
@@ -84,7 +86,7 @@ js="--jobStore ${job_name}_steps_jobstore"
 seqFile_no_ext=$(basename "${seqFile%.*}")
 hal="${seqFile_no_ext}.hal"
 outdirflag="--outDir $outdir"
-outseq="--outSeqFile ${outdir}/$seqFile"
+outseq="--outSeqFile ${outdir}/${seqFile_no_ext}.txt"
 outhal="--outHal ${outdir}/$hal"
 # Memory (in GB) and CPU options
 # Preprocessing memory: 20 GB
@@ -113,8 +115,10 @@ echo "$cmd"
 $cmd > "$cmd_file"
 
 # Split each command into separate SBATCH file in $prep_dir
-mkdir -p "$prep_dir"
 mapfile -t commands < <(grep -v '#' "$cmd_file" | sed '/^[[:space:]]*$/d')
+[[ "${#commands[@]}" -eq 0 ]] && exit 1
+mkdir -p "$prep_dir"
+mkdir -p "$logdir"
 declare -a sbatch_list
 for i in "${!commands[@]}"
 do
@@ -144,7 +148,7 @@ do
     {
       echo "#!/bin/bash"
       echo "#SBATCH -J $cmd_name"
-      echo "#SBATCH -o %x.log"
+      echo "#SBATCH -o $logdir/%x.log"
       echo "#SBATCH -t 1-0"
       echo "#SBATCH --mem=$reqmem"
       echo "#SBATCH -c $reqcpus"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J 13_halAppendSubtree
-#SBATCH -o %x.log
+#SBATCH -o cactus-logs/%x.log
 #SBATCH -t 1-0
 #SBATCH --mem=22G
 #SBATCH -c 16
