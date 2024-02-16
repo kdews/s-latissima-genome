@@ -90,7 +90,7 @@ sbatch cactus_run_prepared.sbatch [sbatch_list_file]
 ```
 ##### Example
 ```
-sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/sbatch_list_file.txt
+sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_sbatch_list.txt
 ```
 ### Visualize alignments
 #### Run halSynteny to extract syntenic blocks between each genome pair

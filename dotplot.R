@@ -3,6 +3,7 @@ rm(list = ls())
 # Required packages
 suppressPackageStartupMessages(library(tidyverse,
                                        quietly = T, warn.conflicts = F))
+# library(caret)
 library(ggpubr, quietly = T)
 library(RColorBrewer, quietly = T)
 suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
@@ -14,6 +15,7 @@ if (require(showtext, quietly = T)) {
 
 # Functions
 # Gets genome name from "genome_vs_genome" character
+# Naming convention: query_vs_target
 getGen <- function(df_name, gen_type) {
   if (gen_type == "query") {
     n <- 1
@@ -78,16 +80,17 @@ sumPsl <- function(df_name, df_list) {
     mutate(qPercent=total_matches/qSize*100)
   return(df2)
 }
-# Pull out maximal matching contigs
+# Pull out maximal matching contigs,
+# where most of query contig maps onto target
 maxMatches <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  df_sum <- df %>% 
+  df_match <- df %>% 
     group_by(qName) %>%
     filter(qPercent == max(qPercent)) %>%
     ungroup()
-  return(df_sum)
+  return(df_match)
 }
 # Convert PSL summary into matrix for heatmap
 matPsl <- function(df_name, df_list) {
@@ -253,11 +256,15 @@ if (interactive()) {
   setwd(wd)
   # Cactus seqFile
   seq_file <- "s-latissima-genome/s_lat_alignment.txt"
+  # Species of interest
+  spc_int <- "Saccharina_latissima"
+  # Output directory
   outdir <- "s-latissima-genome/"
 } else {
   line_args <- commandArgs(trailingOnly = T)
   seq_file <- line_args[1]
-  outdir <- line_args[2]
+  spc_int <- line_args[2]
+  outdir <- line_args[3]
 }
 # Set column names for PSL data frames
 psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
@@ -269,11 +276,17 @@ faidx_col <- c("ID", "Length", "Offset", "Linebases", "Linewidth")
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
 # Import PSL files into data frames
-# Keep only unique species combinations
-species_versus <- lapply(combn(rev(species), 2, simplify = F),
-                         paste, collapse = "_vs_")
-psl_files <- grep(paste(species_versus, collapse = "|"), 
-                  list.files(pattern = "\\.psl"), value = T)
+# # Keep only unique species combinations
+# species_versus <- lapply(combn(rev(species), 2, simplify = F),
+#                          paste, collapse = "_vs_")
+# Designate species of interest as query genome in all combinations
+species_versus <- paste(spc_int,
+                        grep(spc_int, species, invert = T, value = T),
+                        sep = "_vs_")
+psl_files <- grep(paste(species_versus, collapse = "|"),
+                  # list.files(path = ".",
+                  list.files(path = "old_psls", full.names = T,
+                             pattern = "\\.psl"), value = T)
 psl_list <- sapply(psl_files, read.table, col.names = psl_col,
                    simplify = F, USE.NAMES = T)
 names(psl_list) <- gsub(".*ment_|.psl", "", names(psl_list))
@@ -284,7 +297,79 @@ psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 if (dir.exists(outdir)) setwd(outdir)
 # Summarize by contig vs. contig of each syntenic comparison
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+# Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
+
+
+
+
+test <- psl_list[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+matchPlot <- function(qID, df) {
+  df1 <- df %>% filter(qName == qID)
+  p <- ggplot(data = df1,
+         mapping = aes(x=qStart, xend=qEnd, y=tName, yend=tName, col=matches)) +
+         # mapping = aes(x=qStart, xend=qEnd, y=tName, yend=tName)) +
+    scale_color_continuous(type = "viridis") +
+    geom_point(mapping = aes(x = qSize, y = tName),
+               alpha = 0) +
+    geom_segment(linewidth = 3, lineend = "round")
+  return(p)
+}
+matchPlot("scaffold_4", test)
+# plot_match_list <- sapply(unique(test$qName), matchPlot, test, simplify = F)
+# ggarrange(plotlist = plot_match_list[1:5])
+
+hist(test$matches/(abs(test$qStart-test$qEnd)))
+test_metrics <- test %>%
+  mutate(synt=matches) %>%
+  group_by(qName, tName) %>%
+  # Keep only highest synteny for each scaffold-scaffold pair
+  filter(synt == max(synt)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  # Calculate coverage of each alignment
+  mutate(cov=abs(qStart-qEnd)) %>%
+  # Calculate maximum block size (bp) of each alignment
+  mutate(max_block=max(as.numeric(unlist(strsplit(blockSizes, ","))))) %>%
+  mutate(p_blockCount=blockCount/abs(qStart-qEnd)) %>%
+  # Scale coverage and max_block to [0,1]
+  group_by(qName) %>%
+  mutate(synt_scaled=(synt-min(synt))/(max(synt)-min(synt))) %>%
+  mutate(cov_scaled=(cov-min(cov))/(max(cov)-min(cov))) %>%
+  mutate(max_block_scaled=(max_block-min(max_block))/(max(max_block)-min(max_block))) %>%
+  mutate(blockCount_scaled=(blockCount-min(blockCount))/(max(blockCount)-min(blockCount))) %>%
+  mutate(p_blockCount_scaled=(p_blockCount-min(p_blockCount))/(max(p_blockCount)-min(p_blockCount)))
+# For query scaffolds with 1 match, scale to 1
+test_metrics[is.na.data.frame(test_metrics)] <- 1
+# test_metrics <- test_metrics %>% filter(qName == "scaffold_4")
+((p1 <- ggplot(data = test_metrics,
+       mapping = aes(x=synt, y=max_block_scaled, col=qName)) +
+  geom_point() +
+  theme(legend.position="none")))
+((p2 <- ggplot(data = test_metrics,
+       mapping = aes(x=synt, y=blockCount_scaled, col=qName)) +
+  geom_point() +
+  theme(legend.position="none")))
+((p3 <- ggplot(data = test_metrics,
+             mapping = aes(x=blockCount_scaled, y=max_block_scaled, col=synt_scaled)) +
+  geom_point()))
+((p4 <- ggplot(data = test_metrics,
+               mapping = aes(x=p_blockCount_scaled, y=max_block_scaled, col=cov_scaled)) +
+    geom_point()))
+test_metrics %>% ungroup() %>% select(25:29) %>% cor()
+ggarrange(p3, p4)
+
+
+hist(test_metrics$synt)
+
+
+ggplot(data = test, mapping = aes(x=qPercent)) + 
+  geom_histogram()
+ggplot(data = test, mapping = aes(x=qSize)) + 
+  geom_histogram()
+ggplot(data = test, mapping = aes(x=qSize, y=total_matches, col=qPercent)) + 
+  geom_point()
+
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 # Subset data for dotplots

@@ -72,6 +72,11 @@ submit () {
     local part
     local cmd
     part="$SLURM_JOB_PARTITION"
+    # Handle runs started from head node
+    if [[ -z "$part" ]]
+    then
+      part="shared"
+    fi
     # Choose larger partition for BLAST and alignment jobs
     if echo "$*" | grep -q "blast\|align"
     then 
