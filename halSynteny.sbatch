@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J halSynteny
-#SBATCH -p shared
+#SBATCH -p oneweek
 #SBATCH --mem=5gb
 #SBATCH --time=1-0
 #SBATCH --nodes=20
