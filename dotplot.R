@@ -429,7 +429,7 @@ ggplot(data = test,
 
 
 # psl_plots <- sapply(names(psl_metrics), allSyntPlot, psl_metrics, simplify = F)
-allSyntPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", psl_metrics)
+# allSyntPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", psl_metrics)
 
 # test <- psl_list[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
 # test %>%

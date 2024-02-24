@@ -195,7 +195,7 @@ ps <- ggarrange(p1, p2, common.legend = T, legend = "bottom")
 # Save plots
 showtext_opts(dpi = 300)
 ggsave(filt_plot, p0, width = 10, height = 6)
-ggsave(vio_plot, ps, width = 13, height = 6, bg = "white")
+ggsave(vio_plot, ps, width = 20, height = 6, bg = "white")
 # Export filtered lists of contigs for each species
 assembly_list <- c()
 outlist <- c()
