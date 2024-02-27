@@ -13,9 +13,13 @@ if (require(showtext, quietly = T)) {
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 
-# Functions
-# Gets genome name from "genome_vs_genome" character
-# Naming convention: query_vs_target
+# Variables and functions
+# Set column names for PSL data frames
+psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
+             "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
+             "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
+             "blockCount", "blockSizes", "qStarts", "tStarts")
+# Gets genome name from "genome_vs_genome" character named: query_vs_target
 getGen <- function(df_name, gen_type) {
   if (gen_type == "query") {
     n <- 1
@@ -39,6 +43,7 @@ orderPsl <- function(df_name, df_list) {
            tName=fixUndaria(tName))
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
+  # Convert scaffold names to factors ordered by size
   query_contigs <- df %>%
     select(qName, qSize) %>%
     arrange(desc(qSize)) %>%
@@ -56,14 +61,7 @@ orderPsl <- function(df_name, df_list) {
     filter(qSize > 1e6 & tSize > 1e6) %>%
     # Filter out extremely large contigs
     filter(qSize < 30e6 & tSize < 30e6) %>%
-    # # Keep only 30 largest contigs
-    # filter(qName %in% head(query_contigs, n=30),
-    #        tName %in% head(target_contigs, n=30)) %>%
     arrange(qName)
-  # df <- df %>%
-  #   mutate(qName=factor(qName, levels = contig_ids[[query]][["ID"]]),
-  #          tName=factor(tName, levels = contig_ids[[target]][["ID"]])) %>%
-  #   arrange(qName)
   return(df)
 }
 # Calculate metrics from PSL table
@@ -74,16 +72,18 @@ metricsPsl <- function(df_name, df_list) {
   df <- df %>%
     # Calculate synteny within each alignment range
     mutate(synt=matches/abs(qStart-qEnd)) %>%
-    # # Keep only highest synteny for each scaffold-scaffold pair
-    # group_by(qName, tName) %>%
-    # filter(synt == max(synt)) %>%
-    # ungroup() %>%
-    # Calculate fragmentedness of alignment
-    mutate(p_blockCount=blockCount/abs(qStart-qEnd)) %>%
-    # Calculate maximum block size (bp) of each alignment
-    mutate(max_block=max(as.numeric(unlist(strsplit(blockSizes, ","))))) %>%
-    # Calculate each alignment size
-    mutate(aln_size=abs(qStart-qEnd))
+    # Keep only highest synteny for each scaffold-scaffold pair
+    group_by(qName, tName) %>%
+    filter(synt == max(synt)) %>%
+    ungroup()
+  # %>%
+  return(df)
+    # # Calculate fragmentedness of alignment
+    # mutate(p_blockCount=blockCount/abs(qStart-qEnd)) %>%
+    # # Calculate maximum block size (bp) of each alignment
+    # mutate(max_block=max(as.numeric(unlist(strsplit(blockSizes, ","))))) %>%
+    # # Calculate each alignment size
+    # mutate(aln_size=abs(qStart-qEnd))
   df_cov <- df %>%
     group_by(qName, tName) %>%
     summarize(total_aln = sum(aln_size),
@@ -160,11 +160,6 @@ allSyntPlot <- function(df_name, df_list) {
   return(p)
 }
 
-
-
-
-
-
 # Summarize PSL table by summing matches for each contig pair
 sumPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
@@ -176,7 +171,8 @@ sumPsl <- function(df_name, df_list) {
   df2 <- merge(df_sum, unique(df[,c("qName", "qSize")]),
                by = "qName", sort = F)
   df2 <- df2 %>%
-    mutate(qPercent=total_matches/qSize*100)
+    mutate(qPercent=total_matches/qSize) %>%
+    arrange(qName, desc(qPercent))
   return(df2)
 }
 # Pull out maximal matching contigs,
@@ -199,28 +195,54 @@ matPsl <- function(df_name, df_list) {
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   mat <- as.matrix(df %>%
-                     # mutate(qName=fixUndaria(qName),
-                     #             tName=fixUndaria(tName)) %>%
                      pivot_wider(id_cols = qName,
                                  names_from = tName,
                                  values_from = qPercent,
+                                 # values_from = total_matches,
                                  values_fill = 0) %>%
                      column_to_rownames(var = "qName"))
   return(mat)
 }
 # Plot heatmap of given matrix
-heatPsl <- function(mat_name, mat_list) {
+heatPsl <- function(mat_name, mat_list, df_list) {
   mat <- mat_list[[mat_name]]
+  df <- df_list[[mat_name]]
   query <- getGen(mat_name, "query")
   target <- getGen(mat_name, "target")
   x_label <- paste("target:", gsub("_", " ", target))
   y_label <- paste("query:", gsub("_", " ", query))
+  ttl <- gsub("_", " ", mat_name)
   fname <- paste0(mat_name, "_heatmap.png")
   h_colors <- colorRampPalette(brewer.pal(8, "YlOrRd"))
-  png(file = fname, units = "in", width = 5, height = 5, res = 300)
-  heatmap(mat, main = "Query contig coverage %",
-          xlab = x_label, ylab = y_label, col = h_colors(25))
-  dev.off()
+  # h <- heatmap(mat, scale = "none", keep.dendro = T)
+  h <- heatmap(mat, scale = "row", keep.dendro = T,
+               main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25))
+  hclust_mat <- as.hclust(h$Rowv)
+  # df$BUSCO <- factor(x = df$BUSCO,
+  #                    levels = c(rownames(mat)[hclust_order], "Genes"),
+  #                    ordered = T)
+  df <- df %>%
+    mutate(qName = factor(x = qName,
+                      # levels = c(hclust_mat$labels[hclust_mat$order], "Genes"),
+                      levels = hclust_mat$labels[hclust_mat$order],
+                      ordered = T))
+  p <- ggplot(mapping = aes(x = tName, y = qName)) +
+    geom_tile(data = df,
+              mapping = aes(fill = qPercent)) +
+    # scale_fill_manual(values = h_colors) +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.text.x = element_text(angle = 45),
+          axis.text.y = element_text(angle = 45),
+          axis.line = element_line(color = "black"),
+          legend.position = "left") +
+    ggtitle(ttl)
+  return(p)
+  # png(file = fname, units = "in", width = 5, height = 5, res = 300)
+  # heatmap(mat, main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25),
+  #         scale = "row")
+  # dev.off()
 }
 # Subset data for dotplots
 dotFilt <- function(df_name, df_list, df2_list) {
@@ -277,10 +299,10 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
     geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
                  # linewidth = 2,
                  lineend = "round") +
-    geom_point(mapping = aes(x = qSize, y = tSize),
-               alpha = 0) +
-    geom_point(mapping = aes(x = Zeros, y = Zeros),
-               alpha = 0) +
+    # geom_point(mapping = aes(x = qSize, y = tSize),
+    #            alpha = 0) +
+    # geom_point(mapping = aes(x = Zeros, y = Zeros),
+    #            alpha = 0) +
     facet_grid(cols = vars(qName), rows = vars(tName),
                switch = "both",
                space = "free",
@@ -367,93 +389,73 @@ if (interactive()) {
   spc_int <- line_args[2]
   outdir <- line_args[3]
 }
-# Set column names for PSL data frames
-psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
-             "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
-             "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
-             "blockCount", "blockSizes", "qStarts", "tStarts")
-faidx_col <- c("ID", "Length", "Offset", "Linebases", "Linewidth")
-# Import species names
+# Import dataframe of species and associated file names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
-# Import PSL files into data frames
-# # Keep only unique species combinations
-# species_versus <- lapply(combn(rev(species), 2, simplify = F),
-#                          paste, collapse = "_vs_")
-# Designate species of interest as query genome in all combinations
-species_versus <- paste(spc_int,
-                        grep(spc_int, species, invert = T, value = T),
-                        sep = "_vs_")
+# Keep only unique species combinations
+species_versus <- lapply(combn(rev(species), 2, simplify = F),
+                         paste, collapse = "_vs_")
+# # Designate species of interest as query genome in all combinations
+# species_versus <- paste(spc_int,
+#                         grep(spc_int, species, invert = T, value = T),
+#                         sep = "_vs_")
+# Create list of PSL filenames
 psl_files <- grep(paste(species_versus, collapse = "|"),
-                  # list.files(path = ".",
-                  list.files(path = ".", full.names = T,
-                             pattern = "\\.psl"), value = T)
+                  list.files(full.names = T, pattern = "\\.psl"), value = T)
+# Read PSL files into list of dataframes
 psl_list <- sapply(psl_files, read.table, col.names = psl_col,
                    simplify = F, USE.NAMES = T)
+# Remove file extensions from list names
 names(psl_list) <- gsub(".*ment_|.psl", "", names(psl_list))
+# Convert scaffold names to size-ordered factors
 psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 
 # Analysis
 # Change to output directory for plots (if it exists)
 if (dir.exists(outdir)) setwd(outdir)
-psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
+# Summarize by contig vs. contig of each syntenic comparison
+psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+# Select maximal matching contigs
+psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
+# Subset data for dotplots
+psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
+# Summarize subsetted data
+psl_dot_sums <- sapply(names(psl_dot), sumPsl, psl_dot, simplify = F)
+# Matrices of syntenic blocks by contig for heatmaps
+psl_mats1 <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
+psl_mats2 <- sapply(names(psl_dot_sums), matPsl, psl_dot_sums, simplify = F)
+# Heatmaps of genome vs. genome
+psl_heats1 <- sapply(names(psl_mats1), heatPsl, psl_mats2, psl_sums, simplify = F)
+psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_mats1, psl_dot_sums, simplify = F)
+psl_heats[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+# gplots::heatmap.2(psl_mats[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]])
 
 
-test <- psl_metrics[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-
-
-test_filt <- test %>%
-  filter(qName == "scaffold_4")
-
-ggplot(data = test,
-       mapping = aes(x = total_p_blockCount_scaled,
-                     y = cov_scaled,
-                     col = qName)) +
-  geom_point() +
-  theme(legend.position = "none")
-
-test$euc_dist <- (1-test$cov_scaled)^2+(0+test$total_p_blockCount_scaled)^2
-test2 <- test %>%
-  group_by(qName) %>%
-  filter(euc_dist == min(euc_dist)) %>%
-  filter(qName == "scaffold_1")
-ggplot(data = test,
-       mapping = aes(x = total_p_blockCount_scaled,
-                     y = cov_scaled,
-                     col = qName)) +
-  geom_point() +
-  facet_wrap(~qName) +
-  theme_classic() +
-  theme(legend.position = "none")
-
-
-
+# # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
+# psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
+# test <- psl_metrics[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+# ggplot(data = test,
+#        mapping = aes(x = total_p_blockCount_scaled,
+#                      y = cov_scaled,
+#                      col = qName)) +
+#   geom_point() +
+#   theme(legend.position = "none")
+# test$euc_dist <- (1-test$cov_scaled)^2+(0+test$total_p_blockCount_scaled)^2
+# test2 <- test %>%
+#   group_by(qName) %>%
+#   filter(euc_dist == min(euc_dist)) %>%
+#   filter(qName == "scaffold_1")
+# ggplot(data = test,
+#        mapping = aes(x = total_p_blockCount_scaled,
+#                      y = cov_scaled,
+#                      col = qName)) +
+#   geom_point() +
+#   facet_wrap(~qName) +
+#   theme_classic() +
+#   theme(legend.position = "none")
 # psl_plots <- sapply(names(psl_metrics), allSyntPlot, psl_metrics, simplify = F)
 # allSyntPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", psl_metrics)
 
-# test <- psl_list[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-# test %>%
-#   ungroup() %>%
-#   mutate(aln_size=abs(qStart-qEnd)/qSize) %>%
-#   group_by(qName, tName) %>%
-#   reframe(cov = sum(aln_size))
-
-# ((p1 <- ggplot(data = test_metrics,
-#        mapping = aes(x=synt, y=max_block_scaled, col=qName)) +
-#   geom_point() +
-#   theme(legend.position="none")))
-# ((p2 <- ggplot(data = test_metrics,
-#        mapping = aes(x=synt, y=blockCount_scaled, col=qName)) +
-#   geom_point() +
-#   theme(legend.position="none")))
-# ((p3 <- ggplot(data = test_metrics,
-#              mapping = aes(x=blockCount_scaled, y=max_block_scaled, col=synt_scaled)) +
-#   geom_point()))
-# ((p4 <- ggplot(data = test_metrics,
-#                mapping = aes(x=p_blockCount_scaled, y=max_block_scaled, col=cov_scaled)) +
-#     geom_point()))
-# test_metrics %>% ungroup() %>% select(25:29) %>% cor()
-# ggarrange(p3, p4)
 
 
 
