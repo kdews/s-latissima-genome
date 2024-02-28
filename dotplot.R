@@ -251,7 +251,7 @@ dotFilt <- function(df_name, df_list, df2_list) {
   match_list <- paste0(df2$qName, df2$tName)
   target <- getGen(df_name, "target")
   query <- getGen(df_name, "query")
-  subset_cols <- c("qName", "tName", "strand",
+  subset_cols <- c("matches", "strand", "qName", "tName",
                    "qSize", "qStart", "qEnd",
                    "tSize", "tStart", "tEnd")
   df_sub <- df[,subset_cols]
@@ -421,15 +421,43 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 # Summarize subsetted data
 psl_dot_sums <- sapply(names(psl_dot), sumPsl, psl_dot, simplify = F)
+View(psl_dot_sums$Macrocystis_pyrifera_vs_Ectocarpus_siliculosus)
+
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats1 <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 psl_mats2 <- sapply(names(psl_dot_sums), matPsl, psl_dot_sums, simplify = F)
 # Heatmaps of genome vs. genome
-psl_heats1 <- sapply(names(psl_mats1), heatPsl, psl_mats2, psl_sums, simplify = F)
-psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_mats1, psl_dot_sums, simplify = F)
-psl_heats[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-# gplots::heatmap.2(psl_mats[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]])
+psl_heats1 <- sapply(names(psl_mats1), heatPsl, psl_mats1, psl_sums, simplify = F)
+psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_mats2, psl_dot_sums, simplify = F)
+psl_heats1[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+psl_heats2[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+psl_heats1[["Saccharina_latissima_vs_Saccharina_japonica"]]
+psl_heats2[["Saccharina_latissima_vs_Saccharina_japonica"]]
+psl_heats1[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]]
+psl_heats2[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]]
 
+test_order <- psl_match$Saccharina_latissima_vs_Macrocystis_pyrifera %>%
+  arrange(tName) %>%
+  pull(qName) %>%
+  as.character()
+
+
+test <- psl_sums$Saccharina_latissima_vs_Macrocystis_pyrifera %>%
+  mutate(qName = factor(x = qName,
+                        # levels = hclust_mat$labels[hclust_mat$order],
+                        levels = test_order,
+                        ordered = T))
+ggplot(mapping = aes(x = tName, y = qName)) +
+  geom_tile(data = test,
+            mapping = aes(fill = qPercent)) +
+  # scale_fill_manual(values = h_colors) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.text.x = element_text(angle = 45),
+        axis.text.y = element_text(angle = 45),
+        axis.line = element_line(color = "black"),
+        legend.position = "left")
 
 # # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
 # psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
