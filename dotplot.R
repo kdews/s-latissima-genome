@@ -194,42 +194,55 @@ matPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  mat <- as.matrix(df %>%
-                     pivot_wider(id_cols = qName,
-                                 names_from = tName,
-                                 values_from = qPercent,
-                                 # values_from = total_matches,
-                                 values_fill = 0) %>%
-                     column_to_rownames(var = "qName"))
+  # mat <- as.matrix(df %>%
+  #                    pivot_wider(id_cols = qName,
+  #                                names_from = tName,
+  #                                values_from = qPercent,
+  #                                # values_from = total_matches,
+  #                                values_fill = 0) %>%
+  #                    column_to_rownames(var = "qName"))
+  mat <- df %>%
+    pivot_wider(id_cols = qName,
+                names_from = tName,
+                values_from = qPercent,
+                values_fill = 0) %>%
+    pivot_longer(!qName,
+                 names_to = "tName",
+                 values_to = "qPercent") %>%
+    mutate(tName = factor(tName, levels = levels(df$tName)))
   return(mat)
 }
 # Plot heatmap of given matrix
-heatPsl <- function(mat_name, mat_list, df_list) {
-  mat <- mat_list[[mat_name]]
-  df <- df_list[[mat_name]]
-  query <- getGen(mat_name, "query")
-  target <- getGen(mat_name, "target")
+heatPsl <- function(match_name, match_list, df_list) {
+  match <- match_list[[match_name]]
+  df <- df_list[[match_name]]
+  query <- getGen(match_name, "query")
+  target <- getGen(match_name, "target")
   x_label <- paste("target:", gsub("_", " ", target))
   y_label <- paste("query:", gsub("_", " ", query))
-  ttl <- gsub("_", " ", mat_name)
-  fname <- paste0(mat_name, "_heatmap.png")
-  h_colors <- colorRampPalette(brewer.pal(8, "YlOrRd"))
-  # h <- heatmap(mat, scale = "none", keep.dendro = T)
-  h <- heatmap(mat, scale = "row", keep.dendro = T,
-               main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25))
-  hclust_mat <- as.hclust(h$Rowv)
-  # df$BUSCO <- factor(x = df$BUSCO,
-  #                    levels = c(rownames(mat)[hclust_order], "Genes"),
-  #                    ordered = T)
+  ttl <- gsub("_", " ", match_name)
+  # fname <- paste0(match_name, "_heatmap.png")
+  # h <- heatmap(mat, scale = "row", keep.dendro = T,
+  #              main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25))
+  # hclust_mat <- as.hclust(h$Rowv)
+  # png(file = fname, units = "in", width = 5, height = 5, res = 300)
+  # heatmap(mat, main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25),
+  #         scale = "row")
+  # dev.off()
+  h_order <- match %>%
+    arrange(tName) %>%
+    pull(qName) %>%
+    as.character()
   df <- df %>%
     mutate(qName = factor(x = qName,
-                      # levels = c(hclust_mat$labels[hclust_mat$order], "Genes"),
-                      levels = hclust_mat$labels[hclust_mat$order],
-                      ordered = T))
+                          # levels = c(hclust_mat$labels[hclust_mat$order], "Genes"),
+                          # levels = hclust_mat$labels[hclust_mat$order],
+                          levels = h_order,
+                          ordered = T))
   p <- ggplot(mapping = aes(x = tName, y = qName)) +
     geom_tile(data = df,
               mapping = aes(fill = qPercent)) +
-    # scale_fill_manual(values = h_colors) +
+    scale_fill_viridis_c(option = "turbo") +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
@@ -239,10 +252,6 @@ heatPsl <- function(mat_name, mat_list, df_list) {
           legend.position = "left") +
     ggtitle(ttl)
   return(p)
-  # png(file = fname, units = "in", width = 5, height = 5, res = 300)
-  # heatmap(mat, main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25),
-  #         scale = "row")
-  # dev.off()
 }
 # Subset data for dotplots
 dotFilt <- function(df_name, df_list, df2_list) {
@@ -392,13 +401,13 @@ if (interactive()) {
 # Import dataframe of species and associated file names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
-# Keep only unique species combinations
-species_versus <- lapply(combn(rev(species), 2, simplify = F),
-                         paste, collapse = "_vs_")
-# # Designate species of interest as query genome in all combinations
-# species_versus <- paste(spc_int,
-#                         grep(spc_int, species, invert = T, value = T),
-#                         sep = "_vs_")
+# # Keep only unique species combinations
+# species_versus <- lapply(combn(rev(species), 2, simplify = F),
+#                          paste, collapse = "_vs_")
+# Designate species of interest as query genome in all combinations
+species_versus <- paste(spc_int,
+                        grep(spc_int, species, invert = T, value = T),
+                        sep = "_vs_")
 # Create list of PSL filenames
 psl_files <- grep(paste(species_versus, collapse = "|"),
                   list.files(full.names = T, pattern = "\\.psl"), value = T)
@@ -421,43 +430,17 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 # Summarize subsetted data
 psl_dot_sums <- sapply(names(psl_dot), sumPsl, psl_dot, simplify = F)
-View(psl_dot_sums$Macrocystis_pyrifera_vs_Ectocarpus_siliculosus)
 
 # Matrices of syntenic blocks by contig for heatmaps
 psl_mats1 <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
 psl_mats2 <- sapply(names(psl_dot_sums), matPsl, psl_dot_sums, simplify = F)
 # Heatmaps of genome vs. genome
-psl_heats1 <- sapply(names(psl_mats1), heatPsl, psl_mats1, psl_sums, simplify = F)
-psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_mats2, psl_dot_sums, simplify = F)
-psl_heats1[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-psl_heats2[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-psl_heats1[["Saccharina_latissima_vs_Saccharina_japonica"]]
-psl_heats2[["Saccharina_latissima_vs_Saccharina_japonica"]]
-psl_heats1[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]]
-psl_heats2[["Undaria_pinnatifida_vs_Macrocystis_pyrifera"]]
+psl_heats1 <- sapply(names(psl_match), heatPsl, psl_match, psl_mats1, simplify = F)
+psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_match, psl_mats2, simplify = F)
 
-test_order <- psl_match$Saccharina_latissima_vs_Macrocystis_pyrifera %>%
-  arrange(tName) %>%
-  pull(qName) %>%
-  as.character()
-
-
-test <- psl_sums$Saccharina_latissima_vs_Macrocystis_pyrifera %>%
-  mutate(qName = factor(x = qName,
-                        # levels = hclust_mat$labels[hclust_mat$order],
-                        levels = test_order,
-                        ordered = T))
-ggplot(mapping = aes(x = tName, y = qName)) +
-  geom_tile(data = test,
-            mapping = aes(fill = qPercent)) +
-  # scale_fill_manual(values = h_colors) +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank(),
-        axis.text.x = element_text(angle = 45),
-        axis.text.y = element_text(angle = 45),
-        axis.line = element_line(color = "black"),
-        legend.position = "left")
+psl_heats1
+psl_heats2
+ggarrange()
 
 # # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
 # psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
