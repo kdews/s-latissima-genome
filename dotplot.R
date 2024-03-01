@@ -31,16 +31,18 @@ getGen <- function(df_name, gen_type) {
   gen_name <- unlist(strsplit(df_name, "_vs_"))[[n]]
   return(gen_name)
 }
-# Fixes Undaria chromosome labels for plotting
-fixUndaria <- function(contigs) {
-  contigs <- gsub("\\..*", "", gsub("JABAKD01", "scaffold", contigs))
+# Fixes chromosome labels for plotting
+fixChrom <- function(contigs) {
+  contigs <-
+    as.character(as.numeric(str_remove_all(str_remove_all(contigs, ".*_"),
+                                           "[^0-9]")))
   return(contigs)
 }
 # Order PSL data frame by contig size by converting contig names to factors
 orderPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]] %>%
-    mutate(qName=fixUndaria(qName),
-           tName=fixUndaria(tName))
+    mutate(qNum=fixChrom(qName),
+           tNum=fixChrom(tName))
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   # Convert scaffold names to factors ordered by size
@@ -54,9 +56,21 @@ orderPsl <- function(df_name, df_list) {
     arrange(desc(tSize)) %>%
     pull(tName) %>%
     unique()
+  query_nums <- df %>%
+    select(qNum, qSize) %>%
+    arrange(desc(qSize)) %>%
+    pull(qNum) %>%
+    unique()
+  target_nums <- df %>%
+    select(tNum, tSize) %>%
+    arrange(desc(tSize)) %>%
+    pull(tNum) %>%
+    unique()
   df <- df %>%
     mutate(qName=factor(qName, levels = query_contigs),
-           tName=factor(tName, levels = target_contigs)) %>%
+           tName=factor(tName, levels = target_contigs),
+           qNum=factor(qNum, levels = query_nums),
+           tNum=factor(tNum, levels = target_nums)) %>%
     # Filter out extremely small contigs
     filter(qSize > 1e6 & tSize > 1e6) %>%
     # Filter out extremely large contigs
@@ -113,104 +127,67 @@ metricsPsl <- function(df_name, df_list) {
   df_scale[is.na.data.frame(df_scale)] <- 1
   return(df_scale)
 }
-# Plot 
-allSyntPlot <- function(df_name, df_list) {
-  df <- df_list[[df_name]]
-  query <- getGen(df_name, "query")
-  target <- getGen(df_name, "target")
-  df <- df %>%
-    filter(qName %in% unique(df$qName)[1:50])
-  p <- ggplot(data = df,
-              # Plot alignment blocks along query scaffold
-              mapping = aes(x = qStart, xend = qEnd,
-                            # Label scaffolds on y-axis
-                            y = tStart, yend = tEnd,
-                            # # Shade line segments by degree of synteny
-                            # alpha = synt,
-                            # Shade line segments by relative coverage
-                            alpha = cov_scaled,
-                            # Color line segments by degree of fragmentedness
-                            col = total_p_blockCount_scaled)) +
-    # facet_grid(tName~qName) +
-    # scale_alpha_continuous(trans = "reverse") +
-    facet_grid(cols = vars(qName), rows = vars(tName),
-               switch = "both",
-               space = "free",
-               scale = "free",
-               as.table = F) +
-    coord_cartesian(clip="off") +
-    scale_color_continuous(type = "viridis") +
-    geom_point(mapping = aes(x = qSize, y = tName),
-               alpha = 0) +
-    geom_segment(linewidth = 3, lineend = "round") +
-    labs(x = query, y = target, title = "Genome synteny by scaffold") +
-    theme_classic() +
-    theme(axis.title = element_text(face = "italic"),
-          axis.ticks = element_blank(),
-          axis.text = element_blank(),
-          panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.1),
-          panel.spacing = unit(0, "lines"),
-          # strip.clip = "off",
-          strip.text.x.bottom = element_text(size = rel(0.75), angle = 90),
-          strip.text.y.left = element_text(size = rel(0.75), angle = 0),
-          strip.placement = "outside",
-          # strip.text.y.left = element_text(angle = 0),
-          strip.background.x = element_rect(color = NA,  fill=NA),
-          strip.background.y = element_rect(color = NA,  fill=NA))
-  return(p)
-}
-
 # Summarize PSL table by summing matches for each contig pair
 sumPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   df_sum <- df %>%
-    group_by(qName, tName) %>%
+    group_by(qNum, tNum) %>%
     summarize(total_matches=as.numeric(sum(matches)))
-  df2 <- merge(df_sum, unique(df[,c("qName", "qSize")]),
-               by = "qName", sort = F)
+  df2 <- merge(df_sum, unique(df[,c("qNum", "qSize")]),
+               by = "qNum", sort = F)
   df2 <- df2 %>%
     mutate(qPercent=total_matches/qSize) %>%
-    arrange(qName, desc(qPercent))
+    arrange(qNum, desc(qPercent))
   return(df2)
 }
-# Pull out maximal matching contigs,
-# where most of query contig maps onto target
+# Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   df_match <- df %>% 
-    group_by(qName) %>%
+    group_by(qNum) %>%
     filter(qPercent == max(qPercent)) %>%
     ungroup()
   return(df_match)
 }
-
-
-# Convert PSL summary into matrix for heatmap
-matPsl <- function(df_name, df_list) {
+# Pivot PSL summary dataframe for ggplot2 heatmap
+pivotPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  # mat <- as.matrix(df %>%
-  #                    pivot_wider(id_cols = qName,
-  #                                names_from = tName,
-  #                                values_from = qPercent,
-  #                                # values_from = total_matches,
-  #                                values_fill = 0) %>%
-  #                    column_to_rownames(var = "qName"))
-  mat <- df %>%
-    pivot_wider(id_cols = qName,
-                names_from = tName,
+  df_p <- df %>%
+    pivot_wider(id_cols = qNum,
+                names_from = tNum,
                 values_from = qPercent,
                 values_fill = 0) %>%
-    pivot_longer(!qName,
-                 names_to = "tName",
+    pivot_longer(!qNum,
+                 names_to = "tNum",
                  values_to = "qPercent") %>%
-    mutate(tName = factor(tName, levels = levels(df$tName)))
-  return(mat)
+    mutate(tNum = factor(tNum, levels = levels(df$tNum)))
+  return(df_p)
+}
+# Subset data for dotplots
+dotFilt <- function(df_name, df_list, df2_list) {
+  df <- df_list[[df_name]]
+  df2 <- df2_list[[df_name]]
+  match_list <- paste0(df2$qNum, df2$tNum)
+  target <- getGen(df_name, "target")
+  query <- getGen(df_name, "query")
+  subset_cols <- c("matches", "strand", "qNum", "tNum",
+                   "qSize", "qStart", "qEnd",
+                   "tSize", "tStart", "tEnd")
+  df_sub <- df[,subset_cols]
+  df_sub <- df_sub %>%
+    filter(paste0(qNum, tNum) %in% match_list)
+  df_sub <- df_sub %>%
+    group_by(tNum) %>%
+    arrange(tStart, qStart) %>%
+    mutate(qNum = factor(qNum, levels = unique(qNum))) %>%
+    ungroup()
+  return(df_sub)
 }
 # Plot heatmap of given matrix
 heatPsl <- function(match_name, match_list, df_list) {
@@ -230,48 +207,22 @@ heatPsl <- function(match_name, match_list, df_list) {
   #         scale = "row")
   # dev.off()
   h_order <- match %>%
-    arrange(tName) %>%
-    pull(qName) %>%
+    arrange(tNum) %>%
+    pull(qNum) %>%
     as.character()
   df <- df %>%
-    mutate(qName = factor(x = qName,
-                          # levels = c(hclust_mat$labels[hclust_mat$order], "Genes"),
-                          # levels = hclust_mat$labels[hclust_mat$order],
-                          levels = h_order,
-                          ordered = T))
-  p <- ggplot(mapping = aes(x = tName, y = qName)) +
+    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
+  p <- ggplot(mapping = aes(x = tNum, y = qNum)) +
     geom_tile(data = df,
               mapping = aes(fill = qPercent)) +
     scale_fill_viridis_c(option = "turbo") +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.background = element_blank(),
-          axis.text.x = element_text(angle = 45),
-          axis.text.y = element_text(angle = 45),
           axis.line = element_line(color = "black"),
           legend.position = "left") +
-    ggtitle(ttl)
+    labs(title = ttl, x = x_label, y = y_label)
   return(p)
-}
-# Subset data for dotplots
-dotFilt <- function(df_name, df_list, df2_list) {
-  df <- df_list[[df_name]]
-  df2 <- df2_list[[df_name]]
-  match_list <- paste0(df2$qName, df2$tName)
-  target <- getGen(df_name, "target")
-  query <- getGen(df_name, "query")
-  subset_cols <- c("matches", "strand", "qName", "tName",
-                   "qSize", "qStart", "qEnd",
-                   "tSize", "tStart", "tEnd")
-  df_sub <- df[,subset_cols]
-  df_sub <- df_sub %>%
-    filter(paste0(qName, tName) %in% match_list)
-  df_sub <- df_sub %>%
-    group_by(tName) %>%
-    arrange(tStart, qStart) %>%
-    mutate(qName = factor(qName, levels = unique(qName))) %>%
-    ungroup()
-  return(df_sub)
 }
 # Dotplots
 dotPlot <- function(df_name, df_list, filter_ids = NULL) {
@@ -426,62 +377,17 @@ if (dir.exists(outdir)) setwd(outdir)
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
+# Pivot summarized data for heatmaps
+psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 # Subset data for dotplots
 psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
-# Summarize subsetted data
-psl_dot_sums <- sapply(names(psl_dot), sumPsl, psl_dot, simplify = F)
 
-# Matrices of syntenic blocks by contig for heatmaps
-psl_mats1 <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
-psl_mats2 <- sapply(names(psl_dot_sums), matPsl, psl_dot_sums, simplify = F)
-# Heatmaps of genome vs. genome
-psl_heats1 <- sapply(names(psl_match), heatPsl, psl_match, psl_mats1, simplify = F)
-psl_heats2 <- sapply(names(psl_mats2), heatPsl, psl_match, psl_mats2, simplify = F)
+# Plots
+# Heatmaps of genome vs. genome synteny
+psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs, simplify = F)
+ggarrange(plotlist = psl_heats, ncol = length(psl_heats),
+          common.legend = T, legend = "right")
 
-psl_heats1
-psl_heats2
-ggarrange()
-
-# # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
-# psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
-# test <- psl_metrics[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
-# ggplot(data = test,
-#        mapping = aes(x = total_p_blockCount_scaled,
-#                      y = cov_scaled,
-#                      col = qName)) +
-#   geom_point() +
-#   theme(legend.position = "none")
-# test$euc_dist <- (1-test$cov_scaled)^2+(0+test$total_p_blockCount_scaled)^2
-# test2 <- test %>%
-#   group_by(qName) %>%
-#   filter(euc_dist == min(euc_dist)) %>%
-#   filter(qName == "scaffold_1")
-# ggplot(data = test,
-#        mapping = aes(x = total_p_blockCount_scaled,
-#                      y = cov_scaled,
-#                      col = qName)) +
-#   geom_point() +
-#   facet_wrap(~qName) +
-#   theme_classic() +
-#   theme(legend.position = "none")
-# psl_plots <- sapply(names(psl_metrics), allSyntPlot, psl_metrics, simplify = F)
-# allSyntPlot("Saccharina_latissima_vs_Macrocystis_pyrifera", psl_metrics)
-
-
-
-
-# # Summarize by contig vs. contig of each syntenic comparison
-# psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
-# # Select maximal matching contigs
-# psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
-# # Matrices of syntenic blocks by contig for heatmaps
-# psl_mats <- sapply(names(psl_sums), matPsl, psl_sums, simplify = F)
-# # Subset data for dotplots
-# psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
-# 
-# # Plots
-# # Heatmaps of genome vs. genome
-# lapply(names(psl_mats), heatPsl, psl_mats)
 # # Dotplots of genome vs. genome
 # p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
 # fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
@@ -490,3 +396,12 @@ ggarrange()
 # # seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
 # # sep_list <- sapply(names(seps), plotList, seps, simplify = F)
 # # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
+
+
+
+
+
+# # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
+# psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
+# test <- psl_metrics[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
+# test$euc_dist <- (1-test$cov_scaled)^2+(0+test$total_p_blockCount_scaled)^2

@@ -102,8 +102,7 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
     # Label N50
     stat_summary(fun = Biostrings::N50, label = n50_lab,
                  geom = "label", col = "black", size = 3,
-                 position = position_nudge(x = 0.45, y = 3)) +
-                 # position = position_nudge(x = 0.35, y = 2)) +
+                 position = position_nudge(x = 0.35, y = 3)) +
     coord_cartesian(clip = 'off')
   if (missing(n50)) {
     return(p)
@@ -112,7 +111,6 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
   } else {
     print("Error: unrecognized argument to 'annot' variable.")
   }
-  
 }
 
 # Read in data
@@ -139,11 +137,16 @@ idx <- idx %>%
   mutate(`Length (Mb)`= Length/1000000) %>%
   select(ID, `Length (Mb)`, Species) %>%
   group_by(Species) %>%
-  arrange(desc(`Length (Mb)`), .by_group = T)
+  arrange(desc(`Length (Mb)`), .by_group = T) %>%
+  mutate(ID_num = as.numeric(str_remove_all(str_remove_all(ID, ".*_"),
+                                            "[^0-9]"))) %>%
+  replace_na(list(ID_num = 29))
 # Summarize data frame
 sum_idx <- sumDf(idx)
 # Filter contigs/scaffolds by size (100 Mb > length > 4 Mb)
 idx_filt <- idx %>%
+  # Removes ORCAE artificial chromosomes
+  filter(ID_num != 0) %>%
   filter(`Length (Mb)` < 100) %>%
   filter(`Length (Mb)` >= 4)
 # Summarize filtered data frame
