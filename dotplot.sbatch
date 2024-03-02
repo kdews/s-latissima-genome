@@ -40,6 +40,6 @@ seqFile="${scripts_dir}s_lat_alignment.txt"
 r_script="${scripts_dir}${job_name}.R"
 
 # Run Rscript
-cmd="Rscript $r_script $seqFile $scripts_dir"
+cmd="Rscript $r_script $seqFile Saccharina_latissima $scripts_dir"
 echo "$cmd"
 $cmd

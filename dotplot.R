@@ -150,8 +150,23 @@ maxMatches <- function(df_name, df_list) {
   df_match <- df %>% 
     group_by(qNum) %>%
     filter(qPercent == max(qPercent)) %>%
-    ungroup()
+    ungroup() %>%
+    arrange(tNum)
   return(df_match)
+}
+# Order query ID factors by max matches
+plotOrder <- function(match_name, match_list, df_list) {
+  match <- match_list[[match_name]]
+  df <- df_list[[match_name]]
+  query <- getGen(match_name, "query")
+  target <- getGen(match_name, "target")
+  h_order <- match %>%
+    arrange(tNum) %>%
+    pull(qNum) %>%
+    as.character()
+  df <- df %>%
+    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
+  return(df)
 }
 # Pivot PSL summary dataframe for ggplot2 heatmap
 pivotPsl <- function(df_name, df_list) {
@@ -168,26 +183,6 @@ pivotPsl <- function(df_name, df_list) {
                  values_to = "qPercent") %>%
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
-}
-# Subset data for dotplots
-dotFilt <- function(df_name, df_list, df2_list) {
-  df <- df_list[[df_name]]
-  df2 <- df2_list[[df_name]]
-  match_list <- paste0(df2$qNum, df2$tNum)
-  target <- getGen(df_name, "target")
-  query <- getGen(df_name, "query")
-  subset_cols <- c("matches", "strand", "qNum", "tNum",
-                   "qSize", "qStart", "qEnd",
-                   "tSize", "tStart", "tEnd")
-  df_sub <- df[,subset_cols]
-  df_sub <- df_sub %>%
-    filter(paste0(qNum, tNum) %in% match_list)
-  df_sub <- df_sub %>%
-    group_by(tNum) %>%
-    arrange(tStart, qStart) %>%
-    mutate(qNum = factor(qNum, levels = unique(qNum))) %>%
-    ungroup()
-  return(df_sub)
 }
 # Plot heatmap of given matrix
 heatPsl <- function(match_name, match_list, df_list) {
@@ -221,7 +216,9 @@ heatPsl <- function(match_name, match_list, df_list) {
           panel.background = element_blank(),
           axis.line = element_line(color = "black"),
           legend.position = "left") +
-    labs(title = ttl, x = x_label, y = y_label)
+    labs(x = target,
+         # title = ttl, 
+         y = query)
   return(p)
 }
 # Dotplots
@@ -229,16 +226,16 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
   df <- df_list[[df_name]]
   if (missing(filter_ids)) {
   } else {
-    if (all(filter_ids %in% df$tName)) {
+    if (all(filter_ids %in% df$tNum)) {
       df <- df %>%
-        filter(tName %in% filter_ids)
+        filter(tNum %in% filter_ids)
     } else {
-      print(filter_ids %in% df$tName)
+      print(filter_ids %in% df$tNum)
       print(filter_ids)
       print(class(filter_ids))
-      print(unique(df$tName))
-      print(class(df$tName))
-      stop("Error: ensure all 'filter_ids' are present in 'tName' column.")
+      print(unique(df$tNum))
+      print(class(df$tNum))
+      stop("Error: ensure all 'filter_ids' are present in 'tNum' column.")
     }
   } 
   df <- df %>%
@@ -255,15 +252,14 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
   query_nice <- gsub("_", " ", query)
   fname <- paste0(df_name, "_dotplot.png")
   p <- ggplot(data = df,
-              mapping = aes(x = qStart, y = tStart, color = strand)) +
-    geom_segment(mapping = aes(xend = qEnd, yend = tEnd),
-                 # linewidth = 2,
+              mapping = aes(x = tStart, y = qStart, color = strand)) +
+    geom_segment(mapping = aes(xend = tEnd, yend = qEnd),
                  lineend = "round") +
-    # geom_point(mapping = aes(x = qSize, y = tSize),
-    #            alpha = 0) +
-    # geom_point(mapping = aes(x = Zeros, y = Zeros),
-    #            alpha = 0) +
-    facet_grid(cols = vars(qName), rows = vars(tName),
+    geom_point(mapping = aes(x = tSize, y = qSize),
+               alpha = 0) +
+    geom_point(mapping = aes(x = Zeros, y = Zeros),
+               alpha = 0) +
+    facet_grid(cols = vars(tNum), rows = vars(qNum),
                switch = "both",
                space = "free",
                scale = "free",
@@ -273,32 +269,21 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
     theme(axis.title = element_text(face = "italic"),
           # strip.clip = "off",
           strip.placement = "outside",
-          strip.text.y.left = element_text(angle = 0),
           strip.background.x = element_rect(color = NA,  fill=NA),
           strip.background.y = element_rect(color = NA,  fill=NA)) +
     xlab("") +
     ylab("")
   if (missing(filter_ids)) {
     p <- p +
-      xlab(query_nice) +
-      ylab(target_nice) +
-      labs(title = "Genome synteny by scaffold") +
+      labs(title = "Genome synteny by scaffold",
+           x = target_nice, y = query_nice) +
       theme(axis.ticks = element_blank(),
             axis.text = element_blank(),
-            # axis.title = element_text(size = rel(3)),
-            # legend.title = element_text(size = rel(3)),
-            # legend.text = element_text(size = rel(3)),
-            # plot.title = element_text(size = rel(4)),
             panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.1),
             panel.spacing = unit(0, "lines"),
-            strip.text.x.bottom = element_text(size = rel(0.75), angle = 90),
+            strip.text.x.bottom = element_text(size = rel(0.75), angle = 0),
             strip.text.y.left = element_text(size = rel(0.75), angle = 0))
-            # strip.text.x.bottom = element_text(size = rel(2), angle = 45),
-            # strip.text.y.left = element_text(size = rel(2), angle = 0))
   }
-  # showtext_opts(dpi = 300)
-  # ggsave(filename = fname, plot = p, width = 30, height = 40, units = "in")
-  # showtext_opts(dpi = 100)
   return(p)
 }
 # Segmented synteny plots
@@ -321,11 +306,15 @@ plotList <- function(plot_name, plot_list) {
   return(p)
 }
 # Function to use ggsave on plots
-plotSave <- function(plot_name, plot_list, width, height) {
+plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
+                     width, height) {
   p <- plot_list[[plot_name]]
-  fname <- paste0(plot_name, "_dotplot.png")
+  fname <- paste0(plot_type, "_", plot_name, ".png")
+  if (dir.exists(outdir)) {
+      fname <- paste0(outdir, fname)
+  }
   showtext_opts(dpi = 300)
-  ggsave(filename = fname, plot = p, 
+  ggsave(filename = fname, plot = p,
          width = width, height = height, units = "in")
   showtext_opts(dpi = 100)
   return(fname)
@@ -352,16 +341,16 @@ if (interactive()) {
 # Import dataframe of species and associated file names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
-# # Keep only unique species combinations
-# species_versus <- lapply(combn(rev(species), 2, simplify = F),
-#                          paste, collapse = "_vs_")
-# Designate species of interest as query genome in all combinations
-species_versus <- paste(spc_int,
-                        grep(spc_int, species, invert = T, value = T),
-                        sep = "_vs_")
+species_versus <- 
+  # Designate species of interest as query genome in all combinations
+  c(paste(spc_int, grep(spc_int, species, invert = T, value = T), sep = "_vs_"),
+    # Keep only unique species combinations of remaining species
+    unlist(lapply(combn(rev(species[!species %in% spc_int]), 2, simplify = F),
+                  paste, collapse = "_vs_")))
 # Create list of PSL filenames
-psl_files <- grep(paste(species_versus, collapse = "|"),
-                  list.files(full.names = T, pattern = "\\.psl"), value = T)
+psl_files <- sapply(species_versus, grep, list.files(pattern = "\\.psl",
+                                                     path = ".",
+                                                     full.names = T), value = T)
 # Read PSL files into list of dataframes
 psl_list <- sapply(psl_files, read.table, col.names = psl_col,
                    simplify = F, USE.NAMES = T)
@@ -371,34 +360,36 @@ names(psl_list) <- gsub(".*ment_|.psl", "", names(psl_list))
 psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 
 # Analysis
-# Change to output directory for plots (if it exists)
-if (dir.exists(outdir)) setwd(outdir)
 # Summarize by contig vs. contig of each syntenic comparison
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
+# Rearrange scaffold ID factors by matches for plotting
+psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
+                   simplify = F)
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
-# Subset data for dotplots
-psl_dot <- sapply(names(psl_list), dotFilt, psl_list, psl_match, simplify = F)
 
 # Plots
 # Heatmaps of genome vs. genome synteny
-psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs, simplify = F)
-ggarrange(plotlist = psl_heats, ncol = length(psl_heats),
-          common.legend = T, legend = "right")
+psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
+                    simplify = F)
+p_heat <- ggarrange(plotlist = psl_heats, common.legend = T, legend = "right")
+h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
+                          outdir, 7, 10, simplify = F))
+print(unname(h_fnames))
 
-# # Dotplots of genome vs. genome
-# p_list <- sapply(names(psl_dot), dotPlot, psl_dot, simplify = F)
-# fnames <- sapply(names(p_list), plotSave, p_list, 15, 10, simplify = F)
-# print(fnames)
+# Dotplots of genome vs. genome
+psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
+d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
+                   15, 10, simplify = F))
+print(unname(d_fnames))
+
+
 # # Separate out certain syntenic regions
-# # seps <- sapply(names(psl_dot), sepDots, psl_dot, simplify = F)
-# # sep_list <- sapply(names(seps), plotList, seps, simplify = F)
-# # sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
-
-
-
+# seps <- sapply(names(psl_list), sepDots, psl_list, simplify = F)
+# sep_list <- sapply(names(seps), plotList, seps, simplify = F)
+# sapply(names(sep_list), plotSave, sep_list, 7, 7, simplify = F)
 
 
 # # Calculate scaffold-scaffold alignment metrics in each PSL dataframe
