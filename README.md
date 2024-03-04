@@ -111,5 +111,5 @@ sbatch dotplot.sbatch <seqFile>
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_vs_Macrocystis_pyrifera_heatmap.png)
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_vs_Macrocystis_pyrifera_dotplot.png)
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
+![alt text](https://github.com/kdews/s-latissima-genome/blob/main/dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
