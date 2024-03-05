@@ -168,6 +168,25 @@ plotOrder <- function(match_name, match_list, df_list) {
     mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
   return(df)
 }
+# Correlate alignments between all species
+groupScafs <- function(match_list, spc_int) {
+  m_names <- grep(spc_int, names(match_list), value = T)
+  for (i in 1:length(m_names)) {
+    m_name <- m_names[[i]]
+    match <- match_list[[m_name]]
+    query <- getGen(m_name, "query")
+    target <- getGen(m_name, "target")
+    temp <- match %>%
+      select(qNum, tNum)
+    names(temp) <- c(query, target)
+    if (i == 1) {
+      temp2 <- temp
+    } else {
+      temp2 <- merge(temp2, temp)
+    }
+  }
+  return(temp2)
+}
 # Pivot PSL summary dataframe for ggplot2 heatmap
 pivotPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
@@ -370,20 +389,22 @@ psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 
-# Plots
-# Heatmaps of genome vs. genome synteny
-psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
-                    simplify = F)
-p_heat <- ggarrange(plotlist = psl_heats, common.legend = T, legend = "right")
-h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-                          outdir, 7, 10, simplify = F))
-print(unname(h_fnames))
+test <- groupScafs(psl_match, spc_int)
 
-# Dotplots of genome vs. genome
-psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
-d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
-                   15, 10, simplify = F))
-print(unname(d_fnames))
+# # Plots
+# # Heatmaps of genome vs. genome synteny
+# psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
+#                     simplify = F)
+# p_heat <- ggarrange(plotlist = psl_heats, common.legend = T, legend = "right")
+# h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
+#                           outdir, 7, 10, simplify = F))
+# print(unname(h_fnames))
+# 
+# # Dotplots of genome vs. genome
+# psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
+# d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
+#                    15, 10, simplify = F))
+# print(unname(d_fnames))
 
 
 # # Separate out certain syntenic regions
