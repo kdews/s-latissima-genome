@@ -1,0 +1,17 @@
+#reference and target genome names
+.references = Saccharina_japonica,Macrocystis_pyrifera,Undaria_pinnatifida,Ectocarpus_siliculosus
+.target = Saccharina_latissima
+
+#Newick phylogenetic tree for all genomes
+.tree = ((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
+
+#path to HAL/MAF alignment input
+#.hal = /scratch1/kdeweese/latissima/genome_stats/cactus-steps-output/s_lat_alignment.hal
+.maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment.maf
+
+#paths to genome fasta files (required for MAF)
+Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_EctsiV2_genome.fasta
+Undaria_pinnatifida.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
+Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SJ_v6_2_chromosome.fasta
+Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta

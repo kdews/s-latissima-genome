@@ -171,21 +171,21 @@ plotOrder <- function(match_name, match_list, df_list) {
 # Correlate alignments between all species
 groupScafs <- function(match_list, spc_int) {
   m_names <- grep(spc_int, names(match_list), value = T)
+  grp_list <- list()
   for (i in 1:length(m_names)) {
     m_name <- m_names[[i]]
     match <- match_list[[m_name]]
     query <- getGen(m_name, "query")
     target <- getGen(m_name, "target")
-    temp <- match %>%
-      select(qNum, tNum)
-    names(temp) <- c(query, target)
-    if (i == 1) {
-      temp2 <- temp
-    } else {
-      temp2 <- merge(temp2, temp)
-    }
+    grp <- match %>%
+      select(qNum, tNum) %>%
+      pivot_wider(names_from = tNum,
+                  values_from = qNum)
+    #   group_by(tNum) %>%
+    #   group_rows()
+    grp_list[[m_name]] <- grp
   }
-  return(temp2)
+  return(grp_list)
 }
 # Pivot PSL summary dataframe for ggplot2 heatmap
 pivotPsl <- function(df_name, df_list) {
@@ -390,6 +390,8 @@ psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 
 test <- groupScafs(psl_match, spc_int)
+View(test$Saccharina_latissima_vs_Ectocarpus_siliculosus)
+
 
 # # Plots
 # # Heatmaps of genome vs. genome synteny
