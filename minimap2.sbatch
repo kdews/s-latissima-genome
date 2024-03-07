@@ -1,9 +1,11 @@
 #!/bin/bash
+#SBATCH -p gpu
 #SBATCH --mem=70g
 #SBATCH --cpus-per-task=4
 #SBATCH --time=07:00:00
 #SBATCH -J minimap2
-#SBATCH -o logs/%x_%j.log
+#SBATCH -o %x_%a.log
+#SBATCH -a 1-5
 
 # Initialize script
 init="s-latissima-genome/script_init.sh"
@@ -23,12 +25,14 @@ Requires:
 fi
 
 # Input variables
-ref_list="s-latissima-genome/filt_species_table.txt"
-# ref_list="$1"
-ref="$(sed -n "${SLURM_ARRAY_TASK_ID}"p $ref_list | awk '{print $2}')"
-query="ragout-out/Saccharina_latissima_scaffolds.fasta"
-r_base="$(basename "$ref" | sed 's/\..*//g')"
-q_base="$(basename "$query" | sed 's/\..*//g')"
+ref_list="$1"
+query="$2"
+# Default input
+[[ ! -f "$ref_list" ]] && ref_list="s-latissima-genome/filt_species_table.txt"
+[[ ! -f "$query" ]] && query="ragout-out/Saccharina_latissima_scaffolds.fasta"
+ref="$(sed -n "${SLURM_ARRAY_TASK_ID}"p "$ref_list" | awk -F '\t' '{print $2}')"
+r_base="$(basename "${ref%%.*}")"
+q_base="$(basename "${query%%.*}")"
 base_name="${q_base}_vs_${r_base}"
 outPaf="${base_name}.paf"
 thr="$((SLURM_CPUS_PER_TASK - 1))"
@@ -36,9 +40,10 @@ thr="$((SLURM_CPUS_PER_TASK - 1))"
 # Load minimap2 conda environment
 conda activate minimap2
 # Verify program installation
-minimap2 --version
+echo "minimap2 version $(minimap2 --version)"
+echo
 
-
-cmd="minimap2 -t $thr -x asm20 $ref $query"
-echo "$cmd > $outPaf"
-$cmd > "$outPaf"
+# Run minimap2 genome-genome alignment
+cmd="minimap2 -t $thr -x asm20 -o $outPaf $ref $query"
+echo "$cmd"
+$cmd

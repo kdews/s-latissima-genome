@@ -388,10 +388,8 @@ psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
                    simplify = F)
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
-
+# Group scaffolds
 test <- groupScafs(psl_match, spc_int)
-View(test$Saccharina_latissima_vs_Ectocarpus_siliculosus)
-
 
 # # Plots
 # # Heatmaps of genome vs. genome synteny
