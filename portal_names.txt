@@ -1,4 +1,4 @@
-Undpi1
+Undpi1_1
 Macpyr2
 SlaSLCT1FG3_1
 https://bioinformatics.psb.ugent.be/gdb/ectocarpusV2/EctsiV2_genome.fasta.gz

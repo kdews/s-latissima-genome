@@ -65,7 +65,7 @@ fi
 
 # Load samtools conda env
 conda activate samtools
-samtools --version
+samtools --version | head -n4
 # Run samtools index tool on each FASTA
 mapfile -t fastas < <(awk -F '\t' '{print $2}' "$assembly_file")
 # Index assemblies
@@ -91,14 +91,14 @@ Rscript --version
 cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
 echo "$cmd"
 $cmd
-if [[ -f "$for_seqtk" ]]
-then
-    echo "Found file $for_seqtk, skipping Rscript step."
-else
-    cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
-    echo "$cmd"
-    $cmd
-fi
+# if [[ -f "$for_seqtk" ]]
+# then
+#     echo "Found file $for_seqtk, skipping Rscript step."
+# else
+#     cmd="Rscript --vanilla $r_script $assembly_file $for_seqtk $spc_int $out_spc $scripts_dir"
+#     echo "$cmd"
+#     $cmd
+# fi
 
 # Extract "chromosomes" from assembly FASTAs
 echo

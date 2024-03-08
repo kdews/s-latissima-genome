@@ -9,23 +9,32 @@
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
+# Default curl login filename
+today="$(date +%F)"
+login="jgi_login_${today}"
+
 # Help message
-if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 2 ))
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]] || (( $# < 1 ))
 then
   echo "\
-Downloads assembly and associated feature file from given GCA accession(s).
+Downloads assembly and associated feature file from given JGI portal name(s)
+and/or other link(s).
+
 Usage:
   sbatch ${job_name}.sbatch <portal_list> [username] [password]
   sbatch ${job_name}.sbatch <portal_list> [curl_login_file]
+  sbatch ${job_name}.sbatch <portal_list>
+    - Last usage requires curl login file for JGI to be present and readable
+      in current working directory generated same date as today ($(date)),
+      named with today's date following the convention:
+        jgi_login_{YYYY-MM-DD} (e.g., ${login})
+
 Requires:
  - curl (https://curl.se/)"
   exit 0
 fi
 
-# Input
-# Username and password or curl login file
-# Default curl login filename
-login="jgi_login"
+# Input username and password or curl login file
 if [[ "$#" -eq 2 ]]
 then
   portal_file="$1"
@@ -45,7 +54,8 @@ then
   log="--data-urlencode login=$user --data-urlencode password=$pass -c $login"
   cmd="curl -L $log https://signon.jgi.doe.gov/signon/create"
   $cmd > /dev/null
-else
+elif (( $# > 3 ))
+then
   echo "Error: too many positional arguments given."
   exit 1
 fi
@@ -61,7 +71,8 @@ fi
 
 # Script variables
 # grep search patterns
-ptns=('Repeatmasked\.fasta' 'GeneCatalog\w+\.gff3' 'GeneCatalog.*\.aa\.fasta' 'KOG\.tab')
+# ptns=('Repeatmasked\.fasta' 'GeneCatalog\w+\.gff3' 'GeneCatalog.*\.aa\.fasta' 'KOG\.tab')
+ptns=('Repeatmasked.*\.fasta\.gz' 'FilteredModels.*\.gff3\.gz|GeneCatalog\w+\.gff3' 'FilteredModels.*_proteins_.*\.fasta\.gz|GeneCatalog.*\.aa\.fasta' '_kog_.*\.tab\.gz|KOG\.tab')
 # Base JGI url
 u0="https://genome.jgi.doe.gov"
 # XML base URL

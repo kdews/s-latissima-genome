@@ -1,7 +1,7 @@
 # Clear environment
 rm(list = ls())
 # Required packages
-library(tidyverse, quietly = T, warn.conflicts = F)
+suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(gridExtra, quietly = T, warn.conflicts = F)
 library(ggpubr, quietly = T)
 if (require(showtext, quietly = T)) {
