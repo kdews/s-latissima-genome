@@ -3,7 +3,7 @@
 #SBATCH -p gpu
 #SBATCH --mem=25gb
 #SBATCH --time=05:00:00
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=32
 #SBATCH -o %x.log
 
 # Initialize script
@@ -12,7 +12,6 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Script variables
 indir="ortho_prots"
-outdir="orthofinder"
 
 # Help message
 if [[ "$1" = "-h" ]] || [[ "$1" = "--help" ]]
@@ -31,8 +30,11 @@ conda activate orthofinder
 orthofinder --help | grep "version"
 echo
 
-# Prepend scripts directory to output
-outdir="${scripts_dir}${outdir}"
+# Parallelization
+# Low-mem threads
+thr_t="$SLURM_CPUS_PER_TASK"
+# High-mem threads
+thr_a="$(( SLURM_CPUS_PER_TASK / 8 ))"
 
 # Input
 # List of assemblies (s-latissima-genome/species_table.txt)
@@ -68,6 +70,6 @@ do
 done
 
 # Run OrthoFinder
-cmd="orthofinder -t $SLURM_CPUS_PER_TASK -f $indir -o $outdir"
+cmd="orthofinder -t $thr_t -a $thr_a -f $indir"
 echo "$cmd"
 $cmd
