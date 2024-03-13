@@ -21,8 +21,8 @@ if (interactive()) {
   log_file <- "orthofinder.log"
   # Species of interest
   spc_int <- "Saccharina_latissima"
-  # Outgroup species
-  out_spc <- "Ectocarpus_siliculosus"
+  # Ragout output directory
+  ragout_dir <- "ragout-out/"
   # Output directory
   outdir <- "s-latissima-genome/"
 } else {
@@ -34,8 +34,8 @@ if (interactive()) {
   log_file <- line_args[3]
   # Species of interest
   spc_int <- line_args[4]
-  # Outgroup species
-  out_spc <- line_args[5]
+  # Ragout output directory
+  ragout_dir <- line_args[5]
   # Output directory
   outdir <- line_args[6]
 }
@@ -47,11 +47,15 @@ if (interactive()) {
 #   # filt_plot <- paste0(outdir, filt_plot)
 #   # vio_plot <- paste0(outdir, vio_plot)
 # }
-spc_int <- gsub("_"," ", spc_int)
-out_spc <- gsub("_"," ", out_spc)
+
 
 # Global variables
-c_names <- c("Species", "Assembly", "Annotation", "Proteins")
+spc_int <- gsub("_"," ", spc_int)
+
+assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
+agp_cols <- c("seqid_scaf", "start_scaf", "end_scaf",
+              "component_number", "component_type",
+              "seqid_comp", "start_comp", "end_comp", "orientation")
 
 # Functions
 # Checks existence of file or directory and errors if FALSE
@@ -83,7 +87,7 @@ abbrevSpc <- function(spc) {
 readSpecies <- function(assembly_file) {
   checkPath(assembly_file)
   species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
-  colnames(species_tab) <- c_names
+  colnames(species_tab) <- assembly_file_cols
   species_tab <- species_tab[,na.omit(colnames(species_tab))]
   return(species_tab)
 }
@@ -133,6 +137,39 @@ readGff3 <- function(spc, species_tab) {
     select(protein_ID, seqid, start, end)
   return(gff)
 }
+# Import NCBI AGP file (v2.0)
+readAgp <- function(ragout_dir) {
+  # AGP file describing scaffolding
+  checkPath(ragout_dir)
+  agp_file <- list.files(path = ragout_dir, pattern = ".*agp", full.names = T)
+  agp <- read.table(agp_file)
+  colnames(agp) <- agp_cols
+  agp_filt <- agp %>%
+    filter(component_type == "W") %>%
+    select(!contains("component"))
+  return(agp_filt)
+}
+# Import FASTA index file (.fasta.fai)
+readFai <- function(idx_file, suff = NULL) {
+  checkPath(idx_file)
+  idx <- read.table(idx_file)
+  idx <- idx[,1:2]
+  colnames(idx) <- c("seqid", "length")
+  if (!missing(suff)) {
+    colnames(idx) <- paste0(colnames(idx), suff)
+  }
+  return(idx)
+}
+# Index AGP dataframe with component and scaffolded FASTA indices
+idxAgp <- function(agp, idx_comp, idx_scaf) {
+  agp_idx <- merge(agp, idx_comp, by = "seqid_comp", sort = F)
+  agp_idx <- merge(agp_idx, idx_scaf, by = "seqid_scaf", sort = F)
+  return(agp_idx)
+}
+# Recalibration of GFF3 for scaffolded genome
+calGff <- function(agp) {
+  
+}
 # Annotate orthologs with gene location information
 idxOrtho <- function(spc, df, gff_list) {
   # Suffixes for merged dataframe
@@ -151,14 +188,17 @@ idxOrtho <- function(spc, df, gff_list) {
   df1 <- df %>%
     filter(Species == spc) %>%
     select(Orthogroup, matches(spc_int1), Orthologs)
-  df2 <- merge(df1, gff1, by.x = "Orthologs", by.y = "protein_ID")
+  # Merge with GFF3 of given species
+  df2 <- merge(df1, gff1, by.x = "Orthologs", by.y = "protein_ID", sort = F)
   colnames(df2)[colnames(df2) == "Orthologs"] <- spc
+  # Merge with GFF3 of species of interest
   df3 <- merge(df2, gff2, by.x = spc_int1, by.y = "protein_ID",
-               suffixes = suffs)
-  cols1 <- c("Orthogroup", colnames(df3)[colnames(df3) != "Orthogroup"])
+               suffixes = suffs, sort = F)
+  # Sort by seqids of species of interest
   df3 <- df3 %>%
-    arrange(Orthogroup) %>%
-    select(matches(cols1))
+    mutate(nums=as.numeric(gsub(".*_", "", get(paste0("seqid", "_SL"))))) %>%
+    arrange(nums) %>%
+    select(!nums)
   return(df3)
 }
 
@@ -173,9 +213,57 @@ ortho_dict <- dictOrtho(species_tab)
 df <- readOrthoTsv(spc_int, ortho_dict, res_dir)
 # Import GFF3s as dataframes
 gff_list <- sapply(unname(ortho_dict), readGff3, species_tab, simplify = F)
+# Dataframe describing scaffolding
+agp <- readAgp(ragout_dir)
+# FASTA indices of component and scaffolded FASTAs
+idx_file_comp <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
+                             Assembly), ".fai")
+idx_file_scaf <- list.files(path = ragout_dir, pattern = "scaffolds.*fai",
+                            full.names = T)
+idx_comp <- readFai(idx_file_comp, "_comp")
+idx_scaf <- readFai(idx_file_scaf, "_scaf")
 
-df2 <- idxOrtho(unname(ortho_dict)[1], df, gff_list)
-head(df2)
+# Analysis
+# Index AGP dataframe with component and scaffolded FASTA indices (lengths)
+agp_idx <- idxAgp(agp, idx_comp, idx_scaf)
+# Recalibrate gene positions with rescaffolded genome
+gff_update <- merge(agp_idx, gff_list[[grep(spc_int, names(gff_list))]],
+                    by.x = "seqid_comp", by.y = "seqid", sort = F)
+gff_update <- gff_update %>%
+  mutate_at(vars(contains("start"), contains("end")),
+            as.numeric)
+gff_update2 <- gff_update %>%
+  # Filter for genes within given range of component
+  filter(start_comp <= start,
+         start_comp < end,
+         end_comp >= end,
+         end_comp > start)
+  # # Calculate coordinate shift caused by rescaffolding
+  # mutate(scaf_shift = start_comp-start_scaf)
+
+ggplot(data = gff_update2 %>% head(500)) +
+  geom_segment(mapping = aes(x = 1, xend = length_comp,
+                             y = 1, yend = length_scaf),
+               col = "grey", lty = 2) +
+  geom_segment(mapping = aes(x = start_comp, xend = end_comp,
+                             y = start_scaf, yend = end_scaf),
+               col = "black") +
+  # geom_segment(mapping = aes(x = start, xend = end,
+  #                            y = 1, yend = 1, col = seqid_scaf),
+  #              linewidth = 3) +
+  # facet_wrap(~seqid_comp, scales = "fixed") +
+  facet_grid(cols = vars(seqid_comp), rows = vars(seqid_scaf),
+             switch = "both", scales = "free", as.table = F) +
+  labs(title = "Rescaffolding with Ragout", x = "Unscaffolded",
+       y = "Scaffolded") +
+  theme_classic() +
+  theme(legend.position = "none")
+
+
+  
+
+# Merge GFF3s with OrthoFinder results
+o_idx_list <- sapply(names(gff_list), idxOrtho, gff_list, simplify = F)
 
 
 # Analysis
