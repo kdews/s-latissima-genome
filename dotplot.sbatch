@@ -10,6 +10,9 @@
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
+# Script variables
+R_mod_file="modules_for_Rscript.txt"
+
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
@@ -22,9 +25,13 @@ Requires:
   exit 0
 fi
 
+# Prepend scripts_dir
+R_mod_file="${scripts_dir}${R_mod_file}"
+
 # Load R module
 module purge
-module load gcc/11.3.0 openblas/0.3.20 r
+IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
+module load "${R_mods[@]}"
 
 # Input
 # Cactus-formatted seqFile, i.e.,

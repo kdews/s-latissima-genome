@@ -17,12 +17,12 @@ if (interactive()) {
   assembly_file <- "s-latissima-genome/species_table.txt"
   # Directory containing input protein FASTAs for OrthoFinder
   ortho_dir <- "ortho_prots/"
-  # Log file from OrthoFinder run
-  log_file <- "orthofinder.log"
+  # Path to results from OrthoFinder run
+  res_dir <- "ortho_prots/OrthoFinder/Results_Mar08/"
+  # Ragout output directory
+  ragout_dir <- "ragout-out"
   # Species of interest
   spc_int <- "Saccharina_latissima"
-  # Ragout output directory
-  ragout_dir <- "ragout-out/"
   # Output directory
   outdir <- "s-latissima-genome/"
 } else {
@@ -30,12 +30,12 @@ if (interactive()) {
   assembly_file <- line_args[1]
   # Directory containing input protein FASTAs for OrthoFinder
   ortho_dir <- line_args[2]
-  # Log file from OrthoFinder run
-  log_file <- line_args[3]
-  # Species of interest
-  spc_int <- line_args[4]
+  # Path to results from OrthoFinder run
+  res_dir <- line_args[3]
   # Ragout output directory
-  ragout_dir <- line_args[5]
+  ragout_dir <- line_args[4]
+  # Species of interest
+  spc_int <- line_args[5]
   # Output directory
   outdir <- line_args[6]
 }
@@ -51,11 +51,6 @@ if (interactive()) {
 
 # Global variables
 spc_int <- gsub("_"," ", spc_int)
-
-assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
-agp_cols <- c("seqid_scaf", "start_scaf", "end_scaf",
-              "component_number", "component_type",
-              "seqid_comp", "start_comp", "end_comp", "orientation")
 
 # Functions
 # Checks existence of file or directory and errors if FALSE
@@ -92,19 +87,21 @@ abbrevSpc <- function(spc) {
 }
 # Read table of species names and associated files
 readSpecies <- function(assembly_file) {
+  assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
   checkPath(assembly_file)
   species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
   colnames(species_tab) <- assembly_file_cols
   species_tab <- species_tab[,na.omit(colnames(species_tab))]
   return(species_tab)
 }
-# Find OrthoFinder output directory path from given log file
-getOrthoDir <- function(log_file) {
-  checkPath(log_file)
-  ortho_log <- readLines("orthofinder.log")
-  res_dir <- gsub(" ", "", ortho_log[grep("Results:", ortho_log) + 1])
-  return(res_dir)
-}
+# # Find OrthoFinder output directory path from given log file
+# getOrthoDir <- function(log_file) {
+#   checkPath(log_file)
+#   ortho_log <- readLines("orthofinder.log")
+#   res_dir <- gsub(" ", "", ortho_log[grep("Results:", ortho_log) + 1])
+#   checkPath(res_dir)
+#   return(res_dir)
+# }
 # Correlate basename of OrthoFinder result files with species names
 dictOrtho <- function(species_tab) {
   ortho_prefix <- basename(tools::file_path_sans_ext(species_tab$Proteins))
@@ -127,7 +124,7 @@ readOrthoTsv <- function(spc, ortho_dict, res_dir) {
     # filter(all(!grepl(",", pick(colnames(df))))) %>%
     # mutate_at(vars(ortho_int), parseJGI) %>%
     mutate(Species = as.character(ortho_dict[[Species]]))
-           # Orthologs = parseJGI(Orthologs))
+  # Orthologs = parseJGI(Orthologs))
   tempcol <- grep(ortho_int, colnames(df))
   colnames(df)[tempcol] <- spc
   return(df)
@@ -140,13 +137,17 @@ readGff <- function(spc, species_tab) {
   gff <- read.gff(gff_file)
   gff <- gff %>%
     filter(type == "gene") %>%
-    mutate(protein_ID = gsub(".*id=|;.*", "", attributes, ignore.case = T),
+    rowwise() %>%
+    mutate(protein_ID = parseJGI(gsub(".*Name=|;.*", "", attributes)),
            length = abs(end-start)) %>%
     select(protein_ID, seqid, start, end, length)
   return(gff)
 }
 # Import NCBI AGP file (v2.0)
 readAgp <- function(ragout_dir) {
+  agp_cols <- c("seqid_scaf", "start_scaf", "end_scaf",
+                "component_number", "component_type",
+                "seqid_comp", "start_comp", "end_comp", "orientation")
   # AGP file describing scaffolding
   checkPath(ragout_dir)
   agp_file <- list.files(path = ragout_dir, pattern = ".*agp", full.names = T)
@@ -238,51 +239,15 @@ idxOrtho <- function(spc, orthos, gff_list) {
                suffixes = suffs, sort = F)
   print(head(df3, n = 2))
   print(dim(df3))
-  return(list(gff2, df2, df3))
-}
-# Plot
-plotCal <- function(gff_update) {
-  # Arrange dataframe by scaffold length, then start position
-  gff_update <- gff_update %>%
-    mutate(seqid_comp = fixChrom(seqid_comp)) %>%
-    arrange(desc(length_scaf), start_scaf)
-  # Factor seqids by scaffold length and start position (for plotting)
-  order_scaf <- unique(pull(gff_update, seqid_scaf))
-  order_comp <- unique(pull(gff_update, seqid_comp))
-  gff_update <- gff_update %>%
-    mutate(seqid_scaf = factor(seqid_scaf, levels = order_scaf),
-           seqid_comp = factor(seqid_comp, levels = order_comp),
-           temp = start_scaf,
-           start_scaf = case_when(orientation == "-" ~ end_scaf,
-                                  .default = start_scaf),
-           end_scaf = case_when(orientation == "-" ~ temp,
-                                .default = end_scaf))
-  p <- ggplot(data = gff_update) +
-    geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
-                               y = start_comp, yend = end_comp),
-                 col = "black") +
-    facet_grid(cols = vars(seqid_scaf), rows = vars(seqid_comp),
-               switch = "both", scales = "free", as.table = F) +
-    labs(title = "Rescaffolding with Ragout", x = "Ragout assembly",
-         y = "Assembly v1.0") +
-    theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_blank(),
-          strip.placement = "outside",
-          strip.background.x = element_rect(color = NA,  fill=NA),
-          strip.background.y = element_rect(color = NA,  fill=NA),
-          strip.text.x.bottom = element_text(size = rel(0.75), angle = 0),
-          strip.text.y.left = element_text(size = rel(0.75), angle = 0),
-          strip.clip = "off",
-          legend.position = "none")
-  return(p)
+  return(df3)
 }
 
 # Import data
 # Species table
 species_tab <- readSpecies(assembly_file)
 # OrthoFinder results directory
-res_dir <- getOrthoDir(log_file)
+# res_dir <- getOrthoDir(log_file)
+res_dir <- gsub(".*ortho_prots", "ortho_prots", res_dir)
 # Dictionary of OrthoFinder file prefixes and species names
 ortho_dict <- dictOrtho(species_tab)
 # Results for species of interest
@@ -294,7 +259,8 @@ agp <- readAgp(ragout_dir)
 # FASTA indices of component and scaffolded FASTAs
 idx_file_comp <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
                              Assembly), ".fai")
-idx_file_scaf <- list.files(path = ragout_dir, pattern = "scaffolds.*fai",
+idx_file_scaf <- list.files(path = ragout_dir,
+                            pattern = "_scaffolds\\.fasta\\.fai",
                             full.names = T)
 idx_comp <- readFai(idx_file_comp, "_comp")
 idx_scaf <- readFai(idx_file_scaf, "_scaf")
@@ -305,53 +271,33 @@ agp_idx <- idxAgp(agp, idx_comp, idx_scaf)
 # Recalibrate gene positions with rescaffolded genome
 gff_list_cal <- calGff(agp_idx, gff_list)
 # Merge GFF3s with OrthoFinder results
+# Original coordinates
 o_idx_list <- sapply(grep(spc_int, names(gff_list), invert = T, value = T),
                      idxOrtho, orthos, gff_list, simplify = F)
+# Calibrated rescaffolded coordinates
 o_idx_list_cal <- sapply(grep(spc_int, names(gff_list_cal), invert = T, value = T),
-                     idxOrtho, orthos, gff_list_cal, simplify = F)
+                         idxOrtho, orthos, gff_list_cal, simplify = F)
 
 
-test_gff <- o_idx_list$`Undaria pinnatifida M23`[[1]]
-test_df2 <- o_idx_list$`Undaria pinnatifida M23`[[2]]
+rag_seqs <- unique(as.character(unlist(sapply(o_idx_list_cal, pull, "seqid_comp"))))
+gene_density <- merge(gff_list$`Saccharina latissima SL-CT1-FG3 v1.0`, idx_comp,
+                      by.x = "seqid", by.y = "seqid_comp") %>%
+  select(seqid, length_comp, protein_ID) %>%
+  group_by(seqid, length_comp) %>%
+  summarize(n = n()) %>%
+  mutate(ragout = seqid %in% rag_seqs)
+ggplot(data = gene_density, mapping = aes(x = n)) +
+  geom_histogram()
+ggplot(data = gene_density, mapping = aes(x = length_comp, y = n)) +
+  geom_point(aes(col = ragout))
 
-length(which(test_df2$`Saccharina latissima SL-CT1-FG3 v1.0` %in% unname(ann_dict[test_gff$protein_ID])))
-
-gff_list$`Ectocarpus siliculosus Ec 32 V2` %>%
-  filter()
-
-ann_idx_file <- "/scratch1/kdeweese/sterility/annotation_index.txt"
-ann_idx <- read.table(ann_idx_file, header = T)
-ann_dict <- c(as.character(ann_idx[,"proteinId"]))
-names(ann_dict) <- as.character(ann_idx[,"transcriptId"])
-
-
-dim(merge(test_df2, test_gff,
-      by.x = "Saccharina latissima SL-CT1-FG3 v1.0", by.y = "protein_ID",
-      suffixes = c("_UP", "_SL"),
-      sort = F))
-
-# df <- o_idx_list[["Undaria pinnatifida M23"]] %>%
+# df <- o_idx_list_cal[["Undaria pinnatifida M23"]] %>%
 #   select(!contains("length")) %>%
-#   select(seqid, contains("_UP"), contains("_scaf"))
+#   select(contains("seqid"), contains("_UP"), contains("new"))
 # write.table(x = df, file = "for_jose_undaria.txt", quote = F, sep = "\t",
 #             row.names = F)
 
-# Plots
-((p <- plotCal(gff_list[["Saccharina latissima SL-CT1-FG3 v1.0"]])))
-# test1 <- gff_list[["Saccharina latissima SL-CT1-FG3 v1.0"]] %>%
-#   filter(seqid_scaf == "chr_chr1")
-# test2 <- test1 %>%
-#   mutate(temp = new_start, temp2 = start_scaf,
-#          new_start = case_when(orientation == "-" ~ new_end,
-#                                .default = new_start),
-#          new_end = case_when(orientation == "-" ~ temp,
-#                              .default = new_end),
-#          start_scaf = case_when(orientation == "-" ~ end_scaf,
-#                                 .default = start_scaf),
-#          end_scaf = case_when(orientation == "-" ~ temp2,
-#                               .default = end_scaf))
-# ((p1 <- plotCal(test1)))
-# ((p2 <- plotCal(test2)))
+
 
 
 orthos %>%
@@ -364,20 +310,3 @@ stats_path <- paste0(res_dir, "Comparative_Genomics_Statistics")
 sc_stats_file <- list.files(path = stats_path, pattern = ptn, full.names = T)
 test1 <- read.table(sc_stats_file, sep = "\t", header = T, row.names = 1)
 heatmap(as.matrix(test1))
-
-
-fname <- "/scratch1/kdeweese/latissima/genome_stats/ortho_prots/OrthoFinder/Results_Mar08/Orthologues/Orthologues_SlaSLCT1FG3_1_GeneCatalog_proteins_20210608_aa/SlaSLCT1FG3_1_GeneCatalog_proteins_20210608_aa__v__Undpi1_1_FilteredModels1_proteins_2023-12-12.tsv"
-test <- read.table(fname, sep = "\t", header = T, comment.char = "")
-dim(test)
-test2 <- test %>%
-  rowwise() %>%
-  # filter(all(grepl(",", pick(colnames(test)))))
-  filter(!grepl(",", SlaSLCT1FG3_1_GeneCatalog_proteins_20210608_aa))
-  # filter(!grepl(",", Undpi1_1_FilteredModels1_proteins_2023.12.12))
-dim(test2)
-
-
-und_os <- orthos %>% filter(grepl("Und", Species)) %>% pull(Orthologs) %>% grep(",", ., value = T, invert = T)
-und_os <- unname(unlist(sapply(und_os, parseJGI, simplify = F)))
-und_gs <- unique(gff_list$`Undaria pinnatifida M23`$protein_ID)
-length(which(und_os %in% und_gs))

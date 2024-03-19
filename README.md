@@ -113,3 +113,25 @@ sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
+
+## 5. Rescaffold v1.0 assembly with Ragout
+###
+#### Usage
+```
+sbatch ragout.sbatch [recipe_file]
+```
+#### Example
+```
+sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag.rcp
+```
+
+## 6. Identify orthologous genes with OrthoFinder
+### Run OrthoFinder on all brown algal species
+##### Usage
+```
+sbatch orthofinder.sbatch <assembly_file> 
+```
+##### Example
+```
+sbatch s-latissima-genome/orthofinder.sbatch s-latissima-genome/species_table.txt
+```

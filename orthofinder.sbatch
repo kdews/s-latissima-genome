@@ -11,7 +11,10 @@ init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Script variables
+R_mod_file="modules_for_Rscript.txt"
 indir="ortho_prots"
+r_script="${job_name}.R"
+ragout_dir="ragout-out"
 
 # Help message
 if [[ "$1" = "-h" ]] || [[ "$1" = "--help" ]]
@@ -25,10 +28,9 @@ Requires:
   exit 0
 fi
 
-# Load OrthoFinder conda env
-conda activate orthofinder
-orthofinder --help | grep "version"
-echo
+# Prepend scripts_dir
+R_mod_file="${scripts_dir}${R_mod_file}"
+r_script="${scripts_dir}${r_script}"
 
 # Parallelization
 # Low-mem threads
@@ -69,7 +71,42 @@ do
   fi
 done
 
+# Check existing directory for log of completed OrthoFinder run
+echo
+outdir="${indir}/OrthoFinder"
+[[ -d "$outdir" ]] && mapfile -t log < <(ls -t "${outdir}"/Results*/Log.txt)
+for i in "${!log[@]}"
+do
+  if [[ -f "${log[i]}" ]] && grep -q "OrthoFinder run completed" "${log[i]}"
+  then
+    echo "Found previous successful run: ${log[i]}"
+    res_dir="${log[i]%%"Log.txt"}"
+    echo "Skipping OrthoFinder step, using results in: $res_dir"
+    break
+  fi
+done
 # Run OrthoFinder
-cmd="orthofinder -t $thr_t -a $thr_a -f $indir"
+if [[ -z "$res_dir" ]]
+then
+  # Load OrthoFinder conda env
+  echo
+  conda activate orthofinder
+  orthofinder --help | grep "version"
+  cmd="orthofinder -t $thr_t -a $thr_a -f $indir"
+  echo "$cmd"
+  $cmd
+  mapfile -t res_list < <(ls -t "${outdir}"/Results*/)
+  res_dir="${res_list[0]}"
+  conda deactivate
+fi
+
+# Load R modules
+
+module purge
+IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
+module load "${R_mods[@]}"
+
+# Run analysis of OrthoFinder results in R
+cmd="Rscript $r_script $assembly_file ${indir}/ $res_dir $ragout_dir Saccharina_latissima $scripts_dir"
 echo "$cmd"
-$cmd
+# $cmd
