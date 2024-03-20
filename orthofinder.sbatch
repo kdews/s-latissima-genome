@@ -101,7 +101,6 @@ then
 fi
 
 # Load R modules
-
 module purge
 IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
 module load "${R_mods[@]}"

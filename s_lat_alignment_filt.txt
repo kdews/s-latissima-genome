@@ -1,0 +1,6 @@
+((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
+Ectocarpus_siliculosus	chromosome_extract_EctsiV2_genome.fasta
+Macrocystis_pyrifera	chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina_japonica	chromosome_extract_SJ_v6_2_chromosome.fasta
+Saccharina_latissima	chromosome_extract_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+Undaria_pinnatifida	chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
