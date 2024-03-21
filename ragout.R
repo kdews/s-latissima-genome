@@ -2,14 +2,18 @@
 rm(list = ls())
 # Required packages
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
-library(ape)
-library(scales)
+library(ape, quietly = T, warn.conflicts = F)
+library(RColorBrewer, quietly = T, warn.conflicts = F)
 library(gridExtra, quietly = T, warn.conflicts = F)
-library(ggpubr, quietly = T)
-if (require(showtext, quietly = T)) {
+library(ggpubr, quietly = T, warn.conflicts = F)
+if (require(showtext, quietly = T, warn.conflicts = F)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
+
+
+# Label names
+label_names <- c("Ragout input", "Ragout assembly", "remainder", "excluded")
 
 # Input
 if (interactive()) {
@@ -18,7 +22,7 @@ if (interactive()) {
   # Table of species in analysis
   assembly_file <- "s-latissima-genome/species_table.txt"
   # Ragout output directory
-  ragout_dir <- "ragout-out"
+  ragout_dir <- "ragout-out1"
   # Species of interest
   spc_int <- "Saccharina_latissima"
   # Output directory
@@ -94,8 +98,7 @@ readFai <- function(idx_file, suff = NULL) {
   colnames(idx) <- c("seqid", "length")
   idx <- idx %>%
     arrange(desc(length)) %>%
-    mutate(seqid = factor(seqid, levels = seqid),
-           rank=as.numeric(rownames(.)))
+    mutate(seqid = factor(seqid, levels = seqid))
   if (!missing(suff)) {
     colnames(idx) <- paste0(colnames(idx), suff)
   }
@@ -138,16 +141,36 @@ ragoutDot <- function(gff_update) {
           legend.position = "none")
   return(p)
 }
-idxPlot <- function(idx, y_axis_max, pal) {
+# 
+getColors <- function(vec_factors, pal) {
+  vec_colors <- brewer.pal(length(levels(vec_factors)), pal)
+  names(vec_colors) <- levels(vec_factors)
+  return(vec_colors)
+}
+# Plot
+idxPlot <- function(idx, pal) {
   # idx <- idx %>%
   #   filter(type != "excluded")
+  vec_colors <- getColors(idx$type, pal)
   p <- ggplot(data = idx, mapping = aes(fill = type)) +
-    geom_col(mapping = aes(x = rank, y = length), width = 1) +
-    ylim(0, y_axis_max) +
-    scale_fill_manual(values = pal) +
-    # scale_fill_brewer(palette = pal, direction = -1) +
-    # scale_fill_viridis_d(option = pal, direction = -1) +
+    geom_col(mapping = aes(x = as.numeric(row.names(idx)),
+                           y = length), width = 1) +
+    # ylim(0, y_axis_max) +
+    scale_fill_manual(values = vec_colors) +
     theme_bw()
+  return(p)
+}
+combPlot <- function(idx, pal) {
+  common_legend <- get_legend(idxPlot(idx, pal))
+  idx1 <- idx %>%
+    filter(type != "Ragout assembly") %>%
+    mutate(type = "Ragout input")
+  idx2 <- idx %>%
+    filter(type != "Ragout input")
+  p1 <- idxPlot(idx1, pal) + ylim(0, max(idx$length))
+  p2 <- idxPlot(idx2, pal) + ylim(0, max(idx$length))
+  p <- ggarrange(p1, p2, nrow = 2, align = "hv",
+                 legend.grob = common_legend, legend = "right")
   return(p)
 }
 
@@ -164,28 +187,31 @@ idx_file_unscaf <- list.files(path = ragout_dir,
                             pattern = "_unplaced\\.fasta\\.fai",
                             full.names = T)
 idx_comp <- readFai(idx_file_comp) %>%
-  mutate(type = case_when(rank <= 155 ~ "Ragout input", .default = "excluded"),
-         type = factor(type, levels = c("Ragout input", "Ragout assembly",
-                                        "remainder", "excluded")))
-idx_scaf <- readFai(idx_file_scaf) %>%
-  mutate(type = "Ragout assembly")
-idx_unscaf <- readFai(idx_file_unscaf) %>%
-  mutate(type = "remainder",
-         rank = rank + max(idx_scaf$rank))
-idx_ragout <- rbind(idx_scaf, idx_unscaf,
-                    idx_comp %>% filter(type == "excluded")) %>% 
+  mutate(type = case_when(seqid %in% agp$seqid_comp ~ "Ragout input",
+                          as.numeric(row.names(.)) <= 155 ~ "remainder",
+                          .default = "excluded"))
+idx_scaf <- readFai(idx_file_scaf) %>% mutate(type = "Ragout assembly")
+idx_unscaf <- readFai(idx_file_unscaf) %>% mutate(type = "remainder")
+idx_comp <- idx_comp %>%
+  filter(!seqid %in% unique(gsub("\\[.*\\]", "", idx_unscaf$seqid)))
+idx <- rbind(idx_scaf, idx_unscaf, idx_comp) %>%
   mutate(rank = as.numeric(row.names(.)),
-         type = factor(type, levels = c("Ragout input", "Ragout assembly",
-                                        "remainder", "excluded")))
-y_axis_max <- max(c(idx_comp$length, idx_ragout$length))
-
-vec.colors <- brewer.pal(4, "Paired")
-names(vec.colors) <- levels(idx_comp$type)
-
+         type = factor(type, levels = label_names)) %>%
+  arrange(desc(length))
 # Plots
-p1 <- idxPlot(idx_comp, y_axis_max, vec.colors)
-p2 <- idxPlot(idx_ragout, y_axis_max, vec.colors)
-p3 <- idxPlot(idx_comp %>% filter(type != "excluded"), y_axis_max, vec.colors)
-p4 <- idxPlot(idx_ragout %>% filter(type != "excluded"), y_axis_max, vec.colors)
-ggarrange(p1, p3, p2, p4, ncol = 2, nrow = 2, align = "hv")
+combPlot(idx, "Paired")
+
+idx1 <- idx %>% filter(type != "Ragout assembly") %>%
+  mutate(type = "Ragout input")
+idx2 <- idx %>%
+  filter(type != "Ragout input")
+
+p2 <- idxPlot(idx2, "Paired")
+p2
+
+
+
+# lay <- rbind(c(1,1),
+#              c(2,3))
+# grid.arrange(p1, p3, p4, layout_matrix = lay)
 

@@ -5,9 +5,6 @@
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
 
-# Print date and time
-date
-
 # Initialize script
 init="s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi

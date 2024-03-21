@@ -10,8 +10,14 @@
 .maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment.maf
 
 #paths to genome fasta files (required for MAF)
-Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_EctsiV2_genome.fasta
-Undaria_pinnatifida.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
-Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
-Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SJ_v6_2_chromosome.fasta
-Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/EctsiV2_genome.fasta
+Undaria_pinnatifida.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/Undpi1_1_AssemblyScaffolds_Repeatmasked_2023-12-12.fasta
+Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SJ_v6_2_chromosome.fa
+Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+
+#reference to use for naming
+.naming_ref = Saccharina_japonica
+
+#synteny blocks scale (large is >100Mb)
+.blocks = large

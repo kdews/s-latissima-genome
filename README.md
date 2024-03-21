@@ -103,6 +103,7 @@ sbatch halSynteny.sbatch <inHal>
 sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
 #### Generate heatmaps and dotplots of pairwise halSynteny PSL files
+Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/info/website/upload/psl.html).
 ##### Usage
 ```
 sbatch dotplot.sbatch <seqFile>
