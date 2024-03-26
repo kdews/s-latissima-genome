@@ -16,8 +16,8 @@ Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblie
 Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SJ_v6_2_chromosome.fa
 Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
 
-#reference to use for naming (closest related)
-.naming_ref = Saccharina_japonica
+#reference to use for naming (default = closest related)
+.naming_ref = Macrocystis_pyrifera
 
 #synteny blocks scale (large is >100Mb)
 .blocks = large

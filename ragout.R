@@ -11,10 +11,6 @@ if (require(showtext, quietly = T, warn.conflicts = F)) {
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 
-
-# Label names
-label_names <- c("Ragout input", "Ragout assembly", "remainder", "excluded")
-
 # Input
 if (interactive()) {
   wd <- "/scratch1/kdeweese/latissima/genome_stats"
@@ -22,7 +18,7 @@ if (interactive()) {
   # Table of species in analysis
   assembly_file <- "s-latissima-genome/species_table.txt"
   # Ragout output directory
-  ragout_dir <- "ragout-out1"
+  ragout_dir <- "ragout-out"
   # Species of interest
   spc_int <- "Saccharina_latissima"
   # Output directory
@@ -49,6 +45,7 @@ if (interactive()) {
 
 # Global variables
 spc_int <- gsub("_"," ", spc_int)
+label_names <- c("input", "rescaffolded", "remainder", "excluded")
 
 # Functions
 # Checks existence of file or directory and errors if FALSE
@@ -104,6 +101,61 @@ readFai <- function(idx_file, suff = NULL) {
   }
   return(idx)
 }
+# Generate annotated index of pre- and post-Ragout scaffolds
+genIdx <- function(ragout_dir, agp_list, species_tab) {
+  agp <- agp_list[[ragout_dir]]
+  scaf_file <- list.files(path = ragout_dir,
+                          pattern = "_scaffolds\\.fasta\\.fai",
+                          full.names = T)
+  unplc_file <- list.files(path = ragout_dir,
+                           pattern = "_unplaced\\.fasta\\.fai",
+                           full.names = T)
+  comp_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
+                           Assembly), ".fai")
+  scaf <- readFai(scaf_file) %>% mutate(type = "rescaffolded")
+  unplc <- readFai(unplc_file) %>% mutate(type = "remainder")
+  comp <- readFai(comp_file) %>%
+    mutate(type = case_when(seqid %in% agp$seqid_comp ~ "input",
+                            as.numeric(row.names(.)) <= 155 ~ "remainder",
+                            .default = "excluded")) %>%
+    filter(!seqid %in% unique(gsub("\\[.*\\]", "", unplc$seqid)))
+  idx <- rbind(scaf, unplc, comp) %>%
+    mutate(type = factor(type, levels = label_names),
+           # length = length) %>%
+           length = log10(length)) %>%
+    arrange(desc(length))
+}
+# Takes factor vector and returns factor-named vector of colors (i.e., dict)
+getColors <- function(vec_factors, pal = "Paired") {
+  vec_colors <- brewer.pal(length(levels(vec_factors)), pal)
+  names(vec_colors) <- levels(vec_factors)
+  return(vec_colors)
+}
+# Barplot of scaffolds indexed by length
+idxPlot <- function(idx, pal = "Paired", include = NULL, exclude = NULL) {
+  if(!missing(include)) idx <- idx %>% filter(type %in% include)
+  if(!missing(exclude)) idx <- idx %>% filter(!type %in% exclude)
+  idx <- idx %>% arrange(type)
+  vec_colors <- getColors(idx$type, pal)
+  p <- ggplot(data = idx, mapping = aes(fill = type)) +
+    geom_col(mapping = aes(x = as.numeric(row.names(idx)), y = length),
+             width = 1) +
+    scale_fill_manual(values = vec_colors) +
+    labs(x = "", y = "length [log10(bp)]") +
+    theme_minimal()
+  return(p)
+}
+# Combine pre- and post-Ragout index plots
+combPlot <- function(idx, common_lims, pal = "Paired") {
+  common_legend <- get_legend(idxPlot(idx, pal))
+  p1 <- idxPlot(idx, pal, exclude = c("rescaffolded")) + common_lims
+  p2 <- idxPlot(idx, pal, exclude = c("input")) + common_lims
+  p <- ggarrange(p1, p2, nrow = 2,
+                 # legend.grob = common_legend,
+                 legend = "none",
+                 align = "hv")
+  return(p)
+}
 # Dotplot of ragout rescaffolding
 ragoutDot <- function(gff_update) {
   # Arrange dataframe by scaffold length, then start position
@@ -127,7 +179,7 @@ ragoutDot <- function(gff_update) {
                  col = "black") +
     facet_grid(cols = vars(seqid_scaf), rows = vars(seqid_comp),
                switch = "both", scales = "free", as.table = F) +
-    labs(title = "Rescaffolding with Ragout", x = "Ragout assembly",
+    labs(title = "Rescaffolding with Ragout", x = "rescaffolded",
          y = "Assembly v1.0") +
     theme_classic() +
     theme(axis.ticks = element_blank(),
@@ -141,77 +193,29 @@ ragoutDot <- function(gff_update) {
           legend.position = "none")
   return(p)
 }
-# 
-getColors <- function(vec_factors, pal) {
-  vec_colors <- brewer.pal(length(levels(vec_factors)), pal)
-  names(vec_colors) <- levels(vec_factors)
-  return(vec_colors)
-}
-# Plot
-idxPlot <- function(idx, pal) {
-  # idx <- idx %>%
-  #   filter(type != "excluded")
-  vec_colors <- getColors(idx$type, pal)
-  p <- ggplot(data = idx, mapping = aes(fill = type)) +
-    geom_col(mapping = aes(x = as.numeric(row.names(idx)),
-                           y = length), width = 1) +
-    # ylim(0, y_axis_max) +
-    scale_fill_manual(values = vec_colors) +
-    theme_bw()
-  return(p)
-}
-combPlot <- function(idx, pal) {
-  common_legend <- get_legend(idxPlot(idx, pal))
-  idx1 <- idx %>%
-    filter(type != "Ragout assembly") %>%
-    mutate(type = "Ragout input")
-  idx2 <- idx %>%
-    filter(type != "Ragout input")
-  p1 <- idxPlot(idx1, pal) + ylim(0, max(idx$length))
-  p2 <- idxPlot(idx2, pal) + ylim(0, max(idx$length))
-  p <- ggarrange(p1, p2, nrow = 2, align = "hv",
-                 legend.grob = common_legend, legend = "right")
-  return(p)
-}
-
 
 # Import data
 species_tab <- readSpecies(assembly_file)
-agp <- readAgp(ragout_dir)
-idx_file_comp <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
-                             Assembly), ".fai")
-idx_file_scaf <- list.files(path = ragout_dir,
-                            pattern = "_scaffolds\\.fasta\\.fai",
-                            full.names = T)
-idx_file_unscaf <- list.files(path = ragout_dir,
-                            pattern = "_unplaced\\.fasta\\.fai",
-                            full.names = T)
-idx_comp <- readFai(idx_file_comp) %>%
-  mutate(type = case_when(seqid %in% agp$seqid_comp ~ "Ragout input",
-                          as.numeric(row.names(.)) <= 155 ~ "remainder",
-                          .default = "excluded"))
-idx_scaf <- readFai(idx_file_scaf) %>% mutate(type = "Ragout assembly")
-idx_unscaf <- readFai(idx_file_unscaf) %>% mutate(type = "remainder")
-idx_comp <- idx_comp %>%
-  filter(!seqid %in% unique(gsub("\\[.*\\]", "", idx_unscaf$seqid)))
-idx <- rbind(idx_scaf, idx_unscaf, idx_comp) %>%
-  mutate(rank = as.numeric(row.names(.)),
-         type = factor(type, levels = label_names)) %>%
-  arrange(desc(length))
-# Plots
-combPlot(idx, "Paired")
-
-idx1 <- idx %>% filter(type != "Ragout assembly") %>%
-  mutate(type = "Ragout input")
-idx2 <- idx %>%
-  filter(type != "Ragout input")
-
-p2 <- idxPlot(idx2, "Paired")
-p2
-
-
-
-# lay <- rbind(c(1,1),
-#              c(2,3))
-# grid.arrange(p1, p3, p4, layout_matrix = lay)
-
+ragout_dirs <- c("ragout-out-filt", "ragout-out-solid", "ragout-out")
+ttls <- c("Before rescaffolding", "All size-filtered", "None size-filtered",
+          "Others size-filtered")
+agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
+idx_list <- sapply(ragout_dirs, genIdx, agp_list, species_tab, simplify = F)
+comp_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
+                         Assembly), ".fai")
+pre_idx <- readFai(comp_file) %>%
+  mutate(type = factor("input", levels = label_names),
+         length = log10(length))
+legend_name <- names(which.max(sapply(idx_list,
+                                      function(x) length(unique(pull(x, type))),
+                                      simplify = F)))
+common_legend <- get_legend(idxPlot(idx_list[[legend_name]]))
+x_max <- max(unlist(sapply(idx_list, dim, simplify = F)))
+y_max <- max(unlist(sapply(idx_list, pull, length, simplify = F)))
+common_lims <- lims(x = c(0, x_max), y = c(0, y_max))
+temp <- sapply(idx_list, idxPlot, exclude = c("input"), simplify = F)
+p_list <- list(`pre-ragout`= idxPlot(pre_idx))
+p_list <- append(p_list, temp)
+ggarrange(plotlist = p_list, nrow = length(p_list), labels = ttls,
+          legend.grob = common_legend, legend = "right",
+          align = "hv")

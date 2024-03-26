@@ -7,4 +7,4 @@
 
 date
 
-hal2fasta cactus-steps-output/s_lat_alignment.hal Anc0 --hdf5InMemory > cactus-steps-output/Anc0.fa
+hal2fasta cactus-steps-output/s_lat_alignment_new_filt.hal Anc0 --hdf5InMemory > cactus-steps-output/Anc0.fa

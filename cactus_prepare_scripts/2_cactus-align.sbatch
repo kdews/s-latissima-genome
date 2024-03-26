@@ -7,4 +7,4 @@
 
 date
 
-cactus-align cactus_prepare_steps_jobstore/2 cactus-steps-output/s_lat_alignment.txt cactus-steps-output/Anc1.paf cactus-steps-output/Anc1.hal --root Anc1  --maxCores 14 --maxMemory 279.4Gi --logFile cactus-steps-output/logs/align-Anc1.log
+cactus-align cactus_prepare_steps_jobstore/2 cactus-steps-output/s_lat_alignment_new_filt.txt cactus-steps-output/Anc1.paf cactus-steps-output/Anc1.hal --root Anc1  --maxCores 14 --maxMemory 279.4Gi --logFile cactus-steps-output/logs/align-Anc1.log

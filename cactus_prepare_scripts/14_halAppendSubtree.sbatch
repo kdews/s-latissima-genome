@@ -7,4 +7,4 @@
 
 date
 
-halAppendSubtree cactus-steps-output/s_lat_alignment.hal cactus-steps-output/Anc1.hal Anc1 Anc1 --merge --hdf5InMemory
+halAppendSubtree cactus-steps-output/s_lat_alignment_new_filt.hal cactus-steps-output/Anc1.hal Anc1 Anc1 --merge --hdf5InMemory
