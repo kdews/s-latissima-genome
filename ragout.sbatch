@@ -60,6 +60,7 @@ else
   echo "Error: recipe file ($recipe_file) not found."
 fi
 # cmd="ragout -s maf -t $SLURM_CPUS_PER_TASK -o $ragout_dir $recipe_file"
+# cmd="ragout --solid-scaffolds --refine -s maf -t $SLURM_CPUS_PER_TASK -o $ragout_dir $recipe_file"
 cmd="ragout --solid-scaffolds -s maf -t $SLURM_CPUS_PER_TASK -o $ragout_dir $recipe_file"
 echo "$cmd"
 $cmd

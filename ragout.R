@@ -82,6 +82,10 @@ readAgp <- function(ragout_dir) {
   agp_file <- list.files(path = ragout_dir, pattern = ".*agp", full.names = T)
   agp <- read.table(agp_file)
   colnames(agp) <- agp_cols
+  return(agp)
+}
+# Filters out gaps from AGP dataframe
+filtAgp <- function(agp) {
   agp_filt <- agp %>%
     filter(component_type == "W") %>%
     select(!contains("component"))
@@ -196,10 +200,12 @@ ragoutDot <- function(gff_update) {
 
 # Import data
 species_tab <- readSpecies(assembly_file)
-ragout_dirs <- c("ragout-out-filt", "ragout-out-solid", "ragout-out")
-ttls <- c("Before rescaffolding", "All size-filtered", "None size-filtered",
-          "Others size-filtered")
+ragout_dirs <- c("ragout-out-filt", "ragout-out-chimera", "ragout-out-solid",
+                 "ragout-out")
+ttls <- c("Before rescaffolding", "All size-filtered (chimeric)",
+          "All size-filtered", "None size-filtered", "Others size-filtered")
 agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
+filt_agp_list <- sapply(agp_list, filtAgp, simplify = F)
 idx_list <- sapply(ragout_dirs, genIdx, agp_list, species_tab, simplify = F)
 comp_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
                          Assembly), ".fai")

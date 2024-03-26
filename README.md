@@ -115,15 +115,53 @@ sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
 ![alt text](https://github.com/kdews/s-latissima-genome/blob/main/dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
 
-## 5. Rescaffold v1.0 assembly with Ragout
-###
-#### Usage
+## 5. Homology-based rescaffolding
+### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
+##### Usage
 ```
-sbatch ragout.sbatch [recipe_file]
+sbatch hal2maf.sbatch <halFile>
 ```
-#### Example
+##### Example
 ```
-sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag.rcp
+sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
+```
+### Rescaffold assembly v1.0 with [Ragout](https://github.com/fenderglass/Ragout/)
+#### Build Ragout recipe file
+```
+#reference and target genome names
+.references = Saccharina_japonica,Macrocystis_pyrifera,Undaria_pinnatifida,Ectocarpus_siliculosus
+.target = Saccharina_latissima
+
+#Newick phylogenetic tree for all genomes
+.tree = ((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
+
+#path to HAL/MAF alignment input
+#.hal = /scratch1/kdeweese/latissima/genome_stats/cactus-steps-output/s_lat_alignment_new_filt.hal
+.maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment_new_filt.maf
+
+#paths to genome fasta files (required for MAF)
+Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_EctsiV2_genome.fasta
+Undaria_pinnatifida.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
+Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SJ_v6_2_chromosome.fasta
+Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+
+#reference to use for naming (closest related)
+.naming_ref = Saccharina_japonica
+
+#synteny blocks scale (large is >100Mb)
+.blocks = large
+```
+##### Usage
+```
+sbatch ragout.sbatch <recipe_file> <assembly_file>
+```
+##### Example
+```
+sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag.rcp s-latissima-genome/species_table.txt
+```
+```
+sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag_new_filt.rcp s-latissima-genome/new_filt_species_table.txt
 ```
 
 ## 6. Identify orthologous genes with OrthoFinder
