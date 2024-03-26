@@ -20,11 +20,11 @@ blocks for each combination of genomes.
 Usage: sbatch ${job_name}.sbatch <inHal>
 
 Requires:
- - HAL (https://github.com/ComparativeGenomicsToolkit/hal/)"
+ - HAL tools (https://github.com/ComparativeGenomicsToolkit/hal/)"
   exit 0
 fi
 
-# Load Python module and Cactus virtualenv (contains HAL)
+# Load Python module and Cactus virtualenv (contains HAL tools)
 module purge
 # module load gcc/12.3.0 python git py-pip
 module load gcc/11.3.0 python git py-pip parallel

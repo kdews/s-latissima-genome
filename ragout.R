@@ -2,6 +2,7 @@
 rm(list = ls())
 # Required packages
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
+library(ggrepel)
 library(ape, quietly = T, warn.conflicts = F)
 library(RColorBrewer, quietly = T, warn.conflicts = F)
 library(gridExtra, quietly = T, warn.conflicts = F)
@@ -16,7 +17,7 @@ if (interactive()) {
   wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
   # Table of species in analysis
-  assembly_file <- "s-latissima-genome/species_table.txt"
+  assembly_file <- "s-latissima-genome/new_filt_species_table.txt"
   # Ragout output directory
   ragout_dir <- "ragout-out"
   # Species of interest
@@ -68,7 +69,7 @@ readSpecies <- function(assembly_file) {
   assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
   checkPath(assembly_file)
   species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
-  colnames(species_tab) <- assembly_file_cols
+  colnames(species_tab) <- assembly_file_cols[1:length(species_tab)]
   species_tab <- species_tab[,na.omit(colnames(species_tab))]
   return(species_tab)
 }
@@ -136,7 +137,8 @@ getColors <- function(vec_factors, pal = "Paired") {
   return(vec_colors)
 }
 # Barplot of scaffolds indexed by length
-idxPlot <- function(idx, pal = "Paired", include = NULL, exclude = NULL) {
+idxPlot <- function(idx, pal = "Paired", common_lims = NULL,
+                    include = NULL, exclude = NULL) {
   if(!missing(include)) idx <- idx %>% filter(type %in% include)
   if(!missing(exclude)) idx <- idx %>% filter(!type %in% exclude)
   idx <- idx %>% arrange(type)
@@ -144,6 +146,7 @@ idxPlot <- function(idx, pal = "Paired", include = NULL, exclude = NULL) {
   p <- ggplot(data = idx, mapping = aes(fill = type)) +
     geom_col(mapping = aes(x = as.numeric(row.names(idx)), y = length),
              width = 1) +
+    common_lims +
     scale_fill_manual(values = vec_colors) +
     labs(x = "", y = "length [log10(bp)]") +
     theme_minimal()
@@ -164,7 +167,10 @@ combPlot <- function(idx, common_lims, pal = "Paired") {
 ragoutDot <- function(gff_update) {
   # Arrange dataframe by scaffold length, then start position
   gff_update <- gff_update %>%
-    mutate(seqid_comp = fixChrom(seqid_comp)) %>%
+    mutate(seqid_comp = fixChrom(seqid_comp),
+           length_scaf = 10^length_scaf) %>%
+    mutate_at(vars(grep("start|end", colnames(.), value = T)), as.numeric) %>%
+    # mutate_at(vars(grep("start|end", colnames(.), value = T)), log10) %>%
     arrange(desc(length_scaf), start_scaf)
   # Factor seqids by scaffold length and start position (for plotting)
   order_scaf <- unique(pull(gff_update, seqid_scaf))
@@ -178,35 +184,53 @@ ragoutDot <- function(gff_update) {
            end_scaf = case_when(orientation == "-" ~ temp,
                                 .default = end_scaf))
   p <- ggplot(data = gff_update) +
+    # geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
+    #                            y = start_comp, yend = end_comp, 
+    #                            col = orientation))) +
+    # facet_grid(cols = vars(seqid_scaf), rows = vars(seqid_comp),
+    #            switch = "both", scales = "free", as.table = F) +
+    # labs(title = "Rescaffolding with Ragout", x = "rescaffolded",
+    #      y = "Assembly v1.0") +
+    # theme(axis.ticks = element_blank(),
+    #       axis.text = element_blank(),
+    #       strip.placement = "outside",
+    #       strip.background.x = element_rect(color = NA,  fill=NA),
+    #       strip.background.y = element_rect(color = NA,  fill=NA),
+    #       strip.text.x.bottom = element_text(size = rel(0.75), angle = 0),
+    #       strip.text.y.left = element_text(size = rel(0.75), angle = 0),
+    #       strip.clip = "off",
+    #       legend.position = "none") +
+    geom_segment(mapping = aes(x = min(start_scaf), xend = length_scaf,
+                               y = seqid_scaf, yend = seqid_scaf), col = "black") +
     geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
-                               y = start_comp, yend = end_comp),
-                 col = "black") +
-    facet_grid(cols = vars(seqid_scaf), rows = vars(seqid_comp),
-               switch = "both", scales = "free", as.table = F) +
-    labs(title = "Rescaffolding with Ragout", x = "rescaffolded",
-         y = "Assembly v1.0") +
+                               y = seqid_scaf, yend = seqid_scaf, col = seqid_comp),
+                 linewidth = 3) +
+    # geom_text_repel(mapping = aes(x = start_scaf, y = seqid_scaf, label = seqid_comp),
+    #                  max.overlaps = 100000) +
+    # facet_wrap(~seqid_scaf, scales = "free_x") +
     theme_classic() +
-    theme(axis.ticks = element_blank(),
-          axis.text = element_blank(),
-          strip.placement = "outside",
-          strip.background.x = element_rect(color = NA,  fill=NA),
-          strip.background.y = element_rect(color = NA,  fill=NA),
-          strip.text.x.bottom = element_text(size = rel(0.75), angle = 0),
-          strip.text.y.left = element_text(size = rel(0.75), angle = 0),
-          strip.clip = "off",
-          legend.position = "none")
+    theme(legend.position = "none")
   return(p)
 }
 
 # Import data
 species_tab <- readSpecies(assembly_file)
-ragout_dirs <- c("ragout-out-filt", "ragout-out-chimera", "ragout-out-solid",
-                 "ragout-out")
-ttls <- c("Before rescaffolding", "All size-filtered (chimeric)",
-          "All size-filtered", "None size-filtered", "Others size-filtered")
+ragout_dirs <- c("ragout-out-filt",
+                 "ragout-out-chimera",
+                 "ragout-out-solid",
+                 "ragout-out",
+                 "ragout-out-refine",
+                 "ragout-out-refine-chimera")
+ttls <- c("Before rescaffolding",
+          "Size filtration applied to all (chimeric)",
+          "No size filtration (chimeric)",
+          "No size filtration (solid)",
+          "Size filtration except S. latissima (solid)",
+          "Size filtration except S. latissima (solid, refined)",
+          "Size filtration except S. latissima (chimeric, refined)")
 agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
 filt_agp_list <- sapply(agp_list, filtAgp, simplify = F)
-idx_list <- sapply(ragout_dirs, genIdx, agp_list, species_tab, simplify = F)
+idx_list <- sapply(ragout_dirs, genIdx, filt_agp_list, species_tab, simplify = F)
 comp_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
                          Assembly), ".fai")
 pre_idx <- readFai(comp_file) %>%
@@ -219,9 +243,15 @@ common_legend <- get_legend(idxPlot(idx_list[[legend_name]]))
 x_max <- max(unlist(sapply(idx_list, dim, simplify = F)))
 y_max <- max(unlist(sapply(idx_list, pull, length, simplify = F)))
 common_lims <- lims(x = c(0, x_max), y = c(0, y_max))
-temp <- sapply(idx_list, idxPlot, exclude = c("input"), simplify = F)
-p_list <- list(`pre-ragout`= idxPlot(pre_idx))
+temp <- sapply(idx_list, idxPlot, common_lims = common_lims, 
+               exclude = c("input"), simplify = F)
+p_list <- list(`pre-ragout`= idxPlot(pre_idx, common_lims = common_lims))
 p_list <- append(p_list, temp)
-ggarrange(plotlist = p_list, nrow = length(p_list), labels = ttls,
-          legend.grob = common_legend, legend = "right",
-          align = "hv")
+# ggarrange(plotlist = p_list, nrow = length(p_list), labels = ttls,
+#           legend.grob = common_legend, legend = "right",
+#           align = "hv")
+
+
+test <- merge(filt_agp_list[[3]], idx_list[[3]], by.x = "seqid_scaf", by.y = "seqid") %>%
+  mutate(length_scaf = length)
+ragoutDot(test)
