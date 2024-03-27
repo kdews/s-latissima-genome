@@ -2,7 +2,7 @@
 #SBATCH -J halSynteny
 #SBATCH -p oneweek
 #SBATCH --mem=5gb
-#SBATCH --time=1-0
+#SBATCH --time=05:00:00
 #SBATCH --nodes=20
 #SBATCH --ntasks-per-node=1
 #SBATCH -o %x.log

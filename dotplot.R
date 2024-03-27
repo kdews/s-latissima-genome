@@ -71,10 +71,10 @@ orderPsl <- function(df_name, df_list) {
            tName=factor(tName, levels = target_contigs),
            qNum=factor(qNum, levels = query_nums),
            tNum=factor(tNum, levels = target_nums)) %>%
-    # Filter out extremely small contigs
-    filter(qSize > 1e6 & tSize > 1e6) %>%
-    # Filter out extremely large contigs
-    filter(qSize < 30e6 & tSize < 30e6) %>%
+    # # Filter out extremely small contigs
+    # filter(qSize > 1e6 & tSize > 1e6) %>%
+    # # Filter out extremely large contigs
+    # filter(qSize < 30e6 & tSize < 30e6) %>%
     arrange(qName)
   return(df)
 }
@@ -370,6 +370,7 @@ species_versus <-
 psl_files <- sapply(species_versus, grep, list.files(pattern = "\\.psl",
                                                      path = ".",
                                                      full.names = T), value = T)
+psl_files <- grep("new", psl_files, value = T, invert = T)
 # Read PSL files into list of dataframes
 psl_list <- sapply(psl_files, read.table, col.names = psl_col,
                    simplify = F, USE.NAMES = T)
@@ -381,6 +382,9 @@ psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 # Analysis
 # Summarize by contig vs. contig of each syntenic comparison
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+# write.table(psl_sums$Saccharina_latissima_vs_Saccharina_japonica %>%
+#               filter(tNum == 0), file = "comp_chr0.txt", quote = F,
+#             sep = "\t", row.names = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Rearrange scaffold ID factors by matches for plotting
