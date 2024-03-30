@@ -7,7 +7,7 @@
 
 #path to HAL/MAF alignment input
 #.hal = /scratch1/kdeweese/latissima/genome_stats/cactus-steps-output/s_lat_alignment.hal
-.maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment.maf
+.maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment_all.maf
 
 #paths to genome fasta files (required for MAF)
 Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/EctsiV2_genome.fasta

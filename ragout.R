@@ -117,37 +117,44 @@ readFai <- function(idx_file, suff = NULL) {
 # Generate annotated index of pre- and post-Ragout scaffolds
 genIdx <- function(ragout_dir, agp_list, species_tab) {
   agp <- agp_list[[ragout_dir]]
+  # Pre-Ragout scaffold index (later filtered for plotting)
+  pre_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
+                           Assembly), ".fai")
+  pre_idx <- readFai(pre_file)
+  # Ragout rescaffolded scaffold index
   scaf_file <- list.files(path = ragout_dir,
                           pattern = "_scaffolds\\.fasta\\.fai",
                           full.names = T)
+  scaf <- readFai(scaf_file)
+  # Unplaced scaffold index
   unplc_file <- list.files(path = ragout_dir,
                            pattern = "_unplaced\\.fasta\\.fai",
                            full.names = T)
-  pre_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
-                           Assembly), ".fai")
-  # Ragout rescaffolded scaffold index
-  scaf <- readFai(scaf_file) %>% mutate(type = "rescaffolded")
-  # Unplaced scaffold index
-  unplc <- readFai(unplc_file) %>% mutate(type = "remainder")
-  # Pre-Ragout scaffold index (later filtered for plotting)
-  pre_idx <- readFai(pre_file) %>% mutate(type = "input")
-  # Chimeras (from pre-Ragout index)
-  chims <- pre_idx %>% mutate(type = "chimera") %>%
-    # Remove seqids that are in unplaced index (not chimeric)
-    filter(!seqid %in% unplc$seqid) %>%
-    rowwise() %>%
-    filter(any(grepl(paste0(seqid, "\\["), unplc$seqid)))
-    # filter(any(grepl(paste0(seqid, "["), unplc$seqid)) & any(grepl(seqid, agp$seqid_comp)))
-  # Remove chimeras from unplaced index
-  unplc <- unplc %>% filter(!gsub("\\[.*\\]", "", seqid) %in% chims$seqid)
-  # Vector of rescaffolded and unplaced seqids
+  unplc <- readFai(unplc_file)
+  # Create vector of chimeric scaffolds
+  chims <- unique(gsub("\\[.*\\]", "", grep("\\[", unplc$seqid, value = T)))
+  # Create vector of rescaffolded and unplaced seqids
   rag_seqids <- c(agp$seqid_comp, gsub("\\[.*\\]", "", unplc$seqid))
-  # Pre-Ragout scaffolds not in rescaffolded or unplaced indices (accounts for chimeras)
-  excl <- pre_idx %>% mutate(type = "excluded") %>%
-    filter(!seqid %in% rag_seqids)
-  idx <- rbind(scaf, unplc, chims, excl, pre_idx) %>%
-  # idx <- rbind(scaf, unplc, pre_idx) %>%
+  # Label scaffolds with "type" column before combining
+  # Type: rescaffolded
+  scaf <- scaf %>% mutate(type = "rescaffolded")
+  # Type: remainder
+  unplc <- unplc %>% mutate(type = "remainder") %>%
+    rowwise() %>%
+    # Filter out chimeric scaffolds from remainder
+    filter(!grepl("\\[", seqid))
+  pre_idx <- pre_idx %>%
+    # Type: chimera
+    mutate(type = case_when(seqid %in% chims ~ "chimera",
+                            # Type: input
+                            (seqid %in% rag_seqids &
+                               !seqid %in% chims) ~ "input",
+                            # Type: excluded
+                            .default = "excluded"))
+  # Combine all scaffold types
+  idx <- rbind(scaf, unplc, pre_idx) %>%
     mutate(type = factor(type, levels = label_names),
+           seqid = factor(seqid, levels = unique(as.character(seqid))),
            length = log10(length)) %>%
     arrange(desc(length))
   return(idx)
@@ -155,8 +162,11 @@ genIdx <- function(ragout_dir, agp_list, species_tab) {
 # Index AGP dataframe with scaffold/contig lengths
 idxAgp <- function(ragout_dir, filt_agp_list, idx_list) {
   filt_agp <- filt_agp_list[[ragout_dir]]
-  idx <- idx_list[[ragout_dir]] %>% filter(type != "input")
-  pre_idx <- idx_list[[ragout_dir]] %>% filter(type == "input")
+  idx <- idx_list[[ragout_dir]] %>% filter(type == "rescaffolded")
+  pre_idx <- idx_list[[ragout_dir]] %>%
+    filter(type %in% c("input", "chimera")) %>%
+    arrange(desc(length)) %>%
+    mutate(seqid = factor(seqid, levels = unique(as.character(seqid))))
   idx_dict <- idx$length
   names(idx_dict) <- idx$seqid
   pre_idx_dict <- pre_idx$length
@@ -184,28 +194,32 @@ annotChr0 <- function(idx_agp) {
   return(idx_agp)
 }
 # Takes factor vector and returns factor-named vector of colors (i.e., dict)
-getColors <- function(vec, pal = "Paired") {
-  if (is.factor(vec)) {
-    vec_colors <- brewer.pal(length(levels(vec)), pal)
+getColors <- function(vec, palFun, pal = NULL) {
+  if (!is.factor(vec)) stop("Error: vector class is not factor.")
+  if (identical(palFun, brewer.pal)) {
+    if (missing(pal)) pal = "Paired"
+    vec_colors <- palFun(length(levels(vec)), pal)
     names(vec_colors) <- levels(vec)
+    # Color chimera red using "Paired" palette
     if (any(names(vec_colors) %in% c("chimera"))) {
-      vec_colors[["chimera"]] <- brewer.pal(n = length(levels(vec)), name = pal)[5]
+      new_ord <- c("input", "rescaffolded", "remainder", "excluded", "chimera")
+      if (any(names(vec_colors) %in% c("total"))) new_ord <- c(new_ord, "total")
+      names(vec_colors) <- new_ord
     }
-    if (any(names(vec_colors) %in% c("excluded"))) {
-      vec_colors[["excluded"]] <- brewer.pal(n = length(levels(vec)), name = pal)[3]
-    }
-  } else {
-    vec_colors <- viridis(n = length(unique(vec)), option = pal)
-    names(vec_colors) <- unique(vec)
+  } else if (identical(palFun, viridis)) {
+    if (missing(pal)) pal = "turbo"
+    vec_colors <- viridis(n = length(levels(vec)), option = pal)
+    names(vec_colors) <- levels(vec)
   }
   return(vec_colors)
 }
-# Get common legend
-getCommon <- function(idx_list) {
-  type_count <- sapply(idx_list, function(x) length(unique(pull(x, type))),
+# Get common legend for variable in list of dataframes using a plotting function
+getCommon <- function(df_list, var_name, plotFun) {
+  var_count <- sapply(df_list,
+                       function(x) length(unique(pull(x, matches(var_name)))),
                        simplify = F)
-  legend_name <- names(which.max(type_count))
-  common_legend <- get_legend(idxPlot(legend_name, idx_list))
+  legend_name <- names(which.max(var_count))
+  common_legend <- get_legend(plotFun(legend_name, df_list))
   return(common_legend)
 }
 # Barplot of scaffolds indexed by length
@@ -219,16 +233,14 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
   idx <- idx_list[[ragout_dir]]
   ttl <- ttls[[ragout_dir]]
   if(!missing(exclude)) idx <- idx %>% filter(!type %in% exclude)
+  # Filter out input scaffolds that are chimera, remainder, or excluded
   if (any(idx$type %in% c("input"))) {
-    filt_seqids <- idx %>%
-      filter(type != "input") %>%
-      pull(seqid) %>%
+    filt_seqids <- idx %>% filter(type != "input") %>% pull(seqid) %>%
       gsub("\\[.*\\]", "", .)
-    idx <- idx %>%
-      filter(!(seqid %in% filt_seqids & type == "input"))
+    idx <- idx %>% filter(!(type == "input" & seqid %in% filt_seqids))
   }
   # Colors for plot
-  vec_colors <- getColors(idx$type, pal)
+  vec_colors <- getColors(idx$type, brewer.pal, pal)
   idx_sum <- idx %>%
     group_by(type) %>%
     summarise(n = n()) %>%
@@ -237,13 +249,13 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
     mutate(type = factor(type, levels = c(label_names, "total"))) %>%
     rbind(list(factor("total", levels = c(label_names, "total")), sum(.$n)))
   # Colors for table
-  tbl_colors <- getColors(idx_sum$type, pal)
+  tbl_colors <- getColors(idx$type, brewer.pal, pal)
   tbl_colors[["total"]] <- "lightgrey"
   fnt_colors <- rep("black", length(tbl_colors))
   names(fnt_colors) <- names(tbl_colors)
-  fnt_colors[names(fnt_colors) %in% c("rescaffolded", "remainder")] <- "white"
-  tbl_colors <- tbl_colors[unique(idx_sum$type)]
-  fnt_colors <- fnt_colors[unique(idx_sum$type)]
+  fnt_colors[names(fnt_colors) %in% c("rescaffolded", "excluded")] <- "white"
+  tbl_colors <- tbl_colors[as.character(unique(idx_sum$type))]
+  fnt_colors <- fnt_colors[as.character(unique(idx_sum$type))]
   annot <- annotate(geom = "table", x = x_max, y = y_max,
                     label = idx_sum, table.colnames = F,
                     table.theme =
@@ -261,9 +273,8 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
     scale_fill_manual(values = vec_colors) +
     labs(title = ttl, x = "", y = "length [log10(bp)]") +
     theme_minimal() +
-    # coord_cartesian(clip = "off") +
     annot +
-    theme(legend.position = "top")
+    theme(legend.position = "left")
   return(p)
 }
 # Combine pre- and post-Ragout index plots
@@ -272,20 +283,36 @@ combPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
   p1 <- idxPlot(ragout_dir, idx_list, ttls = ttls, pal = pal,
                 exclude = c("rescaffolded"))
   p2 <- idxPlot(ragout_dir, idx_list, pal = pal,
-                exclude = c("input", "chimera"))
+                exclude = c("input"))
+  p3 <- ragoutPlot(ragout_dir, idx_agp_list)
+  p_list <- list(p1, p2)
+  p12 <- ggarrange(plotlist = p_list, nrow = length(p_list),
+                  align = "hv", legend = "none")
   if (legend) {
-    common_legend <- getCommon(idx_list)
-    p <- ggarrange(p1, p2, nrow = 2, align = "hv", legend.grob = common_legend)
+    common_legend <- getCommon(idx_list, "type", idxPlot)
+    p <- ggarrange(p12, p3,
+                   align = "hv", legend.grob = common_legend)
   } else {
-    p <- ggarrange(p1, p2, nrow = 2, align = "hv", legend = "none")
+    p <- ggarrange(p12, p3,
+                   align = "hv", legend = "none")
   }
   return(p)
 }
 # Plot of ragout rescaffolding
-ragoutPlot <- function(ragout_dir, idx_agp_list, ttls, common_x_lims = NULL,
-                      leg_help) {
+ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL) {
   ttl <- ttls[[ragout_dir]]
   idx_agp <- idx_agp_list[[ragout_dir]]
+  # Common x-axis limits for aligning all plots
+  x_max <- max(unlist(sapply(idx_agp_list, pull, length_scaf)))
+  common_x_lims <- xlim(c(0, x_max))
+  # Color each seqid with consistent color in all graphs
+  all_seqids <- lapply(idx_agp_list, select, c(seqid_comp, length_comp)) %>%
+    bind_rows() %>%
+    unique() %>%
+    arrange(desc(length_comp)) %>%
+    mutate(seqid_comp = as.numeric(fixChrom(seqid_comp))) %>%
+    pull(seqid_comp)
+  all_seqids <- factor(all_seqids, levels = all_seqids)
   # Factor seqids by scaffold length and start position (for plotting)
   order_scaf <- unique(pull(idx_agp, seqid_scaf))
   order_comp <- fixChrom(levels(pull(idx_agp, seqid_comp)))
@@ -293,16 +320,13 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls, common_x_lims = NULL,
   idx_agp <- idx_agp %>%
     mutate(seqid_comp = fixChrom(seqid_comp),
            seqid_comp = factor(seqid_comp, levels = order_comp),
-           seqid_scaf = factor(seqid_scaf, levels = order_scaf),
-           temp = start_scaf,
-           start_scaf = case_when(orientation == "-" ~ end_scaf,
-                                  .default = start_scaf),
-           end_scaf = case_when(orientation == "-" ~ temp,
-                                .default = end_scaf))
-  # myColors <- viridis(n = length(levels(idx_agp$seqid_comp)))
-  # names(myColors) <- levels(idx_agp$seqid_comp)
-  myColors <- viridis(n = length(levels(leg_help)), option = "turbo")
-  names(myColors) <- levels(leg_help)
+           seqid_scaf = factor(seqid_scaf, levels = order_scaf))
+           # temp = start_scaf,
+           # start_scaf = case_when(orientation == "-" ~ end_scaf,
+           #                        .default = start_scaf),
+           # end_scaf = case_when(orientation == "-" ~ temp,
+           #                      .default = end_scaf),
+  myColors <- getColors(all_seqids, viridis, "turbo")
   ypos <- dim(idx_agp)[1]
   xpos <- max(idx_agp$length_scaf)*0.8
   p <- ggplot(data = idx_agp) +
@@ -312,8 +336,8 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls, common_x_lims = NULL,
     geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
                                y = seqid_scaf, yend = seqid_scaf,
                                # col = chr0),
-                               # col = seqid_comp),
-                               col = length_comp),
+                               # col = length_comp),
+                               col = seqid_comp),
                  linewidth = 2) +
     annotate(geom = "text", x = xpos,
              y = idx_agp$seqid_scaf[ypos],
@@ -323,26 +347,31 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls, common_x_lims = NULL,
              y = idx_agp$seqid_scaf[ypos-2],
              label = paste(round(unique(idx_agp$perc_N*100),
                                  digits = 2), "% N's")) +
-    labs(title = ttl, x = "assembly v1.0", y = "rescaffolded") +
+    labs(title = ttl, x = "Length (bp)", y = "rescaffolded") +
     theme_classic() +
-    # scale_color_manual(values = myColors) +
-    scale_color_viridis_c(option = "plasma") +
-    theme(legend.position = "none", axis.title.y = element_blank()) +
+    scale_color_manual(values = myColors) +
+    theme(legend.position = "none",
+          # axis.title.y = element_blank(),
+          axis.text.y = element_blank()) +
     common_x_lims
   return(p)
 }
 
 # Import data
 species_tab <- readSpecies(assembly_file)
-ragout_dirs <- c("ragout-out-filt",
-                 "ragout-out-chimera",
-                 "ragout-out-solid",
-                 "ragout-out",
-                 "ragout-out-refine",
-                 "ragout-out-refine-chimera")
+ragout_dirs <- c("ragout-out-filt-chimera",
+                 "ragout-out-all-chimera",
+                 "ragout-out-all-chimera-refine",
+                 "ragout-out-all-solid",
+                 "ragout-out-all-solid-refine",
+                 "ragout-out-no-sac-solid",
+                 "ragout-out-no-sac-solid-refine",
+                 "ragout-out-no-sac-chimera-refine")
 ttls <- c("Size filtration applied to all (chimeric)",
           "No size filtration (chimeric)",
+          "No size filtration (chimeric, refined)",
           "No size filtration (solid)",
+          "No size filtration (solid, refined)",
           "Size filtration except S. latissima (solid)",
           "Size filtration except S. latissima (solid, refined)",
           "Size filtration except S. latissima (chimeric, refined)")
@@ -356,23 +385,21 @@ idx_agp_list <- sapply(ragout_dirs, idxAgp, filt_agp_list, idx_list,
                          simplify = F)
 # Annotate synteny to S. japonica chr0
 idx_agp_list <- sapply(idx_agp_list, annotChr0, simplify = F)
-
+ 
 # Plots
 # Barplots of rescaffolded length distributions
-p_list <- sapply(ragout_dirs, combPlot, idx_list, ttls = ttls, simplify = F)
-p_list[[1]]
-common_legend <- getCommon(idx_list)
+p_list <- sapply(ragout_dirs, combPlot, idx_list,
+                 ttls = ttls,
+                 simplify = F)
+p_list <- p_list[c(1,5,7)]
+# ttls <- ttls[c(1,5,7)]
+common_legend <- getCommon(idx_list, "type", idxPlot)
 (comp_rag <- ggarrange(plotlist = p_list, align = "hv",
-                       # ncol = length(p_list),
-                       legend.grob = common_legend,
-                       legend = "top"))
+                      nrow = length(p_list),
+                      legend.grob = common_legend,
+                      # labels = ttls,
+                      legend = "left"))
 # # Plots of rescaffolding mapping
-# common_x_lims <- xlim(c(0, max(unlist(sapply(idx_agp_list, pull, length_scaf)))))
-# leg_help <- fixChrom(as.character(sort(unique(unlist(sapply(idx_agp_list, pull, seqid_comp))))))
-# leg_help <- factor(leg_help, levels = leg_help)
-# dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list, ttls, common_x_lims,
-#                    leg_help, simplify = F)
-# (all_dot <- ggarrange(plotlist = dot_list,
-#                      nrow = 3, ncol = 2,
-#                      align = "hv"))
-
+# dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list,
+#                    simplify = F)
+# (all_dot <- ggarrange(plotlist = dot_list, align = "hv"))
