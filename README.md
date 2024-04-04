@@ -54,6 +54,7 @@ extremely large or small (>1 Mb) contigs.
 ##### Usage
 sbatch chromosome_extract.sbatch [<assembly_file>](species_table.txt)
 \<species_of_interest\> \<outgroup_species\>
+
 Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format
 "Genus_specificname" and do not contain spaces.
 
@@ -64,8 +65,7 @@ Violin plots of contig sizes before and after filtering will be saved in
 `scaffold_sizes_violin.png`.
 ##### Example
 ```
-sbatch s-latissima-genome/chromosome_extract.sbatch \
-s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
+sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
 ```
 ![alt text](Saccharina_latissima_filtering.png)
 ![alt text](scaffold_sizes_violin.png)
@@ -132,9 +132,7 @@ sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ## 5. Homology-based rescaffolding
 ### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
 ##### Usage
-```
-sbatch hal2maf.sbatch <halFile>
-```
+sbatch [hal2maf.sbatch] \<halFile\>
 ##### Example
 ```
 sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
