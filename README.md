@@ -12,9 +12,7 @@ names and ORCAE links.
 ###### Option 2: Give pre-generated curl login file for JGI
 > sbatch fetch_assemblies.sbatch [\<portal_list\>](portal_names.txt) [curl_login_file]
 ##### Example
-```
-sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
-```
+```sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login```
 Upon successful download, the output directory `assemblies/` and
 [\<assembly_file\>](species_table.txt) will be created.
 
@@ -36,13 +34,12 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 #### Visualize BUSCO results
 ##### Usage
 > bash genome_stats.sh [\<assembly_file\>](species_table.txt) [[path/to/busco_compare.sbatch]](busco_compare.sbatch)
-
-For each lineage, a plot of BUSCO results across all genomes will be saved to
-`busco_<lineage>.png`.
 ##### Example
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
+For each lineage, a plot of BUSCO results across all genomes will be saved to
+`busco_<lineage>.png`.
 ![alt text](busco_eukaryota_odb10.png)
 ![alt text](busco_stramenopiles_odb10.png)
 
@@ -52,16 +49,15 @@ extremely large or small (>1 Mb) contigs.
 ##### Usage
 > sbatch chromosome_extract.sbatch [\<assembly_file\>](species_table.txt) \<species_of_interest\> \<outgroup_species\>
 >> **Note**: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
-
+##### Example
+```
+sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
+```
 Resulting filtered genomes will be tabulated next to species names in
 `filt_species_table.txt`. A curve of filtered length and contig number for the
 species of interest will be saved to `<species_of_interest>_filtering.png`.
 Violin plots of contig sizes before and after filtering will be saved in
 `scaffold_sizes_violin.png`.
-##### Example
-```
-sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
-```
 ![alt text](Saccharina_latissima_filtering.png)
 ![alt text](scaffold_sizes_violin.png)
 
