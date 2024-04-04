@@ -12,7 +12,9 @@ names and ORCAE links.
 ###### Option 2: Give pre-generated curl login file for JGI
 > sbatch fetch_assemblies.sbatch [\<portal_list\>](portal_names.txt) [curl_login_file]
 ##### Example
-```sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login```
+```
+sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
+```
 Upon successful download, the output directory `assemblies/` and
 [\<assembly_file\>](species_table.txt) will be created.
 
