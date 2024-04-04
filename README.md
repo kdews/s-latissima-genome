@@ -8,10 +8,9 @@ Fetch assemblies and annotations from
 names and ORCAE links.
 ##### Usage
 ###### Option 1: Give JGI username and password
-sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt)
-\[username\] \[password\]
+sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt) [username] [password]
 ###### Option 2: Give pre-generated curl login file for JGI
-sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt) \[curl_login_file\]
+sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt) [curl_login_file]
 ##### Example
 ```
 sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
@@ -55,8 +54,7 @@ extremely large or small (>1 Mb) contigs.
 sbatch chromosome_extract.sbatch [<assembly_file>](species_table.txt)
 \<species_of_interest\> \<outgroup_species\>
 
-Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format
-"Genus_specificname" and do not contain spaces.
+> **Note**: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
 
 Resulting filtered genomes will be tabulated next to species names in
 `filt_species_table.txt`. A curve of filtered length and contig number for the
@@ -91,17 +89,13 @@ Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
 ### Run Cactus aligner
 #### Prepare scripts for stepwise pipeline
 ##### Usage
-```
-sbatch cactus_prepare.sbatch <seqFile>
-```
+sbatch [cactus_prepare.sbatch](cactus_prepare.sbatch) [<seqFile>](s_lat_alignment.txt)
 ##### Example
 ```
 sbatch s-latissima-genome/cactus_prepare.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
 #### Run scripts sequentially
-```
-sbatch cactus_run_prepared.sbatch [sbatch_list_file]
-```
+sbatch [cactus_run_prepared.sbatch](cactus_run_prepared.sbatch) [sbatch_list_file](cactus_sbatch_list.txt)
 ##### Example
 ```
 sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_sbatch_list.txt
@@ -109,9 +103,7 @@ sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_s
 ### Visualize alignments
 #### Run halSynteny to extract syntenic blocks between each genome pair
 ##### Usage
-```
-sbatch halSynteny.sbatch <inHal>
-```
+sbatch [halSynteny.sbatch](halSynteny.sbatch) \<inHal\>
 ##### Example
 ```
 sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.hal
@@ -119,9 +111,7 @@ sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.
 #### Generate heatmaps and dotplots of pairwise halSynteny PSL files
 Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/info/website/upload/psl.html).
 ##### Usage
-```
-sbatch dotplot.sbatch <seqFile>
-```
+sbatch [dotplot.sbatch](dotplot.sbatch) [<seqFile>](s_lat_alignment.txt)
 ##### Example
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
@@ -132,18 +122,16 @@ sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ## 5. Homology-based rescaffolding
 ### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
 ##### Usage
-sbatch [hal2maf.sbatch] \<halFile\>
+sbatch [hal2maf.sbatch](hal2maf.sbatch) \<halFile\>
 ##### Example
 ```
 sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
-### Rescaffold assembly v1.0 with [Ragout](https://github.com/fenderglass/Ragout/)
+### Rescaffold assembly v1.0 with [Ragout](https://github.com/fenderglass/Ragout)
 #### Build Ragout recipe file
 
 ##### Usage
-```
-sbatch ragout.sbatch <seqFile> <cactus_dir> [ragout_prefix]
-```
+sbatch [ragout.sbatch](ragout.sbatch) [<seqFile>](s_lat_alignment.txt) \<cactus_dir\> [ragout_prefix]
 ##### Example
 ```
 sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt cactus-steps-output ragout-out
@@ -151,9 +139,7 @@ sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt c
 ## 6. Identify orthologous genes with OrthoFinder
 ### Run OrthoFinder on all brown algal species
 ##### Usage
-```
-sbatch orthofinder.sbatch <assembly_file> 
-```
+sbatch [orthofinder.sbatch](orthofinder.sbatch) [<assembly_file>](species_table.txt)
 ##### Example
 ```
 sbatch s-latissima-genome/orthofinder.sbatch s-latissima-genome/species_table.txt
