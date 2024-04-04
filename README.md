@@ -26,14 +26,14 @@ Species 1     | PATH1        | PATH1           | PATH1         | PATH1          
 Species 2     | PATH2        | PATH2           | PATH2         | PATH2          | ...
 
 ## 2. Genome scoring with BUSCO and QUAST
-Run BUSCO and QUAST on each assembly listed in `<assembly_file>`:
+#### Run BUSCO and QUAST on each assembly listed in `<assembly_file>`
 ##### Usage
 > bash genome_stats.sh [\<assembly_file\>](species_table.txt) [[path/to/aug_busco.sbatch]](aug_busco.sbatch) [[path/to/quast.sbatch]](quast.sbatch)
 ##### Example
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 ```
-Visualize BUSCO results:
+#### Visualize BUSCO results
 ##### Usage
 > bash genome_stats.sh [\<assembly_file\>](species_table.txt) [[path/to/busco_compare.sbatch]](busco_compare.sbatch)
 
