@@ -2,15 +2,19 @@
 Scripts to score and compare the genome assembly of *S. latissima* to related species.
 
 ## 1. Input files
-Fetch assemblies and annotations from JGI website and ORCAE given a list of JGI portal names and ORCAE links.
+Fetch assemblies and annotations from
+[JGI PhycoCosm](https://phycocosm.jgi.doe.gov/phycocosm/home) and
+[ORCAE](https://bioinformatics.psb.ugent.be/orcae) given a list of JGI portal
+names and ORCAE links.
 ##### Usage
-```
-# Give JGI username and password, or give pre-generated curl login file for JGI
-sbatch fetch_assemblies.sbatch <portal_list> [username] [password]
-sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
-```
+###### Option 1: Give JGI username and password
+sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt)
+\[username\] \[password\]
+###### Option 2: Give pre-generated curl login file for JGI
+sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt) \[curl_login_file\]
+
 Upon successful download, output directory (`assemblies/`) and
-`<assembly_file>` (`species_table.txt`) will be created.
+[<assembly_file>](species_table.txt) will be created.
 Assembly file format:
 ```
 Species_name	Genome_PATH	Annotation_PATH	Proteins_PATH	Gene_Info_PATH	...
@@ -74,7 +78,7 @@ sourced from
 ##### Usage
 sbatch [prune_tree.sbatch](prune_tree.sbatch)
 [<assembly_file>](species_table.txt)
-[tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt)
+[[tree]](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt)
 ##### Example
 ```
 sbatch s-latissima-genome/prune_tree.sbatch s-latissima-genome/species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
