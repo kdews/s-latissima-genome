@@ -12,17 +12,19 @@ sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt)
 \[username\] \[password\]
 ###### Option 2: Give pre-generated curl login file for JGI
 sbatch fetch_assemblies.sbatch [<portal_list>](portal_names.txt) \[curl_login_file\]
-
-Upon successful download, output directory (`assemblies/`) and
-[<assembly_file>](species_table.txt) will be created.
-Assembly file format:
-```
-Species_name	Genome_PATH	Annotation_PATH	Proteins_PATH	Gene_Info_PATH	...
-```
 ##### Example
 ```
 sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
 ```
+Upon successful download, the output directory `assemblies/` and
+[<assembly_file>](species_table.txt) will be created.
+
+Assembly file format:
+
+Species_name  | Genome_PATH  | Annotation_PATH | Proteins_PATH | Gene_Info_PATH | ...
+------------- | ------------ | --------------- | ------------- | -------------- | ---
+Species 1     | PATH1        | PATH1           | PATH1         | PATH1          | ...
+Species 2     | PATH2        | PATH2           | PATH2         | PATH2          | ...
 
 ## 2. Genome scoring with BUSCO and QUAST
 Run BUSCO and QUAST on each assembly listed in `<assembly_file>`:
