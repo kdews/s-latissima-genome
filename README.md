@@ -9,7 +9,8 @@ Fetch assemblies and annotations from JGI website and ORCAE given a list of JGI 
 sbatch fetch_assemblies.sbatch <portal_list> [username] [password]
 sbatch fetch_assemblies.sbatch <portal_list> [curl_login_file]
 ```
-Upon successful download, output directory (`assemblies/`) and `<assembly_file>` (`species_table.txt`) will be created.
+Upon successful download, output directory (`assemblies/`) and
+`<assembly_file>` (`species_table.txt`) will be created.
 Assembly file format:
 ```
 Species_name	Genome_PATH	Annotation_PATH	Proteins_PATH	Gene_Info_PATH	...
@@ -43,14 +44,20 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 ![alt text](busco_stramenopiles_odb10.png)
 
 ## 3. Evaluation of scaffoldedness and contig size filtering
-Generates violin plots of contig size for each genome, then filters out extremely large or small (>1 Mb) contigs.
+Generates violin plots of contig size for each genome, then filters out
+extremely large or small (>1 Mb) contigs.
 ##### Usage
 ```
 sbatch chromosome_extract.sbatch <assembly_file> <species_of_interest> <outgroup_species>
 ```
-Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
+Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format
+"Genus_specificname" and do not contain spaces.
 
-Resulting filtered genomes will be tabulated next to species names in `filt_species_table.txt`. A curve of filtered length and contig number for the species of interest will be saved to `<species_of_interest>_filtering.png`. Violin plots of contig sizes before and after filtering will be saved in `scaffold_sizes_violin.png`.
+Resulting filtered genomes will be tabulated next to species names in
+`filt_species_table.txt`. A curve of filtered length and contig number for the
+species of interest will be saved to `<species_of_interest>_filtering.png`.
+Violin plots of contig sizes before and after filtering will be saved in
+`scaffold_sizes_violin.png`.
 ##### Example
 ```
 sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
@@ -60,15 +67,20 @@ sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_t
 
 ## 4. Multi-species whole genome alignment with Cactus Progressive Aligner
 ### Prune brown macroalgae phylogeny to include only species in analysis
-Default [tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt) sourced from [Starko, S. et al. 2019](https://doi.org/10.1016/j.ympev.2019.04.012).
-
+Default
+[tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt)
+sourced from
+[Starko, S. et al. 2019](https://doi.org/10.1016/j.ympev.2019.04.012).
 ##### Usage
-```
-sbatch prune_tree.sbatch <assembly_file> [tree]
-```
+sbatch [prune_tree.sbatch](prune_tree.sbatch)
+[<assembly_file>](species_table.txt)
+[tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt)
 ##### Example
-sbatch [s-latissima-genome/prune_tree.sbatch](prune_tree.sbatch) [s-latissima-genome/species_table.txt](species_table) [1-s2.0-S1055790319300892-mmc1.txt](1-s2.0-S1055790319300892-mmc1.txt)
-Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`. Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
+```
+sbatch s-latissima-genome/prune_tree.sbatch s-latissima-genome/species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
+```
+Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`.
+Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
 ![Phylogenetic graphs showing pruning](phylo_prune.png)
 
 ### Run Cactus aligner
