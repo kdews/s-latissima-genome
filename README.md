@@ -21,7 +21,7 @@ Upon successful download, the output directory `assemblies/` and
 
 Assembly file format:
 
-Species_name  | Genome_PATH  | Annotation_PATH | Proteins_PATH | Gene_Info_PATH | ...
+Species name  | Genome FASTA | Annotation file | Protein FASTA | Gene info file | ...
 ------------- | ------------ | --------------- | ------------- | -------------- | ---
 Species 1     | PATH1        | PATH1           | PATH1         | PATH1          | ...
 Species 2     | PATH2        | PATH2           | PATH2         | PATH2          | ...
@@ -29,19 +29,18 @@ Species 2     | PATH2        | PATH2           | PATH2         | PATH2          
 ## 2. Genome scoring with BUSCO and QUAST
 Run BUSCO and QUAST on each assembly listed in `<assembly_file>`:
 ##### Usage
-```
-bash genome_stats.sh <assembly_file> [path/to/aug_busco.sbatch] [path/to/quast.sbatch]
-```
-##### Examples
+bash genome_stats.sh [<assembly_file>](species_table.txt)
+[[path/to/aug_busco.sbatch]](aug_busco.sbatch)
+[[path/to/quast.sbatch]](quast.sbatch)
+##### Example
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 ```
 Visualize BUSCO results:
 ##### Usage
-```
-bash genome_stats.sh <assembly_file> [path/to/busco_compare.sbatch]
-```
-For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
+bash genome_stats.sh [<assembly_file>](species_table.txt) [[path/to/busco_compare.sbatch]](busco_compare.sbatch)
+For each lineage, a plot of BUSCO results across all genomes will be saved to
+`busco_<lineage>.png`.
 ##### Example
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
@@ -53,9 +52,8 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 Generates violin plots of contig size for each genome, then filters out
 extremely large or small (>1 Mb) contigs.
 ##### Usage
-```
-sbatch chromosome_extract.sbatch <assembly_file> <species_of_interest> <outgroup_species>
-```
+sbatch chromosome_extract.sbatch [<assembly_file>](species_table.txt)
+\<species_of_interest\> \<outgroup_species\>
 Note: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format
 "Genus_specificname" and do not contain spaces.
 
@@ -66,7 +64,8 @@ Violin plots of contig sizes before and after filtering will be saved in
 `scaffold_sizes_violin.png`.
 ##### Example
 ```
-sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
+sbatch s-latissima-genome/chromosome_extract.sbatch \
+s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
 ```
 ![alt text](Saccharina_latissima_filtering.png)
 ![alt text](scaffold_sizes_violin.png)
