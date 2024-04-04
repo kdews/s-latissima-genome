@@ -35,7 +35,7 @@ if (interactive()) {
 # Output plot filenames
 filt_plot <- paste0(spc_int, "_filtering.png")
 vio_plot <- "scaffold_sizes_violin.png"
-# Append output directory to plot name (if it exists)
+# Prepend output directory to plot name (if it exists)
 if (dir.exists(outdir)) {
   filt_plot <- paste0(outdir, filt_plot)
   vio_plot <- paste0(outdir, vio_plot)

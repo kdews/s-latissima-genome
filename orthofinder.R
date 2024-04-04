@@ -42,7 +42,7 @@ if (interactive()) {
 # # Output plot filenames
 # filt_plot <- paste0(spc_int, "_filtering.png")
 # vio_plot <- "scaffold_sizes_violin.png"
-# # Append output directory to plot name (if it exists)
+# # Prepend output directory to plot name (if it exists)
 # if (dir.exists(outdir)) {
 #   # filt_plot <- paste0(outdir, filt_plot)
 #   # vio_plot <- paste0(outdir, vio_plot)
@@ -58,7 +58,7 @@ checkPath <- function(test_path) {
   if (file.exists(test_path)) {
     return(TRUE)
   } else {
-    stop(paste0("Error: cannot follow path (", test_path, ")."))
+    stop(paste0("Cannot follow path (", test_path, ")."))
   }
 }
 # Parse JGI protein IDs
@@ -89,8 +89,8 @@ abbrevSpc <- function(spc) {
 readSpecies <- function(assembly_file) {
   assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
   checkPath(assembly_file)
-  species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
-  colnames(species_tab) <- assembly_file_cols
+  species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F,
+                            col.names = assembly_file_cols)
   species_tab <- species_tab[,na.omit(colnames(species_tab))]
   return(species_tab)
 }

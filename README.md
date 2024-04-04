@@ -64,15 +64,14 @@ Default [tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mm
 
 ##### Usage
 ```
-# Size-filtered assemblies (<filt_assembly_file>)
-sbatch prune_tree.sbatch <filt_assembly_file> [tree]
+sbatch prune_tree.sbatch <assembly_file> [tree]
 ```
 ##### Example
 ```
-sbatch s-latissima-genome/prune_tree.sbatch s-latissima-genome/filt_species_table.txt 1-s2.0-S1055790319300892-mmc1.txt
+sbatch [s-latissima-genome/prune_tree.sbatch](prune_tree.sbatch) [s-latissima-genome/species_table.txt](species_table) [1-s2.0-S1055790319300892-mmc1.txt](1-s2.0-S1055790319300892-mmc1.txt)
 ```
 Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`. Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/phylo_prune.png)
+![alt text](phylo_prune.png)
 
 ### Run Cactus aligner
 #### Prepare scripts for stepwise pipeline
@@ -127,43 +126,15 @@ sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
 ### Rescaffold assembly v1.0 with [Ragout](https://github.com/fenderglass/Ragout/)
 #### Build Ragout recipe file
-```
-#reference and target genome names
-.references = Saccharina_japonica,Macrocystis_pyrifera,Undaria_pinnatifida,Ectocarpus_siliculosus
-.target = Saccharina_latissima
 
-#Newick phylogenetic tree for all genomes
-.tree = ((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
-
-#path to HAL/MAF alignment input
-#.hal = /scratch1/kdeweese/latissima/genome_stats/cactus-steps-output/s_lat_alignment_new_filt.hal
-.maf = /scratch1/kdeweese/latissima/genome_stats/s_lat_alignment_new_filt.maf
-
-#paths to genome fasta files (required for MAF)
-Ectocarpus_siliculosus.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_EctsiV2_genome.fasta
-Undaria_pinnatifida.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Undpi1_AssemblyScaffolds_Repeatmasked.fasta
-Macrocystis_pyrifera.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
-Saccharina_japonica.fasta = /scratch1/kdeweese/latissima/genome_stats/chromosome_extract_SJ_v6_2_chromosome.fasta
-Saccharina_latissima.fasta = /scratch1/kdeweese/latissima/genome_stats/assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
-
-#reference to use for naming (closest related)
-.naming_ref = Saccharina_japonica
-
-#synteny blocks scale (large is >100Mb)
-.blocks = large
-```
 ##### Usage
 ```
-sbatch ragout.sbatch <recipe_file> <assembly_file>
+sbatch ragout.sbatch <seqFile> <cactus_dir> [ragout_prefix]
 ```
 ##### Example
 ```
-sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag.rcp s-latissima-genome/species_table.txt
+sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt cactus-steps-output ragout-out
 ```
-```
-sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_rag_new_filt.rcp s-latissima-genome/new_filt_species_table.txt
-```
-
 ## 6. Identify orthologous genes with OrthoFinder
 ### Run OrthoFinder on all brown algal species
 ##### Usage

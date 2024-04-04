@@ -1,0 +1,9 @@
+.target = Saccharina_latissima
+.references = Undaria_pinnatifida,Macrocystis_pyrifera,Ectocarpus_siliculosus,Saccharina_japonica
+.tree = ((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
+.maf = s_lat_alignment.maf
+Undaria_pinnatifida.fasta = assemblies/Undpi1_1_AssemblyScaffolds_Repeatmasked_2023-12-12.fasta
+Macrocystis_pyrifera.fasta = assemblies/Macpyr2_AssemblyScaffolds_Repeatmasked.fasta
+Saccharina_latissima.fasta = assemblies/SlaSLCT1FG3_1_AssemblyScaffolds_Repeatmasked.fasta
+Ectocarpus_siliculosus.fasta = assemblies/EctsiV2_genome.fasta
+Saccharina_japonica.fasta = assemblies/SJ_v6_2_chromosome.fa
