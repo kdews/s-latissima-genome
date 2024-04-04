@@ -39,8 +39,8 @@ For each lineage, a plot of BUSCO results across all genomes will be saved to `b
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_eukaryota_odb10.png)
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/busco_stramenopiles_odb10.png)
+![alt text](busco_eukaryota_odb10.png)
+![alt text](busco_stramenopiles_odb10.png)
 
 ## 3. Evaluation of scaffoldedness and contig size filtering
 Generates violin plots of contig size for each genome, then filters out extremely large or small (>1 Mb) contigs.
@@ -55,8 +55,8 @@ Resulting filtered genomes will be tabulated next to species names in `filt_spec
 ```
 sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_siliculosus
 ```
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/Saccharina_latissima_filtering.png)
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/scaffold_sizes_violin.png)
+![alt text](Saccharina_latissima_filtering.png)
+![alt text](scaffold_sizes_violin.png)
 
 ## 4. Multi-species whole genome alignment with Cactus Progressive Aligner
 ### Prune brown macroalgae phylogeny to include only species in analysis
@@ -67,11 +67,9 @@ Default [tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mm
 sbatch prune_tree.sbatch <assembly_file> [tree]
 ```
 ##### Example
-```
 sbatch [s-latissima-genome/prune_tree.sbatch](prune_tree.sbatch) [s-latissima-genome/species_table.txt](species_table) [1-s2.0-S1055790319300892-mmc1.txt](1-s2.0-S1055790319300892-mmc1.txt)
-```
 Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`. Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
-![alt text](phylo_prune.png)
+![Phylogenetic graphs showing pruning](phylo_prune.png)
 
 ### Run Cactus aligner
 #### Prepare scripts for stepwise pipeline
@@ -111,8 +109,8 @@ sbatch dotplot.sbatch <seqFile>
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
-![alt text](https://github.com/kdews/s-latissima-genome/blob/main/dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
+![alt text](heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
+![alt text](dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
 
 ## 5. Homology-based rescaffolding
 ### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
