@@ -1,0 +1,14 @@
+setup.py
+src/sonLib/__init__.py
+src/sonLib/bioio.py
+src/sonLib/misc.py
+src/sonLib/nxnewick.py
+src/sonLib/nxnewickTest.py
+src/sonLib/nxtree.py
+src/sonLib/nxtreeTest.py
+src/sonLib/tree.py
+src/sonLib/treeTest.py
+src/sonLib.egg-info/PKG-INFO
+src/sonLib.egg-info/SOURCES.txt
+src/sonLib.egg-info/dependency_links.txt
+src/sonLib.egg-info/top_level.txt

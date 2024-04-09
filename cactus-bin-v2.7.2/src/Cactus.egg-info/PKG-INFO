@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: Cactus
+Version: 2.7.2
+Author: Benedict Paten
+Requires-Python: >=3.7
+License-File: LICENSE.txt
+Requires-Dist: decorator
+Requires-Dist: networkx<2.8.1,>=2
+Requires-Dist: pytest
+Requires-Dist: cigar
+Requires-Dist: biopython

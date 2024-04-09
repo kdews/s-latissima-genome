@@ -1,0 +1,9 @@
+.tree = (((sjm180:0.0400823,els:0.0217168):0.0344596,gambia:0.0652494):0.0217168,(puno:0.064641,g27:0.0526246):0.008389);
+.references = els,gambia,puno,g27
+.target = sjm180
+
+els.fasta = references/ELS37.fasta
+g27.fasta = references/G27.fasta
+gambia.fasta = references/Gambia94_24.fasta
+puno.fasta = references/Puno120.fasta
+sjm180.fasta = SJM180_contigs.fasta

@@ -1,0 +1,8 @@
+.references = rf122,col,jkd,n315
+.target = usa
+
+col.fasta = references/COL.fasta
+jkd.fasta = references/JKD6008.fasta
+rf122.fasta = references/RF122.fasta
+n315.fasta = references/N315.fasta
+usa.fasta = usa300_contigs.fasta

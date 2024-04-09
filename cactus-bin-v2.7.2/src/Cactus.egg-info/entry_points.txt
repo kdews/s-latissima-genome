@@ -1,0 +1,19 @@
+[console_scripts]
+cactus = cactus.progressive.cactus_progressive:main
+cactus-align = cactus.setup.cactus_align:main
+cactus-align-batch = cactus.setup.cactus_align:main_batch
+cactus-blast = cactus.blast.cactus_blast:main
+cactus-graphmap = cactus.refmap.cactus_graphmap:main
+cactus-graphmap-join = cactus.refmap.cactus_graphmap_join:main
+cactus-graphmap-split = cactus.refmap.cactus_graphmap_split:main
+cactus-hal2chains = cactus.maf.cactus_hal2chains:main
+cactus-hal2maf = cactus.maf.cactus_hal2maf:main
+cactus-maf2bigmaf = cactus.maf.cactus_maf2bigmaf:main
+cactus-minigraph = cactus.refmap.cactus_minigraph:main
+cactus-pangenome = cactus.refmap.cactus_pangenome:main
+cactus-prepare = cactus.progressive.cactus_prepare:main
+cactus-prepare-toil = cactus.progressive.cactus_prepare:main_toil
+cactus-preprocess = cactus.preprocessor.cactus_preprocessor:main
+cactus-refmap = cactus.refmap.cactus_refmap:main
+cactus-terra-helper = cactus.progressive.cactus_terra_helper:main
+cactus-update-prepare = cactus.update.cactus_update_prepare:main

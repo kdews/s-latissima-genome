@@ -1,0 +1,5 @@
+decorator
+networkx<2.8.1,>=2
+pytest
+cigar
+biopython

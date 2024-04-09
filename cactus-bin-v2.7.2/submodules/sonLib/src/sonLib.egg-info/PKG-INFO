@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: sonLib
+Version: 2.0
+Summary: Small general purpose library for C and Python with focus on bioinformatics.
+Author: Benedict Paten
+Author-email: benedict@soe.ucsc.edu
