@@ -124,14 +124,14 @@ sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
 ### Rescaffold assembly v1.0 with [Ragout](https://github.com/fenderglass/Ragout)
-#### Build Ragout recipe file
-
 ##### Usage
 > sbatch [ragout.sbatch](ragout.sbatch) [\<seqFile\>](s_lat_alignment.txt) \<cactus_dir\> [ragout_prefix]
 ##### Example
 ```
 sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt cactus-steps-output ragout-out
 ```
+![alt text](rescaffolding.png)
+
 ## 6. Identify orthologous genes with OrthoFinder
 ### Run OrthoFinder on all brown algal species
 ##### Usage
