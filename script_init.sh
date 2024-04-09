@@ -48,7 +48,7 @@ load_R_mods="module load ${R_mods[*]}"
 load_cactus_mods="module load ${cactus_mods[*]}"
 load_ragout_mods="module load ${ragout_mods[*]}"
 cactus_env="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
-ragout_env="${scripts_dir}/Ragout/cactus-bin-v2.7.2/venv-cactus-v2.7.2/bin/activate"
+ragout_env="${scripts_dir}cactus-bin-v2.7.2/venv-cactus-v2.7.2/bin/activate"
 
 # Species of interest and outgroup species in analysis
 spc_int="Saccharina_latissima"

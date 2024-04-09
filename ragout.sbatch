@@ -77,8 +77,8 @@ then
 else
   echo "Error: recipe file ($rcp_file) not found."
 fi
-# cmd="ragout --solid-scaffolds --refine -s maf -t $SLURM_CPUS_PER_TASK -o $ragout_dir $rcp_file"
-cmd="$ragout --solid-scaffolds --refine -s hal -t $SLURM_CPUS_PER_TASK -o $ragout_dir $rcp_file"
+rag_opts="--solid-scaffolds --refine -s hal -t $SLURM_CPUS_PER_TASK"
+cmd="$ragout $rag_opts -o $ragout_dir $rcp_file"
 echo "$cmd"
 $cmd
 # Clear env
