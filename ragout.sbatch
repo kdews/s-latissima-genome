@@ -50,23 +50,6 @@ seqFile="${scripts_dir}${seqFile}"
 # Cactus prefix
 cactus_prefix="$(basename "${seqFile%.*}")"
 
-# # Convert Cactus HAL output to MAF
-# # Parse HAL and MAF paths from inputs
-# maf="${cactus_prefix}.maf"
-# hal="${cactus_dir}/${cactus_prefix}.hal"
-# # Check for existing MAF, if not found generate MAF from HAL
-# if [[ -f "$maf" ]]
-# then
-#   echo "MAF ($maf) found."
-# else
-#   echo "MAF ($maf) not found. Converting HAL to MAF."
-#   [[ -f "$hal" ]] || { echo "Error: HAL ($hal) not found."; exit 1; }
-#   cmd="bash $hal2maf_script $hal $maf"
-#   echo "$cmd"
-#   $cmd
-# fi
-# echo
-
 # Generate Ragout recipe file
 # Load R modules
 module purge
@@ -83,8 +66,6 @@ echo "Recipe file: $rcp_file"
 conda deactivate
 module purge
 # Load Ragout virtualenv
-# module load gcc/11.3.0 python/3.9.12 git/2.36.1
-# source_file "${scripts_dir}cactus-bin-v2.7.2/venv-cactus-v2.7.2/bin/activate"
 $load_ragout_mods
 source_file "$ragout_env"
 ragout="${scripts_dir}Ragout/bin/ragout"
