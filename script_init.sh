@@ -40,11 +40,14 @@ scripts_dir_name="s-latissima-genome"
 # Environments for required packages
 R_mod_file="modules_for_Rscript.txt"
 cactus_mod_file="modules_for_cactus.txt"
+ragout_mod_file="modules_for_ragout.txt"
 mapfile -t R_mods < <(cat "${scripts_dir}${R_mod_file}")
 mapfile -t cactus_mods < <(cat "${scripts_dir}${cactus_mod_file}")
 load_R_mods="module load ${R_mods[*]}"
 load_cactus_mods="module load ${cactus_mods[*]}"
+load_ragout_mods="module load ${cactus_mods[*]}"
 cactus_env="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
+ragout_env="${scripts_dir}cactus-bin-v2.7.2/venv-cactus-v2.7.2/bin/activate"
 
 # Species of interest and outgroup species in analysis
 spc_int="Saccharina_latissima"

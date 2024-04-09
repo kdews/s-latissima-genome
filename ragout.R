@@ -19,9 +19,9 @@ if (interactive()) {
   wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
   # Table of species in analysis
-  assembly_file <- "s-latissima-genome/new_filt_species_table.txt"
+  assembly_file <- "s-latissima-genome/species_table.txt"
   # Ragout output directory
-  ragout_dir <- "ragout-out"
+  ragout_dir <- "ragout-out-new-cactus"
   # Species of interest
   spc_int <- "Saccharina_latissima"
   # Output directory
@@ -37,14 +37,12 @@ if (interactive()) {
   # Output directory
   outdir <- line_args[4]
 }
-# # Output plot filenames
-# filt_plot <- paste0(spc_int, "_filtering.png")
-# vio_plot <- "scaffold_sizes_violin.png"
-# # Prepend output directory to plot name (if it exists)
-# if (dir.exists(outdir)) {
-#   # filt_plot <- paste0(outdir, filt_plot)
-#   # vio_plot <- paste0(outdir, vio_plot)
-# }
+# Output plot filenames
+rescaf_plot <- "rescaffolding.png"
+# Prepend output directory to plot name (if it exists)
+if (dir.exists(outdir)) {
+  rescaf_plot <- paste0(outdir, rescaf_plot)
+}
 
 # Global variables
 spc_int <- gsub("_"," ", spc_int)
@@ -88,6 +86,7 @@ readAgp <- function(ragout_dir) {
 }
 # Filters out gaps from AGP dataframe
 filtAgp <- function(agp) {
+  evidence <- agp %>% filter((component_type == "N")) %>% pull("orientation")
   # Calculate N content and total length before filtering
   agp_filt <- agp %>%
     mutate(N_count = sum(as.numeric(grep("scaffold_", seqid_comp,
@@ -98,7 +97,18 @@ filtAgp <- function(agp) {
     select(!contains("component")) %>%
     # Convert numeric columns
     mutate_at(vars(grep("start|end", colnames(.), value = T)), as.numeric)
+  # agp_filt <- agp_filt %>%
+  #   mutate(evidence = evidence)
   return(agp_filt)
+}
+# Keep gaps from AGP
+gapsAgp <- function(agp) {
+  gap_df <- agp %>%
+    filter(component_type == "N") %>%
+    rowwise() %>%
+    mutate(evidence = length(unlist(strsplit(orientation, ","))),
+           position = mean(c(start_scaf, end_scaf)))
+  return(gap_df)
 }
 # Import FASTA index file (.fasta.fai)
 readFai <- function(idx_file, suff = NULL) {
@@ -214,12 +224,12 @@ getColors <- function(vec, palFun, pal = NULL) {
   return(vec_colors)
 }
 # Get common legend for variable in list of dataframes using a plotting function
-getCommon <- function(df_list, var_name, plotFun) {
+getCommon <- function(plotFun, var_name, df_list, ...) {
   var_count <- sapply(df_list,
                        function(x) length(unique(pull(x, matches(var_name)))),
                        simplify = F)
   legend_name <- names(which.max(var_count))
-  common_legend <- get_legend(plotFun(legend_name, df_list))
+  common_legend <- get_legend(plotFun(legend_name, df_list, ...))
   return(common_legend)
 }
 # Barplot of scaffolds indexed by length
@@ -284,23 +294,21 @@ combPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
                 exclude = c("rescaffolded"))
   p2 <- idxPlot(ragout_dir, idx_list, pal = pal,
                 exclude = c("input"))
-  p3 <- ragoutPlot(ragout_dir, idx_agp_list)
   p_list <- list(p1, p2)
-  p12 <- ggarrange(plotlist = p_list, nrow = length(p_list),
-                  align = "hv", legend = "none")
   if (legend) {
-    common_legend <- getCommon(idx_list, "type", idxPlot)
-    p <- ggarrange(p12, p3,
-                   align = "hv", legend.grob = common_legend)
+    common_legend <- getCommon(idxPlot, "type", idx_list)
+    p <- ggarrange(plotlist = p_list, nrow = length(p_list),
+                   align = "hv", legend = common_legend)
   } else {
-    p <- ggarrange(p12, p3,
+    p <- ggarrange(plotlist = p_list, nrow = length(p_list),
                    align = "hv", legend = "none")
   }
   return(p)
 }
 # Plot of ragout rescaffolding
-ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL) {
+ragoutPlot <- function(ragout_dir, gaps_list, idx_agp_list, ttls = NULL) {
   ttl <- ttls[[ragout_dir]]
+  gap_df <- gaps_list[[ragout_dir]]
   idx_agp <- idx_agp_list[[ragout_dir]]
   # Common x-axis limits for aligning all plots
   x_max <- max(unlist(sapply(idx_agp_list, pull, length_scaf)))
@@ -321,23 +329,15 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL) {
     mutate(seqid_comp = fixChrom(seqid_comp),
            seqid_comp = factor(seqid_comp, levels = order_comp),
            seqid_scaf = factor(seqid_scaf, levels = order_scaf))
-           # temp = start_scaf,
-           # start_scaf = case_when(orientation == "-" ~ end_scaf,
-           #                        .default = start_scaf),
-           # end_scaf = case_when(orientation == "-" ~ temp,
-           #                      .default = end_scaf),
   myColors <- getColors(all_seqids, viridis, "turbo")
   ypos <- dim(idx_agp)[1]
   xpos <- max(idx_agp$length_scaf)*0.8
   p <- ggplot(data = idx_agp) +
-    geom_segment(mapping = aes(x = min(start_scaf), xend = length_scaf,
-                               y = seqid_scaf, yend = seqid_scaf),
-                 col = "grey") +
     geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
-                               y = seqid_scaf, yend = seqid_scaf,
+                               y = seqid_scaf, yend = seqid_scaf),
                                # col = chr0),
                                # col = length_comp),
-                               col = seqid_comp),
+                               # col = seqid_comp),
                  linewidth = 2) +
     annotate(geom = "text", x = xpos,
              y = idx_agp$seqid_scaf[ypos],
@@ -347,10 +347,18 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL) {
              y = idx_agp$seqid_scaf[ypos-2],
              label = paste(round(unique(idx_agp$perc_N*100),
                                  digits = 2), "% N's")) +
+    geom_segment(data = gap_df,
+                 mapping = aes(x = start_scaf, xend = end_scaf,
+                               y = seqid_scaf, yend = seqid_scaf,
+                               col = evidence)) +
+    # geom_text(data = gap_df,
+    #            mapping = aes(x = position, y = seqid_scaf,
+    #                          label = evidence)) +
     labs(title = ttl, x = "Length (bp)", y = "rescaffolded") +
     theme_classic() +
-    scale_color_manual(values = myColors) +
-    theme(legend.position = "none",
+    scale_color_gradient(low = "yellow", high = "blue") +
+    # scale_color_manual(values = myColors) +
+    theme(legend.position = "right",
           # axis.title.y = element_blank(),
           axis.text.y = element_blank()) +
     common_x_lims
@@ -359,25 +367,28 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL) {
 
 # Import data
 species_tab <- readSpecies(assembly_file)
-ragout_dirs <- c("ragout-out-filt-chimera",
-                 "ragout-out-all-chimera",
-                 "ragout-out-all-chimera-refine",
-                 "ragout-out-all-solid",
-                 "ragout-out-all-solid-refine",
-                 "ragout-out-no-sac-solid",
-                 "ragout-out-no-sac-solid-refine",
-                 "ragout-out-no-sac-chimera-refine")
-ttls <- c("Size filtration applied to all (chimeric)",
-          "No size filtration (chimeric)",
-          "No size filtration (chimeric, refined)",
-          "No size filtration (solid)",
-          "No size filtration (solid, refined)",
-          "Size filtration except S. latissima (solid)",
-          "Size filtration except S. latissima (solid, refined)",
-          "Size filtration except S. latissima (chimeric, refined)")
-names(ttls) <- ragout_dirs
+ragout_dirs <- c(ragout_dir)
+ragout_dirs <- c("ragout-out-all-solid-refine")
+# ragout_dirs <- c("ragout-out-filt-chimera",
+#                  "ragout-out-all-chimera",
+#                  "ragout-out-all-chimera-refine",
+#                  "ragout-out-all-solid",
+#                  "ragout-out-all-solid-refine",
+#                  "ragout-out-no-sac-solid",
+#                  "ragout-out-no-sac-solid-refine",
+#                  "ragout-out-no-sac-chimera-refine")
+# ttls <- c("Size filtration applied to all (chimeric)",
+#           "No size filtration (chimeric)",
+#           "No size filtration (chimeric, refined)",
+#           "No size filtration (solid)",
+#           "No size filtration (solid, refined)",
+#           "Size filtration except S. latissima (solid)",
+#           "Size filtration except S. latissima (solid, refined)",
+#           "Size filtration except S. latissima (chimeric, refined)")
+# names(ttls) <- ragout_dirs
 agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
 filt_agp_list <- sapply(agp_list, filtAgp, simplify = F)
+gaps_list <- sapply(agp_list, gapsAgp, simplify = F)
 idx_list <- sapply(ragout_dirs, genIdx, filt_agp_list, species_tab,
                    simplify = F)
 # Index AGP
@@ -389,17 +400,24 @@ idx_agp_list <- sapply(idx_agp_list, annotChr0, simplify = F)
 # Plots
 # Barplots of rescaffolded length distributions
 p_list <- sapply(ragout_dirs, combPlot, idx_list,
-                 ttls = ttls,
+                 # ttls = ttls,
                  simplify = F)
-p_list <- p_list[c(1,5,7)]
-# ttls <- ttls[c(1,5,7)]
-common_legend <- getCommon(idx_list, "type", idxPlot)
-(comp_rag <- ggarrange(plotlist = p_list, align = "hv",
-                      nrow = length(p_list),
-                      legend.grob = common_legend,
-                      # labels = ttls,
-                      legend = "left"))
-# # Plots of rescaffolding mapping
-# dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list,
-#                    simplify = F)
-# (all_dot <- ggarrange(plotlist = dot_list, align = "hv"))
+common_legend <- getCommon(idxPlot, "type", idx_list)
+all_bar <- ggarrange(plotlist = p_list,  align = "hv",
+                     legend.grob = common_legend, legend = "left")
+
+# Plots of rescaffolding mapping
+dot_list <- sapply(ragout_dirs, ragoutPlot, gaps_list, idx_agp_list,
+                   simplify = F)
+common_legend <- getCommon(ragoutPlot, "evidence", gaps_list, idx_agp_list)
+all_dot <- ggarrange(plotlist = dot_list, align = "hv",
+                     legend.grob = common_legend, legend = "right")
+# Combine all plots into figure
+comp_rag <- ggarrange(all_bar, all_dot, align = "hv")
+comp_rag <- annotate_figure(comp_rag,
+                            top = text_grob("Rescaffolding",
+                                            face = "bold", size = 14))
+showtext_opts(dpi = 300)
+ggsave(rescaf_plot, comp_rag, bg = "white",
+       height = 7, width = 12, units = "in")
+

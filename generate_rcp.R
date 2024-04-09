@@ -61,20 +61,21 @@ seqs <- seqs %>%
 t1 <- read.tree(seqFile)
 tree <- write.tree(t1, tree.names = F)
 
-# MAF file
-maf_file <- paste0(cactus_prefix, ".maf")
-if (!checkPath(seqFile)) stop(checkPath(seqFile))
+# HAL file
+hal_file <- paste0(cactus_prefix, ".hal")
+if (!checkPath(hal_file)) stop(checkPath(hal_file))
 
 # Construct Ragout-style recipe file
 rcp <- data.frame(.target=spc_int,
                   .references=refs,
                   .tree=tree,
-                  .maf=maf_file) %>%
+                  .hal=hal_file) %>%
   t() %>% 
   as.data.frame() %>%
   rownames_to_column()
-colnames(seqs) <- colnames(rcp)
-rcp <- rbind(rcp, seqs)
+# # Only FASTA paths for MAF
+# colnames(seqs) <- colnames(rcp)
+# rcp <- rbind(rcp, seqs)
 
 # Write Ragout recipe file
 write.table(rcp, rcp_file, quote = F, sep = " = ", col.names = F, row.names = F)

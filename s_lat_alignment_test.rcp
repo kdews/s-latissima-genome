@@ -1,0 +1,4 @@
+.target = Saccharina_latissima
+.references = Undaria_pinnatifida,Macrocystis_pyrifera,Ectocarpus_siliculosus,Saccharina_japonica
+.tree = ((Saccharina_japonica:0.02842,Saccharina_latissima:0.043054):0.008775,(Macrocystis_pyrifera:0.08963,(Undaria_pinnatifida:0.135309,Ectocarpus_siliculosus:0.71458):0.047105):0.032118);
+.hal = /scratch1/kdeweese/latissima/genome_stats/cactus-steps-output/s_lat_alignment.hal

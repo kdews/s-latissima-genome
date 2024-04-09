@@ -58,12 +58,15 @@ sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_t
 Resulting filtered genomes will be tabulated next to species names in
 `filt_species_table.txt`. A curve of filtered length and contig number for the
 species of interest will be saved to `<species_of_interest>_filtering.png`.
+
 Violin plots of contig sizes before and after filtering will be saved in
 `scaffold_sizes_violin.png`.
+
 ![alt text](Saccharina_latissima_filtering.png)
+
 ![alt text](scaffold_sizes_violin.png)
 
-## 4. Multi-species whole genome alignment with Cactus Progressive Aligner
+## 4. Multi-species whole genome alignment with [Progressive Cactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md)
 ### Prune brown macroalgae phylogeny to include only species in analysis
 Default
 [tree](https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt)
@@ -79,7 +82,7 @@ Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`.
 Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
 ![Phylogenetic graphs showing pruning](phylo_prune.png)
 
-### Run Cactus aligner
+### Run Progressive Cactus alignment
 #### Prepare scripts for stepwise pipeline
 ##### Usage
 > sbatch [cactus_prepare.sbatch](cactus_prepare.sbatch) [\<seqFile\>](s_lat_alignment.txt)
@@ -94,7 +97,7 @@ sbatch s-latissima-genome/cactus_prepare.sbatch s-latissima-genome/s_lat_alignme
 sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_sbatch_list.txt
 ```
 ### Visualize alignments
-#### Run halSynteny to extract syntenic blocks between each genome pair
+#### Run [halSynteny](https://github.com/ComparativeGenomicsToolkit/hal) to extract syntenic blocks between each genome pair
 ##### Usage
 > sbatch [halSynteny.sbatch](halSynteny.sbatch) \<inHal\>
 ##### Example
