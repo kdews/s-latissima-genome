@@ -3,6 +3,7 @@ rm(list = ls())
 # Required packages
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(ape, quietly = T, warn.conflicts = F)
+library(tools)
 
 # Input
 if (interactive()) {
@@ -28,7 +29,7 @@ if (interactive()) {
   outdir <- line_args[4]
 }
 # Output filename
-cactus_prefix <- basename(tools::file_path_sans_ext(seqFile))
+cactus_prefix <- basename(file_path_sans_ext(seqFile))
 rcp_file <- paste0(cactus_prefix, ".rcp")
 # Prepend output directory to filename (if it exists)
 if (dir.exists(outdir)) {
@@ -52,6 +53,10 @@ seqs <- read.table(seqFile, sep = "\t", fill = NA, header = F,
                    # Omit phylogenetic tree line
                    comment.char = "(",
                    col.names = seq_cols)
+if (!all(sapply(seqs$Assembly, checkPath))) stop("Check assembly paths")
+seqs <- seqs %>%
+  rowwise() %>%
+  mutate(Assembly=file_path_as_absolute(Assembly))
 # Species names (minus target species)
 refs <- paste(grep(spc_int, seqs$Species, value = T, invert = T), collapse = ",")
 # Reformat seqs for input
@@ -62,8 +67,9 @@ t1 <- read.tree(seqFile)
 tree <- write.tree(t1, tree.names = F)
 
 # HAL file
-hal_file <- paste0(cactus_prefix, ".hal")
+hal_file <- paste0(cactus_dir, "/", cactus_prefix, ".hal")
 if (!checkPath(hal_file)) stop(checkPath(hal_file))
+hal_file <- file_path_as_absolute(hal_file)
 
 # Construct Ragout-style recipe file
 rcp <- data.frame(.target=spc_int,
@@ -73,7 +79,7 @@ rcp <- data.frame(.target=spc_int,
   t() %>% 
   as.data.frame() %>%
   rownames_to_column()
-# # Only FASTA paths for MAF
+# # FASTA paths (for MAF)
 # colnames(seqs) <- colnames(rcp)
 # rcp <- rbind(rcp, seqs)
 

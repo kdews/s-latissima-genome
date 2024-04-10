@@ -19,9 +19,9 @@ if (interactive()) {
   wd <- "/scratch1/kdeweese/latissima/genome_stats"
   setwd(wd)
   # Table of species in analysis
-  assembly_file <- "s-latissima-genome/species_table.txt"
+  seqFile <- "s-latissima-genome/s_lat_alignment.txt"
   # Ragout output directory
-  ragout_dir <- "ragout-out-new-cactus"
+  ragout_dir <- "ragout-out-all-solid-refine-update"
   # Species of interest
   spc_int <- "Saccharina_latissima"
   # Output directory
@@ -29,7 +29,7 @@ if (interactive()) {
 } else {
   line_args <- commandArgs(trailingOnly = T)
   # Table of species in analysis
-  assembly_file <- line_args[1]
+  seqFile <- line_args[1]
   # Ragout output directory
   ragout_dir <- line_args[2]
   # Species of interest
@@ -45,7 +45,6 @@ if (dir.exists(outdir)) {
 }
 
 # Global variables
-spc_int <- gsub("_"," ", spc_int)
 label_names <- c("input", "rescaffolded", "chimera", "remainder", "excluded")
 
 # Functions
@@ -64,14 +63,17 @@ fixChrom <- function(contigs) {
                                            "[^0-9]")))
   return(contigs)
 }
-# Read table of species names and associated files
-readSpecies <- function(assembly_file) {
-  assembly_file_cols <- c("Species", "Assembly", "Annotation", "Proteins")
-  checkPath(assembly_file)
-  species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
-  colnames(species_tab) <- assembly_file_cols[1:length(species_tab)]
-  species_tab <- species_tab[,na.omit(colnames(species_tab))]
-  return(species_tab)
+# Read Cactus-formatted seqFile
+readSpecies <- function(seqFile) {
+  seq_cols <- c("Species", "Assembly")
+  checkPath(seqFile)
+  seqs <- read.table(seqFile, sep = "\t", fill = NA, header = F,
+                     # Omit phylogenetic tree line
+                     comment.char = "(",
+                     col.names = seq_cols)
+  colnames(seqs) <- seq_cols[1:length(seqs)]
+  seqs <- seqs[,na.omit(colnames(seqs))]
+  return(seqs)
 }
 # Import NCBI AGP file (v2.0)
 readAgp <- function(ragout_dir) {
@@ -125,10 +127,10 @@ readFai <- function(idx_file, suff = NULL) {
   return(idx)
 }
 # Generate annotated index of pre- and post-Ragout scaffolds
-genIdx <- function(ragout_dir, agp_list, species_tab) {
+genIdx <- function(ragout_dir, agp_list, seqs) {
   agp <- agp_list[[ragout_dir]]
   # Pre-Ragout scaffold index (later filtered for plotting)
-  pre_file <- paste0(pull(filter(species_tab, grepl(spc_int, Species)),
+  pre_file <- paste0(pull(filter(seqs, grepl(spc_int, Species)),
                            Assembly), ".fai")
   pre_idx <- readFai(pre_file)
   # Ragout rescaffolded scaffold index
@@ -239,7 +241,7 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
                              function(x) length(unique(pull(x, seqid))),
                              simplify = F)))
   y_max <- max(unlist(sapply(idx_list, pull, length, simplify = F)))
-  common_lims <- lims(x = c(0, x_max), y = c(0, y_max))
+  common_lims <- lims(x = c(0, x_max + 1), y = c(0, y_max + 1))
   idx <- idx_list[[ragout_dir]]
   ttl <- ttls[[ragout_dir]]
   if(!missing(exclude)) idx <- idx %>% filter(!type %in% exclude)
@@ -312,7 +314,7 @@ ragoutPlot <- function(ragout_dir, gaps_list, idx_agp_list, ttls = NULL) {
   idx_agp <- idx_agp_list[[ragout_dir]]
   # Common x-axis limits for aligning all plots
   x_max <- max(unlist(sapply(idx_agp_list, pull, length_scaf)))
-  common_x_lims <- xlim(c(0, x_max))
+  common_x_lims <- xlim(c(0, x_max + 1))
   # Color each seqid with consistent color in all graphs
   all_seqids <- lapply(idx_agp_list, select, c(seqid_comp, length_comp)) %>%
     bind_rows() %>%
@@ -366,9 +368,8 @@ ragoutPlot <- function(ragout_dir, gaps_list, idx_agp_list, ttls = NULL) {
 }
 
 # Import data
-species_tab <- readSpecies(assembly_file)
+seqs <- readSpecies(seqFile)
 ragout_dirs <- c(ragout_dir)
-ragout_dirs <- c("ragout-out-all-solid-refine")
 # ragout_dirs <- c("ragout-out-filt-chimera",
 #                  "ragout-out-all-chimera",
 #                  "ragout-out-all-chimera-refine",
@@ -389,7 +390,7 @@ ragout_dirs <- c("ragout-out-all-solid-refine")
 agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
 filt_agp_list <- sapply(agp_list, filtAgp, simplify = F)
 gaps_list <- sapply(agp_list, gapsAgp, simplify = F)
-idx_list <- sapply(ragout_dirs, genIdx, filt_agp_list, species_tab,
+idx_list <- sapply(ragout_dirs, genIdx, filt_agp_list, seqs,
                    simplify = F)
 # Index AGP
 idx_agp_list <- sapply(ragout_dirs, idxAgp, filt_agp_list, idx_list,
@@ -417,7 +418,8 @@ comp_rag <- ggarrange(all_bar, all_dot, align = "hv")
 comp_rag <- annotate_figure(comp_rag,
                             top = text_grob("Rescaffolding",
                                             face = "bold", size = 14))
-showtext_opts(dpi = 300)
+
+# Save plot
 ggsave(rescaf_plot, comp_rag, bg = "white",
        height = 7, width = 12, units = "in")
-
+cat(paste("Saved plot of Ragout rescaffolding to", rescaf_plot))

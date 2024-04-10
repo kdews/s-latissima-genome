@@ -52,6 +52,7 @@ cactus_prefix="$(basename "${seqFile%.*}")"
 
 # Generate Ragout recipe file
 # Load R modules
+conda deactivate
 module purge
 $load_R_mods
 # Run Rscript
@@ -59,58 +60,61 @@ echo "Generating recipe file for Ragout."
 cmd="Rscript $r_script1 $seqFile $cactus_dir $spc_int $scripts_dir"
 echo "$cmd"
 rcp_file=$($cmd)
-echo "Recipe file: $rcp_file"
 [[ -f "$rcp_file" ]] || { echo "Error: Recipe file not found."; exit 1; }
+echo "Recipe file: $rcp_file"
+# Clear env
+module purge
 
 # Rescaffold assembly with Ragout
-conda deactivate
-module purge
-# Load Ragout virtualenv
-$load_ragout_mods
-source_file "$ragout_env"
-ragout="${scripts_dir}Ragout/bin/ragout"
-echo "Ragout version: $($ragout --version)"
-# Run Ragout
-if [[ -f "$rcp_file" ]]
+if [[ $(find "$ragout_dir" -maxdepth 1 -name '*.fasta') ]]
 then
-  echo "Using recipe file $rcp_file"
+  echo "Using previous run in $ragout_dir"
 else
-  echo "Error: recipe file ($rcp_file) not found."
+  # Load Ragout virtualenv
+  $load_ragout_mods
+  source_file "$ragout_env"
+  ragout="${scripts_dir}Ragout/bin/ragout"
+  echo "Ragout version: $($ragout --version)"
+  # Run Ragout
+  rag_opts="--solid-scaffolds --refine -s hal -t $SLURM_CPUS_PER_TASK"
+  cmd="$ragout $rag_opts -o $ragout_dir $rcp_file"
+  echo "$cmd"
+  $cmd
+  # Clear env
+  deactivate
+  module purge
 fi
-rag_opts="--solid-scaffolds --refine -s hal -t $SLURM_CPUS_PER_TASK"
-cmd="$ragout $rag_opts -o $ragout_dir $rcp_file"
-echo "$cmd"
-$cmd
-# Clear env
-deactivate
-module purge
 
 # Index Ragout output FASTA files
-mapfile -t fastas < <(ls "${ragout_dir}"/*.fasta)
-conda activate samtools
-samtools --version | head -n1
-# Index assemblies
-for fasta in "${fastas[@]}"
-do
-    if [[ -f "${fasta}.fai" ]]
-    then
-        echo "Found file ${fasta}.fai, skipping samtools faidx step."
-    else
-        cmd="samtools faidx $fasta"
-        echo "$cmd"
-        $cmd
-    fi
-done
-conda deactivate
-
+if [[ $(find "$ragout_dir" -maxdepth 1 -name "*.fasta") ]]
+then
+  mapfile -t fastas < <(find "$ragout_dir" -maxdepth 1 -name "*.fasta")
+  conda activate samtools
+  samtools --version | head -n1
+  # Index assemblies
+  for fasta in "${fastas[@]}"
+  do
+      if [[ -f "${fasta}.fai" ]]
+      then
+          echo "Found file ${fasta}.fai, skipping samtools faidx step."
+      else
+          cmd="samtools faidx $fasta"
+          echo "$cmd"
+          $cmd
+      fi
+  done
+  conda deactivate
+fi
 
 # Anaylze Ragout scaffolds with R
-# Load R modules
-module purge
-$load_R_mods
-# Run Rscript
-cmd="Rscript $r_script2 $seqFile $ragout_dir $spc_int $scripts_dir"
-echo "$cmd"
-$cmd
-
+if [[ $(find "$ragout_dir" -maxdepth 1 -name "*.fasta.fai") ]]
+then
+  # Load R modules
+  module purge
+  $load_R_mods
+  # Run Rscript
+  cmd="Rscript $r_script2 $seqFile $ragout_dir $spc_int $scripts_dir"
+  echo "$cmd"
+  $cmd
+fi
 
