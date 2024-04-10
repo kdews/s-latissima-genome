@@ -283,7 +283,7 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
              width = 1) +
     common_lims +
     scale_fill_manual(values = vec_colors) +
-    labs(title = ttl, x = "", y = "length [log10(bp)]") +
+    labs(title = ttl, x = "", y = "Scaffold length (log10 bp)") +
     theme_minimal() +
     annot +
     theme(legend.position = "left")
@@ -293,9 +293,11 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
 combPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
                      legend = F) {
   p1 <- idxPlot(ragout_dir, idx_list, ttls = ttls, pal = pal,
-                exclude = c("rescaffolded"))
+                exclude = c("rescaffolded")) +
+    labs(title = "Before")
   p2 <- idxPlot(ragout_dir, idx_list, pal = pal,
-                exclude = c("input"))
+                exclude = c("input")) +
+    labs(title = "After")
   p_list <- list(p1, p2)
   if (legend) {
     common_legend <- getCommon(idxPlot, "type", idx_list)
