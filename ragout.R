@@ -37,12 +37,20 @@ if (interactive()) {
   # Output directory
   outdir <- line_args[4]
 }
-# Output plot filenames
-rescaf_plot <- "rescaffolding.png"
-# Prepend output directory to plot name (if it exists)
-if (dir.exists(outdir)) {
-  rescaf_plot <- paste0(outdir, rescaf_plot)
+
+# Output plot file names
+outfiles <- list(
+  len_plot = "ragout_length_dist.png",
+  map_plot = "ragout_pseudo_mapping.png",
+  comp_len_plot = "ragout_comp_length_dist.png",
+  comp_map_plot = "ragout_comp_pseudo_mapping.png"
+)
+# If exists, prepend output directory to output file names
+redirect <- function(filename, outdir) {
+  if (dir.exists(outdir)) filename <- paste0(outdir, filename)
+  return(filename)
 }
+outfiles <- sapply(outfiles, redirect, outdir, simplify = F)
 
 # Global variables
 types <- c("input", "pseudochromosomes", "chimera", "remainder", "excluded")
@@ -63,6 +71,21 @@ fixChrom <- function(contigs) {
     as.character(as.numeric(str_remove_all(str_remove_all(contigs, ".*_"),
                                            "[^0-9]")))
   return(contigs)
+}
+# Function to extract title from directory name
+extTtl <- function(ragout_dir) {
+  ttl_dict <- list(all="No filtering,",
+                   `no-sac`="Short contigs filtered out (except S. latissima),",
+                   filt="Short contigs filtered out,",
+                   solid="unbroken scaffolds",
+                   chimera="broken scaffolds")
+  ttl <- gsub("ragout-out-", "", ragout_dir)
+  vals <- list()
+  for (val in names(ttl_dict)) if (grepl(val, ttl)) vals <- append(vals, val)
+  for (val in vals) ttl <- gsub(val, ttl_dict[[val]], ttl)
+  ttl <- gsub("-", " ", ttl)
+  ttl <- gsub(" refine", ", refined", ttl)
+  return(ttl)
 }
 # Read Cactus-formatted seqFile
 readSpecies <- function(seqFile) {
@@ -204,8 +227,6 @@ annotChr0 <- function(idx_agp) {
 # Index AGP dataframe with scaffold/contig lengths
 idxAgp <- function(ragout_dir, agp_list, idx_list) {
   agp <- agp_list[[ragout_dir]]
-  # agp <- agp_list[[ragout_dir]] %>% filter(label == "input")
-  # gaps_df <- agp_list[[ragout_dir]] %>% filter(label == "gap")
   idx <- idx_list[[ragout_dir]] %>% filter(type == "pseudochromosomes")
   pre_idx <- idx_list[[ragout_dir]] %>%
     filter(type %in% c("input", "chimera")) %>%
@@ -406,68 +427,66 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL, pal = "Paired",
   }
   return(p)
 }
+# Run all functions on data
+runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
+  # Extract titles for plots
+  ttls <- sapply(ragout_dirs, extTtl)
+  # Wrangle data
+  # Import AGP
+  agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
+  # Import FASTA indices
+  idx_list <- sapply(ragout_dirs, genIdx, agp_list, seqs, simplify = F)
+  # Index AGP
+  idx_agp_list <- sapply(ragout_dirs, idxAgp, agp_list, idx_list, simplify = F)
+  # Plots
+  # Bar plot length distribution before and after rescaffolding
+  p_list <- sapply(ragout_dirs, combPlot, idx_list,
+                   ttls = ttls,
+                   simplify = F)
+  common_legend <- getCommon(idxPlot, "type", idx_list)
+  all_bar <- ggarrange(plotlist = p_list,
+                       legend.grob = common_legend, legend = "top",
+                       align = "hv", ncol = length(p_list))
+  all_bar <- annotate_figure(all_bar,
+                             bottom = "Scaffold index",
+                             left = "Scaffold length (log10 bp)")
+  # Save plot
+  ht <- 3*length(p_list)
+  wd <- 5*length(p_list)
+  ggsave(plot1, all_bar, height = ht, width = wd, units = "in", bg = "white")
+  cat(paste("Saved plot:", plot1))
+  # Line graph mapping of original scaffolds onto pseudochromosomes
+  dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list, labels = F,
+                     ttls = ttls,
+                     simplify = F)
+  common_legend <- getCommon(ragoutPlot, "label", idx_agp_list)
+  all_dot <- ggarrange(plotlist = dot_list,
+                       legend.grob = common_legend, legend = "top",
+                       align = "hv", ncol = length(dot_list))
+  all_dot <- annotate_figure(all_dot,
+                             top =
+                               text_grob("Reference-based scaffold ordering",
+                                         face = "bold", size = 14),
+                             bottom = "Scaffold length (Mb)",
+                             left = "Scaffold index")
+  # Save plot2
+  ht <- 3*length(dot_list)
+  wd <- 5*length(dot_list)
+  ggsave(plot2, all_dot, height = ht, width = wd, units = "in", bg = "white")
+  cat(paste("Saved plot:", plot2))
+  # # Combine all plots into figure
+  # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
+  # comp_rag <- annotate_figure(comp_rag,
+  #                             top =
+  #                               text_grob("Reference-based scaffold ordering",
+  #                                         face = "bold", size = 14))
+  
+}
+
 
 # Import data
 seqs <- readSpecies(seqFile)
-ragout_dirs <- c(ragout_dir)
-ragout_dirs <- c("ragout-out-filt-chimera",
-                 # "ragout-out-no-sac-solid",
-                 "ragout-out-no-sac-solid-refine",
-                 # "ragout-out-no-sac-chimera-refine",
-                 # "ragout-out-all-chimera",
-                 # "ragout-out-all-chimera-refine",
-                 # "ragout-out-all-solid",
-                 # "ragout-out-all-solid-refine",
-                 "ragout-out-all-solid-refine-update")
-ttls <- ragout_dirs
-# ttls <- c("Size filtration applied to all (chimeric)",
-#           "Size filtration except S. latissima (solid)",
-#           "Size filtration except S. latissima (solid, refined)",
-#           "Size filtration except S. latissima (chimeric, refined)",
-#           "No size filtration (chimeric)",
-#           "No size filtration (chimeric, refined)",
-#           "No size filtration (solid)",
-#           "No size filtration (solid, refined)",
-#           "No size filtration (solid, refined, with HALtools)")
-names(ttls) <- ragout_dirs
-agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
-idx_list <- sapply(ragout_dirs, genIdx, agp_list, seqs, simplify = F)
-# Index AGP
-idx_agp_list <- sapply(ragout_dirs, idxAgp, agp_list, idx_list, simplify = F)
+ragout_dirs <- list.files(pattern = "ragout-out-")
+suppressWarnings(runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot))
+suppressWarnings(runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot))
 
-# Plots
-# Barplots of rescaffolded length distributions
-p_list <- sapply(ragout_dirs, combPlot, idx_list,
-                 ttls = ttls,
-                 simplify = F)
-common_legend <- getCommon(idxPlot, "type", idx_list)
-all_bar <- ggarrange(plotlist = p_list,
-                     legend.grob = common_legend, legend = "top",
-                     align = "hv", ncol = length(p_list))
-all_bar <- annotate_figure(all_bar,
-                           bottom = "Scaffold index",
-                           left = "Scaffold length (log10 bp)")
-
-# Plots of rescaffolding mapping
-dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list, labels = F,
-                   simplify = F)
-common_legend <- getCommon(ragoutPlot, "label", idx_agp_list)
-all_dot <- ggarrange(plotlist = dot_list,
-                     legend.grob = common_legend, legend = "top",
-                     align = "hv", ncol = length(dot_list))
-all_dot <- annotate_figure(all_dot,
-                           bottom = "Scaffold length (Mb)",
-                           left = "Scaffold index")
-
-# Combine all plots into figure
-comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
-comp_rag <- annotate_figure(comp_rag,
-                            top =
-                              text_grob("Reference-based scaffold ordering",
-                                        face = "bold", size = 14))
-
-# Save plot
-showtext_opts(dpi = 300)
-ggsave(rescaf_plot, comp_rag, bg = "white",
-       height = 15, width = 25, units = "in")
-cat(paste("Saved plot of Ragout rescaffolding to", rescaf_plot))
