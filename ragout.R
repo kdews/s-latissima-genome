@@ -83,8 +83,8 @@ extTtl <- function(ragout_dir) {
   vals <- list()
   for (val in names(ttl_dict)) if (grepl(val, ttl)) vals <- append(vals, val)
   for (val in vals) ttl <- gsub(val, ttl_dict[[val]], ttl)
+  ttl <- gsub("-refine", "", ttl)
   ttl <- gsub("-", " ", ttl)
-  ttl <- gsub(" refine", ", refined", ttl)
   return(ttl)
 }
 # Read Cactus-formatted seqFile
@@ -237,14 +237,18 @@ idxAgp <- function(ragout_dir, agp_list, idx_list) {
   pre_idx_dict <- pre_idx$length
   names(pre_idx_dict) <- pre_idx$seqid
   idx_agp <- agp %>%
-    # Convert length out of log10 bp scale to Mb scale
-    mutate(length_scaf = 10^(as.numeric(idx_dict[seqid_scaf]))*10^-6,
-           length_comp = 10^(as.numeric(pre_idx_dict[seqid_comp]))*10^-6,
-           # Order component seqid factors by length (for plotting)
-           seqid_comp = factor(seqid_comp, levels = levels(pre_idx$seqid))) %>%
+    mutate(
+      # Order component seqid factors by length (for plotting)
+      seqid_comp = factor(seqid_comp, levels = levels(pre_idx$seqid)),
+      # Create length columns
+      length_scaf = as.numeric(idx_dict[seqid_scaf]),
+      length_comp = as.numeric(pre_idx_dict[seqid_comp]),
+      # Convert length out of log10(bp) scale to Mb scale
+      length_scaf = (10^length_scaf)*10^-6,
+      length_comp = (10^length_comp)*10^-6
+           ) %>%
     arrange(desc(length_scaf), start_scaf)
   idx_agp <- annotChr0(idx_agp)
-  # idx_agp_split <- list(idx_agp = idx_agp, gaps = gaps_df)
   return(idx_agp)
 }
 # Takes factor vector and returns factor-named vector of colors (i.e., dict)
@@ -325,7 +329,8 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
              width = 1) +
     common_lims +
     scale_fill_manual(values = vec_colors) +
-    labs(title = ttl, x = "Scaffold index", y = "Scaffold length (log10 bp)") +
+    labs(title = str_wrap(ttl, width = 35),
+         x = "Scaffold index", y = "Scaffold length (log10 bp)") +
     theme_minimal() +
     annot +
     theme(legend.position = "top",
@@ -408,8 +413,9 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL, pal = "Paired",
              label = paste(round(tot_len, digits = 2), "Mb")) +
     annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf)[ypos-1],
              label = paste0(round(tot_perc_N, digits = 2), "% N's")) +
-    labs(title = ttl, subtitle = "Pseudochromosomes",
-         x = "Scaffold length (Mb)", y = "Scaffold index") +
+    labs(title = str_wrap(ttl, width = 35),
+         subtitle = "Scaffold mapping onto pseudochromosomes",
+         x = "Scaffold length (Mb)", y = "Pseudochromosome index") +
     theme_classic() +
     scale_color_manual(values = myColors) +
     # scale_color_gradientn(colors = myColors,
@@ -451,10 +457,14 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
                              bottom = "Scaffold index",
                              left = "Scaffold length (log10 bp)")
   # Save plot
-  ht <- 3*length(p_list)
-  wd <- 5*length(p_list)
-  ggsave(plot1, all_bar, height = ht, width = wd, units = "in", bg = "white")
-  cat(paste("Saved plot:", plot1))
+  ht <- 7
+  wd <- 7
+  if (length(p_list) > 1) wd <- 7*length(p_list)*0.6
+  ggsave(plot1, all_bar,
+         height = ht,
+         width = wd,
+         bg = "white")
+  print(paste("Saved plot:", plot1))
   # Line graph mapping of original scaffolds onto pseudochromosomes
   dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list, labels = F,
                      ttls = ttls,
@@ -470,10 +480,14 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
                              bottom = "Scaffold length (Mb)",
                              left = "Scaffold index")
   # Save plot2
-  ht <- 3*length(dot_list)
-  wd <- 5*length(dot_list)
-  ggsave(plot2, all_dot, height = ht, width = wd, units = "in", bg = "white")
-  cat(paste("Saved plot:", plot2))
+  ht <- 7
+  wd <- 7
+  if (length(dot_list) > 1) wd <- 7*length(dot_list)*0.6
+  ggsave(plot2, all_dot,
+         height = ht,
+         width = wd,
+         bg = "white")
+  print(paste("Saved plot:", plot2))
   # # Combine all plots into figure
   # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
   # comp_rag <- annotate_figure(comp_rag,
@@ -487,6 +501,7 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
 # Import data
 seqs <- readSpecies(seqFile)
 ragout_dirs <- list.files(pattern = "ragout-out-")
+ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
 suppressWarnings(runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot))
 suppressWarnings(runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot))
 
