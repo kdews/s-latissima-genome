@@ -502,6 +502,10 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
 seqs <- readSpecies(seqFile)
 ragout_dirs <- list.files(pattern = "ragout-out-")
 ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
-suppressWarnings(runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot))
-suppressWarnings(runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot))
+suppressWarnings(
+  runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot)
+)
+suppressWarnings(
+  runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot)
+)
 
