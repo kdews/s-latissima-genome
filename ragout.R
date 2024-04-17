@@ -4,6 +4,7 @@ rm(list = ls())
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 # library(ggrepel)
 suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F))
+suppressPackageStartupMessages(library(Biostrings, quietly = T, warn.conflicts = F))
 library(ape, quietly = T, warn.conflicts = F)
 library(viridisLite, quietly = T, warn.conflicts = F)
 library(RColorBrewer, quietly = T, warn.conflicts = F)
@@ -110,7 +111,7 @@ readAgp <- function(ragout_dir) {
   names(agp_cols) <- gap_cols
   # AGP file describing scaffolding
   checkPath(ragout_dir)
-  agp_file <- list.files(path = ragout_dir, pattern = ".*agp", full.names = T)
+  agp_file <- list.files(path = ragout_dir, pattern = ".*agp$", full.names = T)
   agp_raw <- read.table(agp_file, col.names = agp_cols)
   agp <- agp_raw %>%
     filter(component_type == "W") %>%
@@ -136,21 +137,6 @@ readAgp <- function(ragout_dir) {
     ungroup()
   return(agp_combo)
 }
-# Filters out gaps from AGP dataframe
-filtAgp <- function(agp) {
-  # Calculate N content and total length before filtering
-  agp_filt <- agp %>%
-    mutate(N_count = sum(as.numeric(grep("scaffold_", seqid_comp,
-                                         value = T, invert = T)), na.rm = T),
-           total_len = sum(abs(as.numeric(start_scaf)-as.numeric(end_scaf)+1)),
-           perc_N = round(N_count/total_len, digits = 4)) %>%
-    filter(component_type == "W") %>%
-    select(!contains("component")) %>%
-    # Convert genomic position columns to numeric type
-    mutate_at(.vars = vars(grep("start|end", colnames(.), value = T)),
-              .funs = as.numeric)
-  return(agp_filt)
-}
 # Import FASTA index file (.fasta.fai)
 readFai <- function(idx_file, suff = NULL) {
   checkPath(idx_file)
@@ -165,21 +151,29 @@ readFai <- function(idx_file, suff = NULL) {
   }
   return(idx)
 }
+# Find gaps (10-kb Ns) from Biostrings DNAStringSet
+findGaps <- function(x) {
+  gap_ptn <- paste(rep("N", 10000), collapse = "")
+  gap_matches <- vmatchPattern(gap_ptn, x)
+  gap_starts <- startIndex(gap_matches)
+  return(gap_starts)
+}
 # Generate annotated index of pre- and post-Ragout scaffolds
 genIdx <- function(ragout_dir, agp_list, seqs) {
   agp <- agp_list[[ragout_dir]] %>% filter(label == "input")
+  # Pre-Ragout scaffold FASTA
+  pre_genome_file <- pull(filter(seqs, grepl(spc_int, Species)), Assembly)
   # Pre-Ragout scaffold index (later filtered for plotting)
-  pre_file <- paste0(pull(filter(seqs, grepl(spc_int, Species)),
-                           Assembly), ".fai")
-  pre_idx <- readFai(pre_file)
+  pre_idx_file <- paste0(pre_genome_file, ".fai")
+  pre_idx <- readFai(pre_idx_file)
   # Ragout rescaffolded scaffold index
   scaf_file <- list.files(path = ragout_dir,
-                          pattern = "_scaffolds\\.fasta\\.fai",
+                          pattern = "_scaffolds\\.fasta\\.fai$",
                           full.names = T)
   scaf <- readFai(scaf_file)
   # Unplaced scaffold index
   unplc_file <- list.files(path = ragout_dir,
-                           pattern = "_unplaced\\.fasta\\.fai",
+                           pattern = "_unplaced\\.fasta\\.fai$",
                            full.names = T)
   unplc <- readFai(unplc_file)
   # Create vector of chimeric scaffolds
@@ -249,6 +243,13 @@ idxAgp <- function(ragout_dir, agp_list, idx_list) {
            ) %>%
     arrange(desc(length_scaf), start_scaf)
   idx_agp <- annotChr0(idx_agp)
+  # Pre-Ragout scaffold FASTA
+  pre_genome_file <- pull(filter(seqs, grepl(spc_int, Species)), Assembly)
+  pre_genome <- readDNAStringSet(pre_genome_file)
+  pre_gaps <- findGaps(pre_genome)
+  pre_gaps <- tibble(pre_gaps) %>%
+    unnest_wider(pre_gaps, names_sep = "_") %>%
+    mutate(seqid_comp = names(pre_genome))
   return(idx_agp)
 }
 # Takes factor vector and returns factor-named vector of colors (i.e., dict)
@@ -407,6 +408,10 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL, pal = "Paired",
                                # col = perc_N,
                                col = label,
                                linewidth = label)) +
+    geom_segment(mapping = aes(x = start_gaps_1*10e-6,
+                            xend = (start_gaps_1+10000)*10e-6,
+                            y = seqid_scaf, yend = seqid_scaf),
+                 col = "purple") +
     annotate(geom = "text", x = sum_df$length_scaf, y = sum_df$seqid_scaf,
              label = sum_df$perc_N, hjust = -0.3) +
     annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf)[ypos],
@@ -460,10 +465,8 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
   ht <- 7
   wd <- 7
   if (length(p_list) > 1) wd <- 7*length(p_list)*0.6
-  ggsave(plot1, all_bar,
-         height = ht,
-         width = wd,
-         bg = "white")
+  # ggsave(plot1, all_bar, height = ht, width = wd, bg = "white")
+  print(all_bar)
   print(paste("Saved plot:", plot1))
   # Line graph mapping of original scaffolds onto pseudochromosomes
   dot_list <- sapply(ragout_dirs, ragoutPlot, idx_agp_list, labels = F,
@@ -483,10 +486,8 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
   ht <- 7
   wd <- 7
   if (length(dot_list) > 1) wd <- 7*length(dot_list)*0.6
-  ggsave(plot2, all_dot,
-         height = ht,
-         width = wd,
-         bg = "white")
+  # ggsave(plot2, all_dot, height = ht, width = wd, bg = "white")
+  print(all_dot)
   print(paste("Saved plot:", plot2))
   # # Combine all plots into figure
   # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
@@ -494,7 +495,6 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
   #                             top =
   #                               text_grob("Reference-based scaffold ordering",
   #                                         face = "bold", size = 14))
-  
 }
 
 
@@ -502,10 +502,10 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
 seqs <- readSpecies(seqFile)
 ragout_dirs <- list.files(pattern = "ragout-out-")
 ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
-suppressWarnings(
-  runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot)
-)
-suppressWarnings(
-  runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot)
-)
-
+ 
+# suppressWarnings(
+#   runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot)
+# )
+# suppressWarnings(
+#   runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot)
+# )
