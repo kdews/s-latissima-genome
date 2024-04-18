@@ -4,12 +4,12 @@ rm(list = ls())
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 # library(ggrepel)
 suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F))
-suppressPackageStartupMessages(library(Biostrings, quietly = T, warn.conflicts = F))
 library(ape, quietly = T, warn.conflicts = F)
 library(viridisLite, quietly = T, warn.conflicts = F)
 library(RColorBrewer, quietly = T, warn.conflicts = F)
 library(gridExtra, quietly = T, warn.conflicts = F)
 library(ggpubr, quietly = T, warn.conflicts = F)
+suppressPackageStartupMessages(library(Biostrings, quietly = T, warn.conflicts = F))
 if (require(showtext, quietly = T, warn.conflicts = F)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
@@ -100,15 +100,32 @@ readSpecies <- function(seqFile) {
   seqs <- seqs[,na.omit(colnames(seqs))]
   return(seqs)
 }
+# Find 10-kb N gaps from FASTA file using Biostrings
+findGaps <- function(fasta_file) {
+  fasta <- readDNAStringSet(fasta_file)
+  gap_ptn <- paste(rep("N", 10000), collapse = "")
+  gap_matches <- vmatchPattern(gap_ptn, fasta)
+  start_comp <- startIndex(gap_matches)
+  fasta_gaps <- tibble(start_comp) %>%
+    mutate(seqid_comp = names(fasta)) %>%
+    unnest_longer(start_comp) %>%
+    mutate(start_comp = as.numeric(start_comp),
+           end_comp = start_comp + 10000,
+           gap_length = 10000,
+           label = factor("gap", levels = label_names, ordered = T)) %>%
+    # Convert genomic position columns from bp to Mb
+    mutate_at(.vars = vars(grep("start|end|length", colnames(.), value = T)),
+              .funs = ~ .x*1e-6)
+  return(fasta_gaps)
+}
 # Import NCBI AGP file (v2.0)
-readAgp <- function(ragout_dir) {
-  base_cols <- c("seqid_scaf", "start_scaf", "end_scaf",
-                 "component_number", "component_type")
-  agp_cols <- c(base_cols,
+readAgp <- function(ragout_dir, pre_gaps) {
+  agp_cols <- c("seqid_scaf", "start_scaf", "end_scaf",
+                "component_number", "component_type",
                 "seqid_comp", "start_comp", "end_comp", "orientation")
-  gap_cols <- c(base_cols,
-                "gap_length", "gap_type", "linkage", "evidence")
-  names(agp_cols) <- gap_cols
+  # Named vector for renaming to gap colnames
+  gap_cols <- c(agp_cols[1:5], "gap_length", "gap_type", "linkage", "evidence")
+  names(gap_cols) <- agp_cols
   # AGP file describing scaffolding
   checkPath(ragout_dir)
   agp_file <- list.files(path = ragout_dir, pattern = ".*agp$", full.names = T)
@@ -116,21 +133,56 @@ readAgp <- function(ragout_dir) {
   agp <- agp_raw %>%
     filter(component_type == "W") %>%
     select(!contains("component")) %>%
-    mutate(label = factor("input", levels = label_names))
+    mutate(label = factor("input", levels = label_names, ordered = T))
   gaps_df <- agp_raw %>%
-    rename(all_of(agp_cols)) %>%
+    rename_with(.fn = function(x) gap_cols[x]) %>%
     filter(component_type == "N") %>%
     select(!contains(c("component", "linkage", "type"))) %>%
     # Quantify number of species used as evidence for gap
     rowwise() %>%
     mutate(n_evidence = length(unlist(strsplit(evidence, ",")))) %>%
     ungroup() %>%
-    mutate(label = factor("gap", levels = label_names))
+    mutate(label = factor("gap", levels = label_names, ordered = T))
   agp_combo <- merge(agp, gaps_df, all = T)
   agp_combo <- agp_combo %>%
     # Convert genomic position columns to numeric type and bp to Mb
     mutate_at(.vars = vars(grep("start|end|length", colnames(.), value = T)),
-              .funs = ~ as.numeric(.x)*10^-6) %>%
+              .funs = ~ as.numeric(.x)*1e-6)
+  seqid_df <- agp_combo %>%
+    select(seqid_scaf, seqid_comp, start_scaf, end_scaf,
+           start_comp, end_comp, orientation) %>%
+    filter_all(all_vars(!is.na(.))) %>%
+    unique()
+  pre_gaps <- merge(pre_gaps, seqid_df, sort = F, by = "seqid_comp",
+                    suffixes = c("", "_OG"))
+  pre_gaps <- pre_gaps %>%
+    # Keep only v1.0 gaps if they are included in rescaffolded assembly
+    filter(start_comp >= start_comp_OG & end_comp <= end_comp_OG) %>%
+    mutate(start_scaf = case_when(orientation == "+" ~
+                                    start_scaf + (start_comp - start_comp_OG),
+                                  orientation == "-" ~
+                                    start_scaf + (end_comp_OG - end_comp),
+                                  .default = NA),
+           end_scaf = start_scaf + gap_length) %>%
+    select(!contains("OG"))
+  agp_combo <- merge(agp_combo, pre_gaps, all = T, sort = F)
+  agp_combo <- agp_combo %>% arrange(seqid_scaf, start_scaf)
+  agp_gaps <- agp_combo %>% filter(label == "gap" & !is.na(seqid_comp))
+  for (i in 1:dim(agp_gaps)[1]) {
+    agp_gaps_row <- agp_gaps[i,]
+    row_id <- which(agp_combo$label == "input" &
+                      agp_combo$seqid_comp == agp_gaps_row$seqid_comp &
+                      agp_combo$start_scaf <= agp_gaps_row$start_scaf &
+                      agp_combo$end_scaf >= agp_gaps_row$end_scaf)
+    agp_row1 <- agp_combo[row_id,] %>%
+      mutate(end_scaf = agp_gaps_row$start_scaf)
+    agp_row2 <- agp_combo[row_id,] %>%
+      mutate(start_scaf = agp_gaps_row$end_scaf)
+    agp_combo <- agp_combo %>%
+      add_row(agp_row2)
+    agp_combo[row_id,] <- agp_row1
+  }
+  agp_combo <- agp_combo %>%
     group_by(seqid_scaf) %>%
     # Sum N content of each scaffold
     mutate(N_scaf = sum(gap_length, na.rm = T)) %>%
@@ -150,13 +202,6 @@ readFai <- function(idx_file, suff = NULL) {
     colnames(idx) <- paste0(colnames(idx), suff)
   }
   return(idx)
-}
-# Find gaps (10-kb Ns) from Biostrings DNAStringSet
-findGaps <- function(x) {
-  gap_ptn <- paste(rep("N", 10000), collapse = "")
-  gap_matches <- vmatchPattern(gap_ptn, x)
-  gap_starts <- startIndex(gap_matches)
-  return(gap_starts)
 }
 # Generate annotated index of pre- and post-Ragout scaffolds
 genIdx <- function(ragout_dir, agp_list, seqs) {
@@ -199,8 +244,9 @@ genIdx <- function(ragout_dir, agp_list, seqs) {
                             .default = "excluded"))
   # Combine all scaffold types
   idx <- rbind(scaf, unplc, pre_idx) %>%
-    mutate(type = factor(type, levels = types),
+    mutate(type = factor(type, levels = types, ordered = T),
            seqid = factor(seqid, levels = unique(as.character(seqid))),
+           # Convert scaffold lengths to log10(bp) scale
            length = log10(length)) %>%
     arrange(desc(length))
   return(idx)
@@ -220,12 +266,16 @@ annotChr0 <- function(idx_agp) {
 }
 # Index AGP dataframe with scaffold/contig lengths
 idxAgp <- function(ragout_dir, agp_list, idx_list) {
+  # AGP dataframe
   agp <- agp_list[[ragout_dir]]
+  # Rescaffolded pseudochromosome index
   idx <- idx_list[[ragout_dir]] %>% filter(type == "pseudochromosomes")
+  # Genome v1.0 index
   pre_idx <- idx_list[[ragout_dir]] %>%
     filter(type %in% c("input", "chimera")) %>%
     arrange(desc(length)) %>%
     mutate(seqid = factor(seqid, levels = unique(as.character(seqid))))
+  # Create dictionary of lengths and seqids from each index
   idx_dict <- idx$length
   names(idx_dict) <- idx$seqid
   pre_idx_dict <- pre_idx$length
@@ -238,26 +288,34 @@ idxAgp <- function(ragout_dir, agp_list, idx_list) {
       length_scaf = as.numeric(idx_dict[seqid_scaf]),
       length_comp = as.numeric(pre_idx_dict[seqid_comp]),
       # Convert length out of log10(bp) scale to Mb scale
-      length_scaf = (10^length_scaf)*10^-6,
-      length_comp = (10^length_comp)*10^-6
-           ) %>%
-    arrange(desc(length_scaf), start_scaf)
+      length_scaf = (10^length_scaf)*1e-6,
+      length_comp = (10^length_comp)*1e-6
+           )
   idx_agp <- annotChr0(idx_agp)
-  # Pre-Ragout scaffold FASTA
-  pre_genome_file <- pull(filter(seqs, grepl(spc_int, Species)), Assembly)
-  pre_genome <- readDNAStringSet(pre_genome_file)
-  pre_gaps <- findGaps(pre_genome)
-  pre_gaps <- tibble(pre_gaps) %>%
-    unnest_wider(pre_gaps, names_sep = "_") %>%
-    mutate(seqid_comp = names(pre_genome))
+  idx_agp <- idx_agp %>%
+    arrange(desc(length_scaf), start_scaf)
+  # Factor seqids by scaffold length and start position (for plotting)
+  # order_scaf <- unique(pull(idx_agp, seqid_scaf))
+  # order_comp <- fixChrom(levels(pull(idx_agp, seqid_comp)))
+  # Arrange data by scaffold length, then start position
+  idx_agp <- idx_agp %>%
+    mutate(seqid_comp_num = fixChrom(seqid_comp),
+           seqid_comp_num = factor(seqid_comp_num,
+                                   levels = unique(seqid_comp_num)),
+           seqid_scaf_num = as.factor(as.numeric(factor(seqid_scaf,
+                                                        levels =
+                                                          unique(seqid_scaf)))),
+           perc_N = (N_scaf/length_scaf)*100)
   return(idx_agp)
 }
 # Takes factor vector and returns factor-named vector of colors (i.e., dict)
 getColors <- function(vec, palFun, pal = NULL) {
+  n_colors <- 3
+  if (length(levels(vec)) > n_colors) n_colors <- length(levels(vec))
   if (!is.factor(vec)) stop("Error: vector class is not factor.")
   if (identical(palFun, brewer.pal)) {
     if (missing(pal)) pal = "Paired"
-    vec_colors <- palFun(length(levels(vec)), pal)
+    vec_colors <- palFun(n_colors, pal)
     names(vec_colors) <- levels(vec)
     # Color chimera red using "Paired" palette
     if (any(names(vec_colors) %in% c("chimera"))) {
@@ -267,7 +325,7 @@ getColors <- function(vec, palFun, pal = NULL) {
     }
   } else if (identical(palFun, viridis)) {
     if (missing(pal)) pal = "turbo"
-    vec_colors <- viridis(n = length(levels(vec)), option = pal)
+    vec_colors <- palFun(n = n_colors, option = pal)
     names(vec_colors) <- levels(vec)
   }
   return(vec_colors)
@@ -305,8 +363,9 @@ idxPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
     summarise(n = n()) %>%
     ungroup() %>%
     # Add total n row
-    mutate(type = factor(type, levels = c(types, "total"))) %>%
-    rbind(list(factor("total", levels = c(types, "total")), sum(.$n)))
+    mutate(type = factor(type, levels = c(types, "total"), ordered = T)) %>%
+    rbind(list(factor("total", levels = c(types, "total"), ordered = T),
+               sum(.$n)))
   # Colors for table
   tbl_colors <- getColors(idx$type, brewer.pal, pal)
   tbl_colors[["total"]] <- "white"
@@ -361,6 +420,20 @@ combPlot <- function(ragout_dir, idx_list, ttls = NULL, pal = "Paired",
   }
   return(p)
 }
+# Function to summarize indexed AGP dataframe
+sumAgp <- function(idx_agp) {
+  sum_df <- idx_agp %>%
+    select(seqid_scaf_num, N_scaf, length_scaf, perc_N) %>% unique()
+  tot_len <- sum_df %>% pull("length_scaf") %>% sum()
+  tot_N <- sum_df %>% pull("N_scaf") %>% sum()
+  tot_perc_N <- (tot_N/tot_len)*100
+  sum_df <- sum_df %>%
+    mutate(perc_N = paste0(round(perc_N, digits = 2), "%"))
+  return(list(sum_df=sum_df,
+              tot_len=tot_len,
+              tot_N=tot_N,
+              tot_perc_N=tot_perc_N))
+}
 # Plot of ragout rescaffolding
 ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL, pal = "Paired",
                        labels = T) {
@@ -369,82 +442,45 @@ ragoutPlot <- function(ragout_dir, idx_agp_list, ttls = NULL, pal = "Paired",
   # Common x-axis limits for aligning all plots
   x_max <- max(unlist(sapply(idx_agp_list, pull, length_scaf)), na.rm = T)*1.1
   common_x_lims <- xlim(c(0, x_max + 1))
-  # # Color each seqid with consistent colors in all graphs
-  # all_seqids <- lapply(idx_agp_list, select, c(seqid_comp, length_comp)) %>%
-  #   bind_rows() %>%
-  #   unique() %>%
-  #   arrange(desc(length_comp)) %>%
-  #   mutate(seqid_comp = as.numeric(fixChrom(seqid_comp))) %>%
-  #   pull(seqid_comp)
-  # all_seqids <- factor(all_seqids, levels = all_seqids)
-  # myColors <- getColors(all_seqids, viridis, "turbo")
-  # Factor seqids by scaffold length and start position (for plotting)
-  order_scaf <- unique(pull(idx_agp, seqid_scaf))
-  order_comp <- fixChrom(levels(pull(idx_agp, seqid_comp)))
-  # Arrange data by scaffold length, then start position
-  idx_agp <- idx_agp %>%
-    mutate(seqid_comp = fixChrom(seqid_comp),
-           seqid_comp = factor(seqid_comp, levels = order_comp),
-           seqid_scaf = as.factor(as.numeric(factor(seqid_scaf,
-                                                    levels = order_scaf))),
-           perc_N = (N_scaf/length_scaf)*100)
-  # Summary of data
   # Positions
   xpos <- x_max*0.8
-  ypos <- length(levels(idx_agp$seqid_scaf))
-  sum_df <- idx_agp %>%
-    select(seqid_scaf, N_scaf, length_scaf, perc_N) %>% unique()
-  tot_len <- sum_df %>% pull("length_scaf") %>% sum()
-  tot_N <- sum_df %>% pull("N_scaf") %>% sum()
-  tot_perc_N <- (tot_N/tot_len)*100
-  sum_df <- sum_df %>%
-    mutate(perc_N = paste0(round(perc_N, digits = 2), "%"))
+  ypos <- length(levels(idx_agp$seqid_scaf_num))
+  # Summary of AGP dataframe
+  sum_list <- sumAgp(idx_agp)
+  sum_df <- sum_list$sum_df
   # Color by labels with consistent colors in all graphs
   myColors <- getColors(idx_agp$label, brewer.pal, pal)
-  # myColors <- viridis(4, option = "rocket")
   p <- ggplot(data = idx_agp) +
     geom_segment(mapping = aes(x = start_scaf, xend = end_scaf,
-                               y = seqid_scaf, yend = seqid_scaf,
+                               y = seqid_scaf_num, yend = seqid_scaf_num,
                                # col = perc_N,
                                col = label,
                                linewidth = label)) +
-    geom_segment(mapping = aes(x = start_gaps_1*10e-6,
-                            xend = (start_gaps_1+10000)*10e-6,
-                            y = seqid_scaf, yend = seqid_scaf),
-                 col = "purple") +
-    annotate(geom = "text", x = sum_df$length_scaf, y = sum_df$seqid_scaf,
+    annotate(geom = "text", x = sum_df$length_scaf, y = sum_df$seqid_scaf_num,
              label = sum_df$perc_N, hjust = -0.3) +
-    annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf)[ypos],
-             label = paste(round(tot_len, digits = 2), "Mb")) +
-    annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf)[ypos-1],
-             label = paste0(round(tot_perc_N, digits = 2), "% N's")) +
+    annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf_num)[ypos],
+             label = paste(round(sum_list$tot_len, digits = 2), "Mb")) +
+    annotate(geom = "text", x = xpos, y = levels(idx_agp$seqid_scaf_num)[ypos-1],
+             label = paste0(round(sum_list$tot_perc_N, digits = 2), "% N's")) +
     labs(title = str_wrap(ttl, width = 35),
          subtitle = "Scaffold mapping onto pseudochromosomes",
          x = "Scaffold length (Mb)", y = "Pseudochromosome index") +
     theme_classic() +
     scale_color_manual(values = myColors) +
-    # scale_color_gradientn(colors = myColors,
-    #                       # values = c(0, 0.1, 0.25, 1),
-    #                       limits = c(0, 100)) +
-    # scale_color_gradient2(low = myColors[1],
-    #                       mid = myColors[2],
-    #                       high = myColors[3],
-    #                       midpoint = 5, limits = c(0, 100)) +
-    scale_linewidth_discrete(range = c(3, 1)) +
+    scale_linewidth_manual(values = c(3, 1)) +
     theme(legend.position = "top") +
     common_x_lims
-  if (!labels) {
-    p <- p + labs(x = "", y = "")
-  }
+  # Remove labels from graph if not desired (labels = F)
+  if (!labels) p <- p + labs(x = "", y = "")
   return(p)
 }
 # Run all functions on data
-runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
+runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
   # Extract titles for plots
   ttls <- sapply(ragout_dirs, extTtl)
   # Wrangle data
   # Import AGP
-  agp_list <- sapply(ragout_dirs, readAgp, simplify = F)
+  agp_list <- sapply(ragout_dirs, readAgp, pre_gaps, simplify = F)
   # Import FASTA indices
   idx_list <- sapply(ragout_dirs, genIdx, agp_list, seqs, simplify = F)
   # Index AGP
@@ -495,17 +531,22 @@ runAnalysis <- function(ragout_dirs, seqs, plot1, plot2) {
   #                             top =
   #                               text_grob("Reference-based scaffold ordering",
   #                                         face = "bold", size = 14))
+  return(list(idx_list=idx_list,
+              agp_list=agp_list,
+              idx_agp_list=idx_agp_list))
 }
 
 
+# Analysis
 # Import data
 seqs <- readSpecies(seqFile)
+# Tabulate original genome scaffold gaps
+pre_genome_file <- pull(filter(seqs, grepl(spc_int, Species)), Assembly)
+pre_gaps <- findGaps(pre_genome_file)
 ragout_dirs <- list.files(pattern = "ragout-out-")
-ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
- 
-# suppressWarnings(
-#   runAnalysis(c(ragout_dir), seqs, outfiles$len_plot, outfiles$map_plot)
-# )
-# suppressWarnings(
-#   runAnalysis(ragout_dirs, seqs, outfiles$comp_len_plot, outfiles$comp_map_plot)
-# )
+# ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
+ragout_dirs <- grep("solid.*refine", ragout_dirs, value = T)
+result_list1 <- runAnalysis(ragout_dir, seqs, pre_gaps, outfiles$len_plot, outfiles$map_plot)
+# result_list2 <- runAnalysis(ragout_dirs, seqs, pre_gaps, outfiles$comp_len_plot, outfiles$comp_map_plot)
+
+sumAgp(result_list1$idx_agp_list$`ragout-out-all-solid-refine-update`)
