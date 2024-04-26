@@ -6,7 +6,7 @@
 #SBATCH -o %x.log
 
 # Initialize script
-init="s-latissima-genome/script_init.sh"
+init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Default curl login filename

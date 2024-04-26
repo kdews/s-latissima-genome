@@ -34,7 +34,7 @@ else
 fi
 
 # Scripts directory
-scripts_dir_name="s-latissima-genome"
+scripts_dir_name="/home1/kdeweese/scripts/s-latissima-genome"
 [[ -d $scripts_dir_name ]] && scripts_dir="${scripts_dir_name}/"
 
 # Environments for required packages

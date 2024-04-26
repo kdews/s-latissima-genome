@@ -9,13 +9,9 @@
 #SBATCH -o %x.log
 
 # Initialize script
-init="s-latissima-genome/script_init.sh"
+init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Load BUSCO env
-conda activate busco
-# Load GNU Parallel
-module load parallel
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -28,6 +24,10 @@ Requires: BUSCO (https://busco.ezlab.org)"
   exit 0
 fi
 
+# Load BUSCO env
+conda activate busco
+# Load GNU Parallel
+module load parallel
 
 # Define variables
 mode=genome
