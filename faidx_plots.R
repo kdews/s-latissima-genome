@@ -80,17 +80,15 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
     geom_violin(mapping = aes(col = Species, fill = Species),
                 alpha = 0.4, linewidth = 1) +
     geom_jitter(height = 0, width = 0.02, size = 0.8) +
-    annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.1,
+    annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.02,
              label = paste("n =", sum_idx$n)) +
     annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.05,
              label = paste(round(sum_idx$total, digits = 1), "Mb")) +
-    # scale_x_continuous(expand = expansion(mult = c(0.5, 0.10))) +
     scale_x_discrete(expand = expansion(mult = c(0.05, 0.15))) +
     scale_fill_viridis_d() +
     scale_color_viridis_d() +
     ggtitle(ttl) +
-    theme(axis.text.x = element_blank(),
-          axis.title.x = element_blank())
+    theme(legend.position = "right")
   n50_lab <- paste(paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
                    paste("n>N50 =", sum_idx$noverN50),
                    sep = "\n")
@@ -102,15 +100,61 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
     # Label N50
     stat_summary(fun = Biostrings::N50, label = n50_lab,
                  geom = "label", col = "black", size = 3,
-                 position = position_nudge(x = 0.35, y = 3)) +
-    coord_cartesian(clip = 'off')
+                 # position = position_nudge(x = 0.35, y = 3),
+                 mapping = aes(group = Species, y = 35))
+    # coord_cartesian(clip = "off")
+  if (max(idx$`Length (Mb)` > 40)) {
+    low_rng <- p_n50 + coord_cartesian(ylim = c(0, 40)) +
+      theme(axis.title.y.left = element_blank(),
+            title = element_blank())
+    hi_rng <- p_n50 +
+      coord_cartesian(ylim = c(170, 210)) +
+      theme(axis.ticks.x.bottom = element_blank(),
+            axis.text.x.bottom = element_blank(),
+            axis.title = element_blank())
+    p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, align = "v",
+                       legend = "none")
+    p_n50 <- annotate_figure(p_n50, left = "Length (Mb)")
+  }
   if (missing(n50)) {
     return(p)
   } else if (n50) {
+    p_n50 <- list(p_n50, get_legend(p))
     return(p_n50)
   } else {
     print("Error: unrecognized argument to 'annot' variable.")
   }
+}
+# Create annotated graphs of contig length distribution by species
+distPlot <- function(spc, idx) {
+  idx <- idx %>%
+    mutate(`Length (log10 bp)` = log10(`Length (Mb)`*1e6))
+  y_min <- min(idx$`Length (Mb)`)
+  y_max <- max(idx$`Length (Mb)`)
+  idx_filt <- idx %>%
+    filter(Species == spc) %>%
+    arrange(desc(`Length (log10 bp)`)) %>%
+    mutate(ID_num = factor(ID_num, levels = ID_num))
+  idx_high <- idx_filt %>%
+    filter(`Length (log10 bp)` >= Biostrings::N50(`Length (log10 bp)`))
+  p <- ggplot(data = idx_filt,
+              mapping = aes(x = ID_num, y = `Length (log10 bp)`)) +
+    geom_col(col = "lightgrey", fill = "lightgrey") +
+    geom_hline(yintercept = Biostrings::N50(idx_filt$`Length (log10 bp)`),
+               col = "red", lty = 2) +
+    geom_col(data = idx_high,
+             mapping = aes(x = ID_num, y = `Length (log10 bp)`),
+             col = "darkblue", fill = "darkblue") +
+    annotate(geom = "text", col = "white",
+             label = paste0("n = ", dim(idx_high)[1]),
+             x = dim(idx_high)[1]/2,
+             y = mean(idx$`Length (log10 bp)`)) +
+    coord_cartesian(ylim = c(y_min, log10(35*1e6))) +
+    labs(title = spc) +
+    theme_classic() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank())
+  return(p)
 }
 
 # Read in data
@@ -120,6 +164,8 @@ species_tab <- species_tab[,na.omit(colnames(species_tab))]
 spc_int <- gsub("_"," ", spc_int)
 out_spc <- gsub("_"," ", out_spc)
 species <- species_tab$Species
+# Keep only Latin species names
+species <- word(species, start = 1, end = 2, sep = " ")
 fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
   idx_temp <- read.table(fns[i])
@@ -192,9 +238,11 @@ sum_idx_filt_2 <- sumDf(idx_filt)
 # Plot filtering of species of interest on curve of length vs. n_contigs
 p0 <- filtCurve(spc_lens, spc_int, opt_n, real_n)
 # Plot length distributions using violin plots
-p1 <- violinPlot(idx, "Unfiltered", n50 = T)
-p2 <- violinPlot(idx_filt, "Size filtered", n50 = T)
-ps <- ggarrange(p1, p2, common.legend = T, legend = "bottom")
+p1_l <- violinPlot(idx, "Unfiltered", n50 = T)
+p2_l <- violinPlot(idx_filt, "Size filtered", n50 = T)
+ps <- ggarrange(p1_l[[1]], p2_l[[1]], legend.grob = p2_l[[2]], legend = "right")
+p_list <- lapply(species, distPlot, idx)
+p3 <- ggarrange(plotlist = p_list, align = "v")
 # Save plots
 showtext_opts(dpi = 300)
 ggsave(filt_plot, p0, width = 10, height = 6)
