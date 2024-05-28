@@ -112,8 +112,8 @@ Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/i
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
-![alt text](heatmap_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
-![alt text](dotplot_Saccharina_latissima_vs_Macrocystis_pyrifera.png)
+![alt text](heatmap_Saccharina_latissima_vs_Saccharina_japonica.png)
+![alt text](dotplot_Saccharina_latissima_vs_Saccharina_japonica.png)
 
 ## 5. Homology-based rescaffolding
 ### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
