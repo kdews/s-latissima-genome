@@ -6,6 +6,7 @@ suppressPackageStartupMessages(library(tidyverse,
 # library(caret)
 library(ggpubr, quietly = T)
 library(RColorBrewer, quietly = T)
+library(BiocManager)
 suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 # library(gridExtra, quietly = T)
 if (require(showtext, quietly = T)) {
@@ -30,6 +31,14 @@ getGen <- function(df_name, gen_type) {
   }
   gen_name <- unlist(strsplit(df_name, "_vs_"))[[n]]
   return(gen_name)
+}
+# Abbreviate species genus name
+abbrevSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  let1 <- substr(spc[1], 1, 1)
+  spc[1] <- paste0(let1, ".")
+  spc_a <- paste(spc, collapse = " ")
+  return(spc_a)
 }
 # Fixes chromosome labels for plotting
 fixChrom <- function(contigs) {
@@ -203,6 +212,39 @@ pivotPsl <- function(df_name, df_list) {
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
 }
+# Plot number of scaffold matches vs. chromosome length
+lenvsMatch <- function(match_name, match_list, df_list) {
+  match <- match_list[[match_name]]
+  df <- df_list[[match_name]]
+  query <- getGen(match_name, "query")
+  target <- getGen(match_name, "target")
+  x_label <- "Target chromosome length (Mb)"
+  y_label <- "Length of query aligned (Mb)"
+  ttl <- paste(abbrevSpc(query), "alignment to", abbrevSpc(target))
+  # Summarize total query length aligned
+  qcount <- match %>%
+    group_by(tNum) %>%
+    summarize(n_sum = sum(qSize))
+  # Annotate chromosome lengths
+  tlens <- df %>%
+    select(tNum, tSize) %>%
+    unique()
+  qcount <- merge(qcount, tlens)
+  qcount <- qcount %>%
+    filter(tNum != "0") %>%
+    # Convert bp to Mb
+    mutate(tSize=tSize*1e-6) %>%
+    mutate(n_sum=n_sum*1e-6) %>%
+    mutate(tNum=as.character(tNum)) %>%
+    rbind(c(tNum = "0", tSize = 0, n_sum = 0), .)
+  p <- ggplot(data = qcount,
+              mapping = aes(x = tSize, y = n_sum)) +
+    geom_point() +
+    geom_smooth(method = "lm", formula = y~x+0, se = F, col = "red") +
+    stat_cor() +
+    labs(title = ttl, x = x_label, y = y_label)
+  return(p)
+}
 # Plot heatmap of given matrix
 heatPsl <- function(match_name, match_list, df_list) {
   match <- match_list[[match_name]]
@@ -343,7 +385,7 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
 # Input
 # Only take command line input if not running interactively
 if (interactive()) {
-  wd <- "/scratch1/kdeweese/latissima/genome_stats"
+  wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
   setwd(wd)
   # Cactus seqFile
   seq_file <- "s-latissima-genome/s_lat_alignment.txt"
@@ -387,13 +429,18 @@ psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 #             sep = "\t", row.names = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
-# Rearrange scaffold ID factors by matches for plotting
-psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
-                   simplify = F)
-# Pivot summarized data for heatmaps
-psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
-# Group scaffolds
-test <- groupScafs(psl_match, spc_int)
+
+plots <- sapply(grep("latissima", names(psl_match), value = T), lenvsMatch,
+                psl_match, psl_list, simplify = F)
+ggarrange(plotlist = plots)
+
+# # Rearrange scaffold ID factors by matches for plotting
+# psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
+#                    simplify = F)
+# # Pivot summarized data for heatmaps
+# psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
+# # Group scaffolds
+# test <- groupScafs(psl_match, spc_int)
 
 # # Plots
 # # Heatmaps of genome vs. genome synteny
@@ -421,3 +468,6 @@ test <- groupScafs(psl_match, spc_int)
 # psl_metrics <- sapply(names(psl_list), metricsPsl, psl_list, simplify = F)
 # test <- psl_metrics[["Saccharina_latissima_vs_Macrocystis_pyrifera"]]
 # test$euc_dist <- (1-test$cov_scaled)^2+(0+test$total_p_blockCount_scaled)^2
+
+
+
