@@ -141,7 +141,7 @@ sumPsl <- function(df_name, df_list) {
   target <- getGen(df_name, "target")
   df_sum <- df %>%
     group_by(qNum, tNum) %>%
-    summarize(total_matches=as.numeric(sum(matches)))
+    summarize(total_matches=as.numeric(sum(matches)), .groups = "keep")
   df2 <- merge(df_sum, unique(df[,c("qNum", "qSize")]),
                by = "qNum", sort = F)
   df2 <- df2 %>%
@@ -275,23 +275,15 @@ heatPsl <- function(match_name, match_list, df_list) {
   x_label <- abbrevSpc(target)
   y_label <- abbrevSpc(query)
   ttl <- gsub("_", " ", match_name)
-  # fname <- paste0(match_name, "_heatmap.png")
-  # h <- heatmap(mat, scale = "row", keep.dendro = T,
-  #              main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25))
-  # hclust_mat <- as.hclust(h$Rowv)
-  # png(file = fname, units = "in", width = 5, height = 5, res = 300)
-  # heatmap(mat, main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25),
-  #         scale = "row")
-  # dev.off()
-  match <- match %>%
-    filter(tNum != "0")
-  df <- df %>%
-    filter(tNum != "0")
-  h_order <- match %>%
-    arrange(tNum) %>%
-    pull(qNum) %>%
-    as.character()
-  df <- df %>%
+  # Filter out artificial chromosomes
+  match <- match %>% filter(tNum != "0", qNum != "0")
+    # # Filter out small scaffolds/contigs from query (remove <1Mb)
+    # filter(qSize > 1e6)
+  # Order of query contigs while their respective homologs (tNum) are size-ordered
+  h_order <- match %>% arrange(tNum) %>% pull(qNum) %>% as.character()
+  # Apply filtering from match data frame
+  df <- df %>% filter(tNum %in% match$tNum, qNum %in% h_order) %>%
+    # Use "match" data frame to order query contig factors in heatmap
     mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
   p <- ggplot(mapping = aes(x = tNum, y = qNum)) +
     geom_tile(data = df,
@@ -304,6 +296,15 @@ heatPsl <- function(match_name, match_list, df_list) {
           legend.position = "left") +
     labs(x = x_label, y = y_label) +
     theme(axis.title = element_text(face="italic"))
+  # # R base heatmap version
+  # fname <- paste0(match_name, "_heatmap.png")
+  # h <- heatmap(mat, scale = "row", keep.dendro = T,
+  #              main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25))
+  # hclust_mat <- as.hclust(h$Rowv)
+  # png(file = fname, units = "in", width = 5, height = 5, res = 300)
+  # heatmap(mat, main = ttl, xlab = x_label, ylab = y_label, col = h_colors(25),
+  #         scale = "row")
+  # dev.off()
   return(p)
 }
 # Dotplots
@@ -466,10 +467,10 @@ showtext_opts(dpi = 300)
 ggsave(plot = len_fig, filename = "homolog_lengths.png", path = outdir, bg = "white",
        width = 12, height = 9, units = "in")
 showtext_opts(dpi = 100)
-
-# Rearrange scaffold ID factors by matches for plotting
-psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
-                   simplify = F)
+ 
+# # Rearrange scaffold ID factors by matches for plotting
+# psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
+#                    simplify = F)
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 # # Group scaffolds
@@ -479,10 +480,15 @@ psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 # Heatmaps of genome vs. genome synteny
 psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
                     simplify = F)
-p_heat <- ggarrange(plotlist = psl_heats, legend = "right")
-# h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-#                           outdir, 7, 10, simplify = F))
-# print(unname(h_fnames))
+# p_heat <- ggarrange(plotlist = psl_heats, legend = "right")
+((p2 <- ggarrange(psl_heats[["Saccharina_latissima_vs_Macrocystis_pyrifera"]],
+                psl_heats[["Saccharina_japonica_vs_Macrocystis_pyrifera"]],
+                psl_heats[["Saccharina_latissima_vs_Saccharina_japonica"]],
+                psl_heats[["Macrocystis_pyrifera_vs_Saccharina_japonica"]],
+                legend = "right")))
+h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
+                          outdir, 7, 10, simplify = F))
+print(unname(h_fnames))
 
 # # Dotplots of genome vs. genome
 # psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
