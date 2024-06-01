@@ -11,7 +11,7 @@ if (require(showtext, quietly = T)) {
 
 # Input
 if (interactive()) {
-  wd <- "/scratch1/kdeweese/latissima/genome_stats"
+  wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
   setwd(wd)
   assembly_file <- "s-latissima-genome/species_table.txt"
   for_seqtk <- "s-latissima-genome/for_seqtk.txt"
@@ -41,6 +41,21 @@ if (dir.exists(outdir)) {
   vio_plot <- paste0(outdir, vio_plot)
 }
 # Functions
+# Abbreviate species genus name
+abbrevSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  let1 <- substr(spc[1], 1, 1)
+  spc[1] <- paste0(let1, ".")
+  spc_a <- paste(spc, collapse = " ")
+  return(spc_a)
+}
+# Extract numbers from contig IDs for filtering
+fixChrom <- function(contigs) {
+  contigs <-
+    as.character(as.numeric(str_remove_all(str_remove_all(contigs, ".*_"),
+                                           "[^0-9]")))
+  return(contigs)
+}
 # Summarize index statistics for each assembly
 sumDf <- function(df) {
   sum_df <- df %>%
@@ -75,45 +90,50 @@ filtCurve <- function(spc_lens, spc_int, opt_n, real_n) {
 # Create annotated violin plot of contig lengths by species
 violinPlot <- function(idx, ttl, n50 = NULL) {
   sum_idx <- sumDf(idx)
+  max_len <- as.integer(max(idx$`Length (Mb)`))
+  sec_max_len <- as.integer(sort(idx$`Length (Mb)`, decreasing = T)[2])
   p <- ggplot(data = idx,
               mapping = aes(x = Species, y = `Length (Mb)`)) +
     geom_violin(mapping = aes(col = Species, fill = Species),
                 alpha = 0.4, linewidth = 1) +
     geom_jitter(height = 0, width = 0.02, size = 0.8) +
-    annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.02,
-             label = paste("n =", sum_idx$n)) +
-    annotate(geom = "text", x = sum_idx$Species, y = max(idx$`Length (Mb)`)*1.05,
-             label = paste(round(sum_idx$total, digits = 1), "Mb")) +
-    scale_x_discrete(expand = expansion(mult = c(0.05, 0.15))) +
+    annotate(geom = "text", x = sum_idx$Species, y = max_len+3,
+             label = paste(round(sum_idx$total, digits = 1), "Mb\n",
+                           "n =", sum_idx$n)) +
     scale_fill_viridis_d() +
     scale_color_viridis_d() +
     ggtitle(ttl) +
     theme(legend.position = "right")
-  n50_lab <- paste(paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
-                   paste("n>N50 =", sum_idx$noverN50),
-                   sep = "\n")
+  n50_lab <- paste(
+    # paste(round(sum_idx$total, digits = 1), "Mb"),
+    # paste("n =", sum_idx$n),
+    paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
+    paste("n>N50 =", sum_idx$noverN50),
+    sep = "\n")
   p_n50 <- p +
     # Mark N50 with white triangle
     stat_summary(fun = Biostrings::N50,
-                 geom = "point", col = "black", fill = "white",
-                 size = 3, shape = 25) +
+                 geom = "point", col = "black", alpha = 0.5,
+                 # col = "black", fill = "white", size = 3, shape = 25,
+                 size = 10, shape = "—") +
     # Label N50
     stat_summary(fun = Biostrings::N50, label = n50_lab,
                  geom = "label", col = "black", size = 3,
+                 mapping = aes(group = Species, y = sec_max_len-4))
                  # position = position_nudge(x = 0.35, y = 3),
-                 mapping = aes(group = Species, y = 35))
-    # coord_cartesian(clip = "off")
-  if (max(idx$`Length (Mb)` > 40)) {
-    low_rng <- p_n50 + coord_cartesian(ylim = c(0, 40)) +
+  if (max_len > 40) {
+    low_rng <- p_n50 +
+      coord_cartesian(ylim = c(0, sec_max_len)) +
       theme(axis.title.y.left = element_blank(),
             title = element_blank())
     hi_rng <- p_n50 +
-      coord_cartesian(ylim = c(170, 210)) +
+      coord_cartesian(ylim = c(max_len-5, max_len+5)) +
+      scale_y_continuous(breaks = scales::breaks_width(10)) +
       theme(axis.ticks.x.bottom = element_blank(),
             axis.text.x.bottom = element_blank(),
             axis.title = element_blank())
-    p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, align = "v",
-                       legend = "none")
+    p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 4),
+                       align = "v", legend = "none")
     p_n50 <- annotate_figure(p_n50, left = "Length (Mb)")
   }
   if (missing(n50)) {
@@ -161,11 +181,14 @@ distPlot <- function(spc, idx) {
 species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
 colnames(species_tab) <- c("Species", "Assembly", "Annotation")
 species_tab <- species_tab[,na.omit(colnames(species_tab))]
-spc_int <- gsub("_"," ", spc_int)
-out_spc <- gsub("_"," ", out_spc)
+# spc_int <- gsub("_"," ", spc_int)
+# out_spc <- gsub("_"," ", out_spc)
+spc_int <- abbrevSpc(spc_int)
+out_spc <- abbrevSpc(out_spc)
 species <- species_tab$Species
-# Keep only Latin species names
+# Keep only Latin species names and abbreviate
 species <- word(species, start = 1, end = 2, sep = " ")
+species <- sapply(species, abbrevSpc, USE.NAMES = F)
 fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
   idx_temp <- read.table(fns[i])
@@ -238,6 +261,7 @@ sum_idx_filt_2 <- sumDf(idx_filt)
 # Plot filtering of species of interest on curve of length vs. n_contigs
 p0 <- filtCurve(spc_lens, spc_int, opt_n, real_n)
 # Plot length distributions using violin plots
+((p_l <- violinPlot(idx, "", n50 = T)))
 p1_l <- violinPlot(idx, "Unfiltered", n50 = T)
 p2_l <- violinPlot(idx_filt, "Size filtered", n50 = T)
 ps <- ggarrange(p1_l[[1]], p2_l[[1]], legend.grob = p2_l[[2]], legend = "right")
