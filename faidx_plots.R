@@ -4,6 +4,7 @@ rm(list = ls())
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(gridExtra, quietly = T, warn.conflicts = F)
 library(ggpubr, quietly = T)
+suppressPackageStartupMessages(library(Biostrings, quietly = T, warn.conflicts = F))
 if (require(showtext, quietly = T)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
@@ -56,6 +57,24 @@ fixChrom <- function(contigs) {
                                            "[^0-9]")))
   return(contigs)
 }
+# Find N_len-length gaps (N's) from FASTA file using Biostrings
+findGaps <- function(fasta_file, N_len) {
+  fasta <- readDNAStringSet(fasta_file)
+  gap_ptn <- paste(rep("N", N_len), collapse = "")
+  gap_matches <- vmatchPattern(gap_ptn, fasta)
+  start_comp <- startIndex(gap_matches)
+  fasta_gaps <- tibble(start_comp) %>%
+    mutate(seqid_comp = names(fasta)) %>%
+    unnest_longer(start_comp) %>%
+    mutate(start_comp = as.numeric(start_comp),
+           end_comp = start_comp + N_len,
+           gap_length = N_len)
+  # %>%
+  #   # Convert genomic position columns from bp to Mb
+  #   mutate_at(.vars = vars(grep("start|end|length", colnames(.), value = T)),
+  #             .funs = ~ .x*1e-6)
+  return(fasta_gaps)
+}
 # Summarize index statistics for each assembly
 sumDf <- function(df) {
   sum_df <- df %>%
@@ -103,7 +122,8 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
     scale_fill_viridis_d() +
     scale_color_viridis_d() +
     ggtitle(ttl) +
-    theme(legend.position = "right")
+    # Remove legend
+    theme(legend.position = "none")
   n50_lab <- paste(
     # paste(round(sum_idx$total, digits = 1), "Mb"),
     # paste("n =", sum_idx$n),
@@ -119,7 +139,7 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
     # Label N50
     stat_summary(fun = Biostrings::N50, label = n50_lab,
                  geom = "label", col = "black", size = 3,
-                 mapping = aes(group = Species, y = sec_max_len-4))
+                 mapping = aes(group = Species, y = max_len-3))
                  # position = position_nudge(x = 0.35, y = 3),
   if (max_len > 40) {
     low_rng <- p_n50 +
@@ -257,11 +277,56 @@ real_n <- dim(retrieved_contigs)[1]
 idx_filt <- unique(rbind(idx_filt, retrieved_contigs))
 sum_idx_filt_2 <- sumDf(idx_filt)
 
+faidx <- read.table("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0_split.fa.fai")
+test <- findGaps("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa", 200)
+test <- test %>% mutate(contig_len = c(start_comp[[1]]-1, diff(start_comp)-200)) %>%
+  filter(contig_len > 1) %>%
+  rowid_to_column(var = "index") %>%
+  # filter(contig_len %in% faidx$V2) %>%
+  select(index, contig_len)
+faidx <- faidx %>% rowid_to_column(var = "index") %>%
+  # filter(V2 %in% test$contig_len) %>%
+  select(index, V2)
+
+fa_mer <- merge(faidx, test, by.x = "V2", by.y = "contig_len", sort = F,
+                # all.x = T,
+                suffixes = c(".faidx", ".200bp"))
+fa_mer <- fa_mer %>% mutate(diff_index = index.faidx - index.200bp) %>%
+  arrange(index.faidx)
+fa_mer_filt <- fa_mer %>%
+  filter(diff_index >= 0) %>%
+  filter(diff_index < 1000)
+ggplot(data = fa_mer_filt, mapping = aes(x = index.faidx, y = index.200bp)) +
+  geom_point() +
+  theme_classic()
+
+old_fasta_file <- "assemblies/old_genomes/GCA_000978595.1/GCA_000978595.1_SJ6.1_genomic.fna"
+old_fasta <- readDNAStringSet(old_fasta_file)
+old_gaps <- letterFrequency(old_fasta, letters = "N")
+length(which(old_gaps==0)) + length(which(old_gaps>0))
+which(old_gaps==200)
+gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
+old_gap_matches <- names(vmatchPattern(gap_ptn, old_fasta))
+length(names(old_fasta))
+old_fasta$`JXRI01000608.1 Saccharina japonica cultivar Ja scaffold609, whole genome shotgun sequence`
+old_gaps_scaf <- old_gaps[old_gaps>0]
+median(old_gaps_scaf)
+median(old_gaps)
+fasta_file <- "assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa"
+fasta <- readDNAStringSet(fasta_file)
+letterFrequency(fasta, letters = "N")
+gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
+gap_matches <- matchPattern(gap_ptn, fasta$chr0)
+strsplit(fasta, gap_ptn)
+ggplot(data = test, mapping = aes(x = start_comp, y = contig_len)) +
+  geom_col()
 # Plots
 # Plot filtering of species of interest on curve of length vs. n_contigs
 p0 <- filtCurve(spc_lens, spc_int, opt_n, real_n)
 # Plot length distributions using violin plots
 ((p_l <- violinPlot(idx, "", n50 = T)))
+idx_no0 <- idx %>% filter(fixChrom(ID) != "0")
+violinPlot(idx_no0, "", n50 = T)
 p1_l <- violinPlot(idx, "Unfiltered", n50 = T)
 p2_l <- violinPlot(idx_filt, "Size filtered", n50 = T)
 ps <- ggarrange(p1_l[[1]], p2_l[[1]], legend.grob = p2_l[[2]], legend = "right")
