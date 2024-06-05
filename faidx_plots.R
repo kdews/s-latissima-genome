@@ -14,7 +14,8 @@ if (require(showtext, quietly = T)) {
 if (interactive()) {
   wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
   setwd(wd)
-  assembly_file <- "s-latissima-genome/species_table.txt"
+  # assembly_file <- "s-latissima-genome/species_table.txt"
+  assembly_file <- "s-latissima-genome/species_table_split_chr0.txt"
   for_seqtk <- "s-latissima-genome/for_seqtk.txt"
   # Species of interest
   spc_int <- "Saccharina_latissima"
@@ -33,6 +34,9 @@ if (interactive()) {
   # Output directory
   outdir <- line_args[5]
 }
+# Order for species factor
+spc_order <- c("E. siliculosus", "U. pinnatifida", "M. pyrifera",
+               "S. japonica", "S. latissima")
 # Output plot filenames
 filt_plot <- paste0(spc_int, "_filtering.png")
 vio_plot <- "scaffold_sizes_violin.png"
@@ -111,51 +115,74 @@ violinPlot <- function(idx, ttl, n50 = NULL) {
   sum_idx <- sumDf(idx)
   max_len <- as.integer(max(idx$`Length (Mb)`))
   sec_max_len <- as.integer(sort(idx$`Length (Mb)`, decreasing = T)[2])
+  pos_fun <- function(x) max(x)*1.3+0.5
   p <- ggplot(data = idx,
               mapping = aes(x = Species, y = `Length (Mb)`)) +
+    scale_y_log10() +
     geom_violin(mapping = aes(col = Species, fill = Species),
-                alpha = 0.4, linewidth = 1) +
-    geom_jitter(height = 0, width = 0.02, size = 0.8) +
-    annotate(geom = "text", x = sum_idx$Species, y = max_len+3,
-             label = paste(round(sum_idx$total, digits = 1), "Mb\n",
-                           "n =", sum_idx$n)) +
+                alpha = 0.4, linewidth = 1, scale = "width", show.legend = F) +
+    geom_jitter(height = 0, width = 0.04, size = 0.3) +
+    stat_summary(fun = pos_fun, geom = "text",
+                 label = paste(round(sum_idx$total, digits = 1), "Mb\n",
+                               "n =", sum_idx$n)) +
+    # annotate(geom = "text", x = sum_idx$Species, y = max_len*1.25,
+    #          label = paste(round(sum_idx$total, digits = 1), "Mb\n",
+    #                        "n =", sum_idx$n)) +
     scale_fill_viridis_d() +
     scale_color_viridis_d() +
     ggtitle(ttl) +
+    theme_linedraw() +
     # Remove legend
-    theme(legend.position = "none")
+    theme(
+      # legend.position = "none",
+          axis.text.x = element_text(face = "italic"))
   n50_lab <- paste(
     # paste(round(sum_idx$total, digits = 1), "Mb"),
     # paste("n =", sum_idx$n),
     paste("N50 =", round(sum_idx$N50, digits = 1), "Mb"),
-    paste("n>N50 =", sum_idx$noverN50),
+    paste("L50 =", sum_idx$noverN50),
     sep = "\n")
-  p_n50 <- p +
-    # Mark N50 with white triangle
-    stat_summary(fun = Biostrings::N50,
-                 geom = "point", col = "black", alpha = 0.5,
-                 # col = "black", fill = "white", size = 3, shape = 25,
-                 size = 10, shape = "—") +
+  pos_fun2 <- function(x) max(x)*1.3
+  pos_fun3 <- function(x) Biostrings::N50(10^x)
+  p_n50 <- p  +
     # Label N50
-    stat_summary(fun = Biostrings::N50, label = n50_lab,
-                 geom = "label", col = "black", size = 3,
-                 mapping = aes(group = Species, y = max_len-3))
-                 # position = position_nudge(x = 0.35, y = 3),
-  if (max_len > 40) {
-    low_rng <- p_n50 +
-      coord_cartesian(ylim = c(0, sec_max_len)) +
-      theme(axis.title.y.left = element_blank(),
-            title = element_blank())
-    hi_rng <- p_n50 +
-      coord_cartesian(ylim = c(max_len-5, max_len+5)) +
-      scale_y_continuous(breaks = scales::breaks_width(10)) +
-      theme(axis.ticks.x.bottom = element_blank(),
-            axis.text.x.bottom = element_blank(),
-            axis.title = element_blank())
-    p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 4),
-                       align = "v", legend = "none")
-    p_n50 <- annotate_figure(p_n50, left = "Length (Mb)")
-  }
+    stat_summary(fun = pos_fun2, label = n50_lab,
+                 geom = "label", col = "black", size = 3)
+                 # mapping = aes(group = Species, y = max_len*1.1)) +
+    # # Mark N50 with line
+    # stat_summary(fun = Biostrings::N50,
+    #              geom = "point", col = "red", size = 10, shape = "—")
+                 # size = 4, shape = ">", position = position_nudge(x = -0.15))
+  # if (max_len > 10) {
+  #   low_rng <- p_n50 + coord_cartesian(ylim = c(0, 1)) +
+  #     scale_y_continuous(breaks = scales::breaks_width(1)) +
+  #     theme(axis.title.y.left = element_blank(),
+  #           title = element_blank())
+  #   hi_rng <- p_n50 + coord_cartesian(ylim = c(1, max_len*1.3)) +
+  #     scale_y_continuous(breaks = scales::breaks_width(10)) +
+  #     theme(axis.ticks.x.bottom = element_blank(),
+  #           axis.text.x.bottom = element_blank(),
+  #           axis.title = element_blank())
+  #   p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 2),
+  #                      align = "v", legend = "none")
+  #   p_n50 <- annotate_figure(p_n50, left = "Length (Mb)")
+  #   return(p_n50)
+  # }
+  # if (max_len > 40) {
+  #   low_rng <- p_n50 + coord_cartesian(ylim = c(0, sec_max_len)) +
+  #     theme(axis.title.y.left = element_blank(),
+  #           title = element_blank())
+  #   hi_rng <- p_n50 + coord_cartesian(ylim = c(max_len*0.9, max_len*1.3)) +
+  #     scale_y_continuous(breaks = scales::breaks_width(10)) +
+  #     theme(axis.ticks.x.bottom = element_blank(),
+  #           axis.text.x.bottom = element_blank(),
+  #           axis.title = element_blank())
+  #   p_n50 <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 4),
+  #                      align = "v", legend = "none")
+  #   p_n50 <- annotate_figure(p_n50, left = "Length (Mb)")
+  # } else {
+  #   p_n50 <- p_n50 + coord_cartesian(ylim = c(0, max_len*1.3))
+  # }
   if (missing(n50)) {
     return(p)
   } else if (n50) {
@@ -201,8 +228,6 @@ distPlot <- function(spc, idx) {
 species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
 colnames(species_tab) <- c("Species", "Assembly", "Annotation")
 species_tab <- species_tab[,na.omit(colnames(species_tab))]
-# spc_int <- gsub("_"," ", spc_int)
-# out_spc <- gsub("_"," ", out_spc)
 spc_int <- abbrevSpc(spc_int)
 out_spc <- abbrevSpc(out_spc)
 species <- species_tab$Species
@@ -223,7 +248,9 @@ for (i in 1:length(fns)) {
 # Create grouped data frame and convert "Length" column from bp to Mb
 colnames(idx) <- c("ID", "Length", "Species")
 idx <- idx %>%
-  mutate(`Length (Mb)`= Length/1000000) %>%
+  mutate(Species = factor(Species, levels = spc_order),
+         # `Length (Mb)`= log10(Length)) %>%
+         `Length (Mb)`= Length/1000000) %>%
   select(ID, `Length (Mb)`, Species) %>%
   group_by(Species) %>%
   arrange(desc(`Length (Mb)`), .by_group = T) %>%
@@ -277,54 +304,58 @@ real_n <- dim(retrieved_contigs)[1]
 idx_filt <- unique(rbind(idx_filt, retrieved_contigs))
 sum_idx_filt_2 <- sumDf(idx_filt)
 
-faidx <- read.table("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0_split.fa.fai")
-test <- findGaps("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa", 200)
-test <- test %>% mutate(contig_len = c(start_comp[[1]]-1, diff(start_comp)-200)) %>%
-  filter(contig_len > 1) %>%
-  rowid_to_column(var = "index") %>%
-  # filter(contig_len %in% faidx$V2) %>%
-  select(index, contig_len)
-faidx <- faidx %>% rowid_to_column(var = "index") %>%
-  # filter(V2 %in% test$contig_len) %>%
-  select(index, V2)
 
-fa_mer <- merge(faidx, test, by.x = "V2", by.y = "contig_len", sort = F,
-                # all.x = T,
-                suffixes = c(".faidx", ".200bp"))
-fa_mer <- fa_mer %>% mutate(diff_index = index.faidx - index.200bp) %>%
-  arrange(index.faidx)
-fa_mer_filt <- fa_mer %>%
-  filter(diff_index >= 0) %>%
-  filter(diff_index < 1000)
-ggplot(data = fa_mer_filt, mapping = aes(x = index.faidx, y = index.200bp)) +
-  geom_point() +
-  theme_classic()
+# # Split chr0s on gaps?
+# faidx <- read.table("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0_split.fa.fai")
+# test <- findGaps("assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa", 200)
+# test <- test %>% mutate(contig_len = c(start_comp[[1]]-1, diff(start_comp)-200)) %>%
+#   filter(contig_len > 1) %>%
+#   rowid_to_column(var = "index") %>%
+#   # filter(contig_len %in% faidx$V2) %>%
+#   select(index, contig_len)
+# faidx <- faidx %>% rowid_to_column(var = "index") %>%
+#   # filter(V2 %in% test$contig_len) %>%
+#   select(index, V2)
+# fa_mer <- merge(faidx, test, by.x = "V2", by.y = "contig_len", sort = F,
+#                 # all.x = T,
+#                 suffixes = c(".faidx", ".200bp"))
+# fa_mer <- fa_mer %>% mutate(diff_index = index.faidx - index.200bp) %>%
+#   arrange(index.faidx)
+# fa_mer_filt <- fa_mer %>%
+#   filter(diff_index >= 0) %>%
+#   filter(diff_index < 1000)
+# ggplot(data = fa_mer_filt, mapping = aes(x = index.faidx, y = index.200bp)) +
+#   geom_point() +
+#   theme_classic()
+# old_fasta_file <- "assemblies/old_genomes/GCA_000978595.1/GCA_000978595.1_SJ6.1_genomic.fna"
+# old_fasta <- readDNAStringSet(old_fasta_file)
+# old_gaps <- letterFrequency(old_fasta, letters = "N")
+# length(which(old_gaps==0)) + length(which(old_gaps>0))
+# which(old_gaps==200)
+# gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
+# old_gap_matches <- names(vmatchPattern(gap_ptn, old_fasta))
+# length(names(old_fasta))
+# old_fasta$`JXRI01000608.1 Saccharina japonica cultivar Ja scaffold609, whole genome shotgun sequence`
+# old_gaps_scaf <- old_gaps[old_gaps>0]
+# median(old_gaps_scaf)
+# median(old_gaps)
+# fasta_file <- "assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa"
+# fasta <- readDNAStringSet(fasta_file)
+# letterFrequency(fasta, letters = "N")
+# gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
+# gap_matches <- matchPattern(gap_ptn, fasta$chr0)
+# strsplit(fasta, gap_ptn)
 
-old_fasta_file <- "assemblies/old_genomes/GCA_000978595.1/GCA_000978595.1_SJ6.1_genomic.fna"
-old_fasta <- readDNAStringSet(old_fasta_file)
-old_gaps <- letterFrequency(old_fasta, letters = "N")
-length(which(old_gaps==0)) + length(which(old_gaps>0))
-which(old_gaps==200)
-gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
-old_gap_matches <- names(vmatchPattern(gap_ptn, old_fasta))
-length(names(old_fasta))
-old_fasta$`JXRI01000608.1 Saccharina japonica cultivar Ja scaffold609, whole genome shotgun sequence`
-old_gaps_scaf <- old_gaps[old_gaps>0]
-median(old_gaps_scaf)
-median(old_gaps)
-fasta_file <- "assemblies/split_scaff_test/SJ_v6_2_chromosome_chr0.fa"
-fasta <- readDNAStringSet(fasta_file)
-letterFrequency(fasta, letters = "N")
-gap_ptn <- DNAString(paste(rep("N", 200), collapse = ""))
-gap_matches <- matchPattern(gap_ptn, fasta$chr0)
-strsplit(fasta, gap_ptn)
-ggplot(data = test, mapping = aes(x = start_comp, y = contig_len)) +
-  geom_col()
+# sja <- read.table("assemblies/old_genomes/GCA_000978595.1/GCA_000978595.1_SJ6.1_genomic.fna.fai")
+# ecto <- read.table("assemblies/old_genomes/GCA_000310025.1/ncbi_dataset/data/GCA_000310025.1/GCA_000310025.1_ASM31002v1_genomic.fna.fai")
+# min(sja$V2)
+# min(ecto$V2)
+
 # Plots
 # Plot filtering of species of interest on curve of length vs. n_contigs
 p0 <- filtCurve(spc_lens, spc_int, opt_n, real_n)
 # Plot length distributions using violin plots
-((p_l <- violinPlot(idx, "", n50 = T)))
+((p_l <- violinPlot(idx, "", n50 = T)[[1]]))
 idx_no0 <- idx %>% filter(fixChrom(ID) != "0")
 violinPlot(idx_no0, "", n50 = T)
 p1_l <- violinPlot(idx, "Unfiltered", n50 = T)
