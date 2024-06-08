@@ -2,9 +2,7 @@
 rm(list = ls())
 # Required packages
 library(Hmisc)
-suppressPackageStartupMessages(library(tidyverse,
-                                       quietly = T, warn.conflicts = F))
-# library(caret)
+suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(ggpubr, quietly = T)
 library(ggpmisc)
 library(RColorBrewer, quietly = T)
@@ -210,60 +208,136 @@ pivotPsl <- function(df_name, df_list) {
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
 }
+# # Calculate number & length of scaffold matches vs. chromosome length
+# lenvsMatch <- function(match_name, match_list, df_list) {
+#   match <- match_list[[match_name]]
+#   df <- df_list[[match_name]]
+#   # Summarize total query length aligned
+#   qcount <- match %>% group_by(tNum) %>% summarize(n = n(), n_sum = sum(qSize))
+#   # Annotate chromosome lengths
+#   tlens <- df %>% select(tNum, tSize) %>% unique()
+#   qcount <- merge(qcount, tlens, by = "tNum")
+#   # Filter out artificial chromosomes
+#   qcount <- qcount %>% filter(tNum != "0")
+#   return(qcount)
+# }
+# # Plot number & length of scaffold matches vs. chromosome length (qcount)
+# plotLens <- function(qcount_name, qcount_list) {
+#   qcount <- qcount_list[[qcount_name]]
+#   query <- getGen(qcount_name, "query")
+#   target <- getGen(qcount_name, "target")
+#   x_label <- "Reference chromosome length (Mb)"
+#   y_label1 <- "Length of homologs (Mb)"
+#   y_label2 <- "n homologs"
+#   ttl <- paste(abbrevSpc(query), "alignment to", abbrevSpc(target))
+#   # Convert bp to Mb
+#   qcount <- qcount %>% mutate(tSize=tSize*1e-6) %>% mutate(n_sum=n_sum*1e-6)
+#   # Limits for all scatter plots, scaled to Mb
+#   x_max <- max(unlist(lapply(qcount_list, function(x) pull(x, tSize))))*1e-6
+#   y_max <- max(unlist(lapply(qcount_list, function(x) pull(x, n_sum))))*1e-6
+#   common_lims <- coord_cartesian(xlim = c(0, x_max + 1), ylim = c(0, y_max + 1))
+#   # # Add zero point to force fit to x=0 y=0 intercept
+#   # levels(qcount$tNum) <- c("0", levels(qcount$tNum))
+#   # fakezero <- c(tNum=factor("0", levels = levels(qcount$tNum)),
+#   #               tSize=as.integer(0), n=NA, n_sum=as.integer(0))
+#   # qcount <- rbind(fakezero, qcount)
+#   barwidth <- (resolution(qcount$tSize)*1000)/max(qcount$tSize)
+#   p1 <- ggplot(data = qcount,
+#               mapping = aes(x = tSize, y = n_sum)) +
+#     geom_point() +
+#     stat_poly_line(formula = y~x+0, se = F, fullrange = T) +
+#     stat_poly_eq(mapping = use_label(c("R2", "eq")), formula = y~x+0) +
+#     # common_lims +
+#     labs(y = y_label1) +
+#     theme_classic() +
+#     theme(axis.title.x = element_blank(), axis.text.x = element_blank(),
+#           axis.line.x = element_blank(), axis.ticks.x = element_blank())
+#   p2 <- ggplot(data = qcount,
+#                mapping = aes(x = tSize, y = n)) +
+#     geom_col(alpha = 0.2, position = "identity", width = barwidth) +
+#     # coord_cartesian(xlim = c(0, x_max + 1)) +
+#     labs(x = x_label, y = y_label2) +
+#     theme_classic()
+#   p <- ggarrange(p1, p2, nrow = 2, align = "v", heights = c(2, 1))
+#   p <- annotate_figure(
+#     p,
+#     bottom = text_grob(abbrevSpc(target), face = "italic"),
+#     left = text_grob(abbrevSpc(query), face = "italic", rot = 90)
+#   )
+#   return(p)
+# }
 # Calculate number & length of scaffold matches vs. chromosome length
-lenvsMatch <- function(match_name, match_list, df_list) {
-  match <- match_list[[match_name]]
-  df <- df_list[[match_name]]
-  # Summarize total query length aligned
-  qcount <- match %>% group_by(tNum) %>% summarize(n = n(), n_sum = sum(qSize))
-  # Annotate chromosome lengths
-  tlens <- df %>% select(tNum, tSize) %>% unique()
-  qcount <- merge(qcount, tlens, by = "tNum")
-  # Filter out artificial chromosomes
-  qcount <- qcount %>% filter(tNum != "0")
+lenvsMatch <- function(match_list, df_list) {
+  # Subset species of interest 
+  match_list <- match_list[grep(spc_int, names(match_list), value = T)]
+  for (i in 1:length(match_list)) {
+    qcount_name <- names(match_list)[[i]]
+    target <- abbrevSpc(getGen(qcount_name, "target"))
+    match <- match_list[[i]]
+    df <- df_list[[i]]
+    # Summarize total query length aligned
+    qcount_temp <- match %>% group_by(tNum) %>%
+      summarize(`n homologs` = n(), `Length of homologs (Mb)` = sum(qSize))
+    # Annotate chromosome lengths
+    tlens <- df %>% select(tNum, tSize) %>% unique()
+    qcount_temp <- merge(qcount_temp, tlens, by = "tNum")
+    # Filter out artificial chromosomes
+    qcount_temp <- qcount_temp %>% filter(tNum != "0") %>%
+      # Add column for species name
+      mutate(Species = target)
+    if (i == 1) {
+      qcount <- qcount_temp
+    } else {
+      qcount <- rbind(qcount, qcount_temp)
+    }
+  }
+  # Convert species column to ordered factor sorted by species relatedness
+  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
+  lvls <- unname(sapply(spc_order, grep, unique(qcount$Species), value = T))
+  qcount <- qcount %>% mutate(Species=factor(Species, levels = lvls),
+                              # Convert from bp to Mb
+                              `Length of homologs (Mb)`=
+                                `Length of homologs (Mb)`*1e6,
+                              tSize=tSize*1e6) %>%
+    # Pivot dataframe longer to plot metrics on same graph
+    pivot_longer(!c(tNum, tSize, Species),
+                 names_to = "metric", values_to = "value")
   return(qcount)
 }
 # Plot number & length of scaffold matches vs. chromosome length (qcount)
-plotLens <- function(qcount_name, qcount_list) {
-  qcount <- qcount_list[[qcount_name]]
-  query <- getGen(qcount_name, "query")
-  target <- getGen(qcount_name, "target")
+plotLens <- function(qcount) {
   x_label <- "Reference chromosome length (Mb)"
   y_label1 <- "Length of homologs (Mb)"
   y_label2 <- "n homologs"
-  ttl <- paste(abbrevSpc(query), "alignment to", abbrevSpc(target))
-  # Convert bp to Mb
-  qcount <- qcount %>% mutate(tSize=tSize*1e-6) %>% mutate(n_sum=n_sum*1e-6)
-  # Limits for all scatter plots, scaled to Mb
-  x_max <- max(unlist(lapply(qcount_list, function(x) pull(x, tSize))))*1e-6
-  y_max <- max(unlist(lapply(qcount_list, function(x) pull(x, n_sum))))*1e-6
-  common_lims <- coord_cartesian(xlim = c(0, x_max + 1), ylim = c(0, y_max + 1))
-  # # Add zero point to force fit to x=0 y=0 intercept
-  # levels(qcount$tNum) <- c("0", levels(qcount$tNum))
-  # fakezero <- c(tNum=factor("0", levels = levels(qcount$tNum)),
-  #               tSize=as.integer(0), n=NA, n_sum=as.integer(0))
-  # qcount <- rbind(fakezero, qcount)
-  barwidth <- (resolution(qcount$tSize)*1000)/max(qcount$tSize)
+  # barwidth <- (resolution(qcount$tSize)*1000)/max(qcount$tSize)*10
   p1 <- ggplot(data = qcount,
-              mapping = aes(x = tSize, y = n_sum)) +
+               mapping = aes(x = tSize, y = value,
+                             col = Species, fill = Species)) +
     geom_point() +
-    stat_poly_line(formula = y~x+0, se = F, fullrange = T) +
-    stat_poly_eq(mapping = use_label(c("R2", "eq")), formula = y~x+0) +
-    # common_lims +
-    labs(y = y_label1) +
+    stat_poly_line(formula = y~x+0, se = F) +
+    stat_poly_eq(mapping = use_label(c("R2", "eq")), formula = y~x+0,
+                 geom = "label_npc", col = "black", alpha = 0.2) +
+    facet_grid(rows = vars(metric), switch = "both", scales = "free_y") +
+    labs(x = x_label, y = "") +
     theme_classic() +
-    theme(axis.title.x = element_blank(), axis.text.x = element_blank(),
-          axis.line.x = element_blank(), axis.ticks.x = element_blank())
-  p2 <- ggplot(data = qcount,
-               mapping = aes(x = tSize, y = n)) +
-    geom_col(alpha = 0.2, position = "identity", width = barwidth) +
-    # coord_cartesian(xlim = c(0, x_max + 1)) +
-    labs(x = x_label, y = y_label2) +
-    theme_classic()
-  p <- ggarrange(p1, p2, nrow = 2, align = "v", heights = c(2, 1))
-  p <- annotate_figure(p, top = text_grob(abbrevSpc(target), face = "italic"),
-                       left = text_grob(abbrevSpc(query),
-                                        face = "italic", rot = 90))
+    theme(legend.text = element_text(face = "italic"),
+          strip.placement = "outside",
+          strip.background = element_rect(color = "white"))
+  # p2 <- ggplot(data = qcount, mapping = aes(x = tSize, y = n)) +
+  #   geom_col(position = "identity", alpha = 0.2, width = barwidth) +
+  #   facet_grid(cols = vars(species), switch = "x") +
+  #   labs(x = x_label, y = y_label2) +
+  #   theme_classic() +
+  #   # Format facet labels
+  #   theme(strip.placement = "outside",
+  #         strip.text = element_text(face = "italic"),
+  #         strip.background = element_rect(color = "white"))
+  # p <- ggarrange(p1, p2, nrow = 2, align = "v", heights = c(2, 1))
+  p <- annotate_figure(
+    p1,
+    # bottom = text_grob(abbrevSpc(target), face = "italic"),
+    left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
+  )
   return(p)
 }
 # Plot heatmap of given matrix
@@ -458,38 +532,41 @@ psl_list <- sapply(names(psl_list), orderPsl, psl_list, simplify = F)
 psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
-# Compare matches 
-match_lens <- sapply(grep("latissima", names(psl_match), value = T), lenvsMatch,
-                    psl_match, psl_list, simplify = F)
-len_plots <- sapply(names(match_lens), plotLens, match_lens, simplify = F)
-len_fig <- ggarrange(plotlist = len_plots)
-showtext_opts(dpi = 300)
-ggsave(plot = len_fig, filename = "homolog_lengths.png", path = outdir, bg = "white",
-       width = 12, height = 9, units = "in")
-showtext_opts(dpi = 100)
- 
-# # Rearrange scaffold ID factors by matches for plotting
-# psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
-#                    simplify = F)
-# Pivot summarized data for heatmaps
-psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
-# # Group scaffolds
-# test <- groupScafs(psl_match, spc_int)
+# Compare matches
+match_lens <- lenvsMatch(psl_match, psl_list)
+plotLens(match_lens)
+# match_lens <- sapply(grep("latissima", names(psl_match), value = T), lenvsMatch,
+#                     psl_match, psl_list, simplify = F)
+# match_lens <- match_lens[sapply(spc_order, grep, names(match_lens), value = T)]
+# len_plots <- sapply(names(match_lens), plotLens, match_lens, simplify = F)
+# ((len_fig <- ggarrange(plotlist = len_plots)))
+# showtext_opts(dpi = 300)
+# ggsave(plot = len_fig, filename = "homolog_lengths.png", path = outdir, bg = "white",
+#        width = 12, height = 9, units = "in")
+# showtext_opts(dpi = 100)
 
-# Plots
-# Heatmaps of genome vs. genome synteny
-psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
-                    simplify = F)
-# p_heat <- ggarrange(plotlist = psl_heats, legend = "right")
-((p2 <- ggarrange(psl_heats[["Saccharina_latissima_vs_Macrocystis_pyrifera"]],
-                psl_heats[["Saccharina_japonica_vs_Macrocystis_pyrifera"]],
-                psl_heats[["Saccharina_latissima_vs_Saccharina_japonica"]],
-                psl_heats[["Macrocystis_pyrifera_vs_Saccharina_japonica"]],
-                legend = "right")))
-h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-                          outdir, 7, 10, simplify = F))
-print(unname(h_fnames))
-
+# # # Rearrange scaffold ID factors by matches for plotting
+# # psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
+# #                    simplify = F)
+# # Pivot summarized data for heatmaps
+# psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
+# # # Group scaffolds
+# # test <- groupScafs(psl_match, spc_int)
+# 
+# # Plots
+# # Heatmaps of genome vs. genome synteny
+# psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
+#                     simplify = F)
+# # p_heat <- ggarrange(plotlist = psl_heats, legend = "right")
+# ((p2 <- ggarrange(psl_heats[["Saccharina_latissima_vs_Macrocystis_pyrifera"]],
+#                 psl_heats[["Saccharina_japonica_vs_Macrocystis_pyrifera"]],
+#                 psl_heats[["Saccharina_latissima_vs_Saccharina_japonica"]],
+#                 psl_heats[["Macrocystis_pyrifera_vs_Saccharina_japonica"]],
+#                 legend = "right")))
+# h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
+#                           outdir, 7, 10, simplify = F))
+# print(unname(h_fnames))
+# 
 # # Dotplots of genome vs. genome
 # psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
 # d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
