@@ -2,6 +2,7 @@
 rm(list = ls())
 # Required packages
 library(Hmisc)
+library(scales)
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(ggpubr, quietly = T)
 library(ggpmisc)
@@ -75,8 +76,18 @@ orderPsl <- function(df_name, df_list) {
     arrange(desc(tSize)) %>%
     pull(tNum) %>%
     unique()
+  target_index_df <- df %>%
+    select(tNum, tSize) %>%
+    arrange(desc(tSize)) %>%
+    unique() %>%
+    filter(tNum != "0") %>%
+    rowid_to_column(var="index") %>%
+    select(index, tNum)
+  target_index <- c(target_index_df$index, 0)
+  names(target_index) <- c(target_index_df$tNum, "0")
   df <- df %>%
-    mutate(qName=factor(qName, levels = query_contigs),
+    mutate(index=target_index[tNum],
+           qName=factor(qName, levels = query_contigs),
            tName=factor(tName, levels = target_contigs),
            qNum=factor(qNum, levels = query_nums),
            tNum=factor(tNum, levels = target_nums)) %>%
@@ -138,14 +149,14 @@ sumPsl <- function(df_name, df_list) {
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
   df_sum <- df %>%
-    group_by(qNum, tNum) %>%
+    group_by(index, qNum, tNum, qSize, tSize) %>%
     summarize(total_matches=as.numeric(sum(matches)), .groups = "keep")
-  df2 <- merge(df_sum, unique(df[,c("qNum", "qSize")]),
-               by = "qNum", sort = F)
-  df2 <- df2 %>%
-    mutate(qPercent=total_matches/qSize) %>%
+  # df2 <- merge(df_sum, unique(df[,c("qNum", "qSize")]),
+  #              by = "qNum", sort = F)
+  # df2 <- df2 %>%
+  df_sum <- df_sum %>% mutate(qPercent=total_matches/qSize) %>%
     arrange(qNum, desc(qPercent))
-  return(df2)
+  return(df_sum)
 }
 # Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(df_name, df_list) {
@@ -208,19 +219,6 @@ pivotPsl <- function(df_name, df_list) {
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
 }
-# # Calculate number & length of scaffold matches vs. chromosome length
-# lenvsMatch <- function(match_name, match_list, df_list) {
-#   match <- match_list[[match_name]]
-#   df <- df_list[[match_name]]
-#   # Summarize total query length aligned
-#   qcount <- match %>% group_by(tNum) %>% summarize(n = n(), n_sum = sum(qSize))
-#   # Annotate chromosome lengths
-#   tlens <- df %>% select(tNum, tSize) %>% unique()
-#   qcount <- merge(qcount, tlens, by = "tNum")
-#   # Filter out artificial chromosomes
-#   qcount <- qcount %>% filter(tNum != "0")
-#   return(qcount)
-# }
 # # Plot number & length of scaffold matches vs. chromosome length (qcount)
 # plotLens <- function(qcount_name, qcount_list) {
 #   qcount <- qcount_list[[qcount_name]]
@@ -266,78 +264,91 @@ pivotPsl <- function(df_name, df_list) {
 #   )
 #   return(p)
 # }
-# Calculate number & length of scaffold matches vs. chromosome length
-lenvsMatch <- function(match_list, df_list) {
-  # Subset species of interest 
+# Collapse list of maxMatch data frames into one data frame labeling target species
+collapseMatch <- function(match_list) {
+  # Subset species of interest
   match_list <- match_list[grep(spc_int, names(match_list), value = T)]
-  for (i in 1:length(match_list)) {
-    qcount_name <- names(match_list)[[i]]
-    target <- abbrevSpc(getGen(qcount_name, "target"))
-    match <- match_list[[i]]
-    df <- df_list[[i]]
-    # Summarize total query length aligned
-    qcount_temp <- match %>% group_by(tNum) %>%
-      summarize(`n homologs` = n(), `Length of homologs (Mb)` = sum(qSize))
-    # Annotate chromosome lengths
-    tlens <- df %>% select(tNum, tSize) %>% unique()
-    qcount_temp <- merge(qcount_temp, tlens, by = "tNum")
-    # Filter out artificial chromosomes
-    qcount_temp <- qcount_temp %>% filter(tNum != "0") %>%
-      # Add column for species name
-      mutate(Species = target)
-    if (i == 1) {
-      qcount <- qcount_temp
-    } else {
-      qcount <- rbind(qcount, qcount_temp)
-    }
-  }
+  # Rename data frames by target species
+  names(match_list) <- sapply(names(match_list), getGen, "target", USE.NAMES = F)
+  # Format species names
+  names(match_list) <- sapply(names(match_list), abbrevSpc, USE.NAMES = F)
+  # Collapse list of data frames
+  match_lens <- bind_rows(match_list, .id = "Species")
   # Convert species column to ordered factor sorted by species relatedness
   spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
-  lvls <- unname(sapply(spc_order, grep, unique(qcount$Species), value = T))
-  qcount <- qcount %>% mutate(Species=factor(Species, levels = lvls),
-                              # Convert from bp to Mb
-                              `Length of homologs (Mb)`=
-                                `Length of homologs (Mb)`*1e6,
-                              tSize=tSize*1e6) %>%
-    # Pivot dataframe longer to plot metrics on same graph
-    pivot_longer(!c(tNum, tSize, Species),
-                 names_to = "metric", values_to = "value")
-  return(qcount)
+  lvls <- unname(sapply(spc_order, grep, unique(match_lens$Species), value = T))
+  match_lens <- match_lens %>%
+    mutate(qNum=as.character(qNum),
+           tNum=as.character(tNum),
+           Species=factor(Species, levels = lvls)) %>%
+    # Filter out artificial chromosomes
+    filter(tNum != "0")
+    # # Pivot dataframe longer to plot metrics on same graph
+    # pivot_longer(!c(tNum, tSize, Species),
+    #              names_to = "metric", values_to = "value")
+  return(match_lens)
 }
-# Plot number & length of scaffold matches vs. chromosome length (qcount)
-plotLens <- function(qcount) {
-  x_label <- "Reference chromosome length (Mb)"
-  y_label1 <- "Length of homologs (Mb)"
-  y_label2 <- "n homologs"
-  # barwidth <- (resolution(qcount$tSize)*1000)/max(qcount$tSize)*10
-  p1 <- ggplot(data = qcount,
-               mapping = aes(x = tSize, y = value,
-                             col = Species, fill = Species)) +
-    geom_point() +
-    stat_poly_line(formula = y~x+0, se = F) +
-    stat_poly_eq(mapping = use_label(c("R2", "eq")), formula = y~x+0,
-                 geom = "label_npc", col = "black", alpha = 0.2) +
-    facet_grid(rows = vars(metric), switch = "both", scales = "free_y") +
-    labs(x = x_label, y = "") +
-    theme_classic() +
-    theme(legend.text = element_text(face = "italic"),
-          strip.placement = "outside",
-          strip.background = element_rect(color = "white"))
-  # p2 <- ggplot(data = qcount, mapping = aes(x = tSize, y = n)) +
-  #   geom_col(position = "identity", alpha = 0.2, width = barwidth) +
-  #   facet_grid(cols = vars(species), switch = "x") +
-  #   labs(x = x_label, y = y_label2) +
-  #   theme_classic() +
-  #   # Format facet labels
-  #   theme(strip.placement = "outside",
-  #         strip.text = element_text(face = "italic"),
-  #         strip.background = element_rect(color = "white"))
-  # p <- ggarrange(p1, p2, nrow = 2, align = "v", heights = c(2, 1))
-  p <- annotate_figure(
-    p1,
-    # bottom = text_grob(abbrevSpc(target), face = "italic"),
-    left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
-  )
+# Plot number and length of scaffold matches vs. chromosome length (match_lens)
+plotLens <- function(match_lens) {
+  match_lens_sum <- match_lens %>% group_by(tNum, tSize, Species) %>%
+    summarize(sum_homolog=sum(qSize), sum_match=sum(total_matches),
+              `n homologs`=n(), .groups = "keep") %>%
+    # Convert bp to Mb
+    mutate(`Reference chromosome length (Mb)`=tSize*1e-6,
+           `summed homolog lengths (Mb)`=sum_homolog*1e-6,
+           `summed match lengths (Mb)`=sum_match*1e-6,
+           Reference=Species) %>%
+    arrange(Species, desc(tSize)) %>% ungroup()
+  lenPlot <- function(my_var) {
+    p <- ggplot(data = match_lens_sum,
+                mapping = aes(x = `Reference chromosome length (Mb)`,
+                              group = Reference,
+                              col = Reference, fill = Reference)) +
+      geom_point(mapping = aes(y = .data[[my_var]]), alpha = 0.5) +
+      stat_poly_line(mapping = aes(y = .data[[my_var]]), formula = y~x+0) +
+      stat_poly_eq(formula = y~x+0, 
+                   mapping = aes(y = .data[[my_var]],
+                                 label = paste(after_stat(rr.label),
+                                               after_stat(eq.label),
+                                               sep = "*\", \"*"))) +
+                   # geom = "label_npc", col = "black", alpha = 0.5) +
+      scale_x_continuous(breaks = pretty_breaks()) +
+      scale_y_continuous(breaks = pretty_breaks()) +
+      theme_bw() +
+      theme(legend.text = element_text(face = "italic"))
+    return(p)
+  }
+  addSpcInt <- function(p) {
+    p <- annotate_figure(
+      p,
+      left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
+    )
+    return(p)
+  }
+  p1 <- lenPlot("summed homolog lengths (Mb)")
+  leg1 <- get_legend(p1)
+  p1 <- addSpcInt(p1 + theme(legend.position = "none"))
+  p2 <- lenPlot("summed match lengths (Mb)")
+  p2 <- addSpcInt(p2 + theme(legend.position = "none"))
+  p3 <- ggplot(data = match_lens %>% filter(index < 30),
+               mapping = aes(x = index, y = total_matches,
+                             fill = qNum, group = Species)) +
+    # geom_col(col = "white") +
+    geom_col(mapping = aes(col = qNum)) +
+    stat_summary(mapping = aes(y = tSize), geom = "point",
+                 fun = mean, col = "black") +
+    # scale_x_continuous(breaks = pretty_breaks(),
+    #                    labels = label_number(scale = 1e-6)) +
+    scale_y_continuous(breaks = pretty_breaks(),
+                       labels = label_number(scale = 1e-6)) +
+    facet_grid(cols = vars(Species), switch = "both") +
+    theme_bw() +
+    theme(legend.position = "none",
+          strip.background = element_blank(),
+          strip.text = element_text(face = "italic"),
+          strip.placement = "outside")
+  return(p3)
+  p <- ggarrange(p1, p2, align = "hv", legend.grob = leg1, legend = "right")
   return(p)
 }
 # Plot heatmap of given matrix
@@ -533,7 +544,7 @@ psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 # Select maximal matching contigs
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Compare matches
-match_lens <- lenvsMatch(psl_match, psl_list)
+match_lens <- collapseMatch(psl_match)
 plotLens(match_lens)
 # match_lens <- sapply(grep("latissima", names(psl_match), value = T), lenvsMatch,
 #                     psl_match, psl_list, simplify = F)
