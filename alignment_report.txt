@@ -1,0 +1,5 @@
+Species	Average homologs mapped per chromosome	Maximum homologs mapped per chromosome	Minimum homologs mapped per chromosome	Total homologs mapped	Average exact matches (Mb) per chromosome	Maximum exact matches (Mb) per chromosome	Minimum exact matches (Mb) per chromosome	Total exact matches (Mb)
+S. japonica	24.55 ± 10.76	56	6	761	4.73 ± 1.8	8.820528	1.684755	146.530515
+M. pyrifera	18.18 ± 15.5	57	1	1091	1.52 ± 1.39	5.065786	0.012321	90.932973
+U. pinnatifida	31.03 ± 16.71	60	1	1024	1.07 ± 0.74	2.522421	0.002287	35.362516
+E. siliculosus	31.89 ± 11.47	74	16	861	0.63 ± 0.38	1.774656	0.206719	17.032372

@@ -96,7 +96,7 @@ sbatch s-latissima-genome/cactus_prepare.sbatch s-latissima-genome/s_lat_alignme
 ```
 sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_sbatch_list.txt
 ```
-### Visualize alignments
+### Visualize alignments and calculate statistics
 #### Run [halSynteny](https://github.com/ComparativeGenomicsToolkit/hal) to extract syntenic blocks between each genome pair
 ##### Usage
 > sbatch [halSynteny.sbatch](halSynteny.sbatch) \<inHal\>
@@ -104,7 +104,7 @@ sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_s
 ```
 sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
-#### Generate heatmaps and dotplots of pairwise halSynteny PSL files
+#### Generate summary statistics, heatmaps and dotplots of pairwise halSynteny PSL files
 Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/info/website/upload/psl.html).
 ##### Usage
 > sbatch [dotplot.sbatch](dotplot.sbatch) [\<seqFile\>](s_lat_alignment.txt)
@@ -112,6 +112,8 @@ Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/i
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
+![alt text](alignment_report.txt)
+![alt text](homolog_lengths.png)
 ![alt text](heatmap_Saccharina_latissima_vs_Saccharina_japonica.png)
 ![alt text](dotplot_Saccharina_latissima_vs_Saccharina_japonica.png)
 

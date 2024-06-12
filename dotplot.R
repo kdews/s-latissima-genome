@@ -15,7 +15,7 @@ if (require(showtext, quietly = T)) {
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
 
-# Variables and functions
+# Functions
 # Set column names for PSL data frames
 psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
              "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
@@ -169,6 +169,41 @@ maxMatches <- function(df_name, df_list) {
     arrange(tNum)
   return(df_match)
 }
+# Collapse list of maxMatch data frames into one data frame labeling target species
+collapseMatch <- function(match_list) {
+  # Subset species of interest
+  match_list <- match_list[grep(spc_int, names(match_list), value = T)]
+  # Rename data frames by target species
+  names(match_list) <- sapply(names(match_list), getGen, "target", USE.NAMES = F)
+  # Format species names
+  names(match_list) <- sapply(names(match_list), abbrevSpc, USE.NAMES = F)
+  # Collapse list of data frames
+  match_lens <- bind_rows(match_list, .id = "Species")
+  # Convert species column to ordered factor sorted by species relatedness
+  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
+  lvls <- unname(sapply(spc_order, grep, unique(match_lens$Species), value = T))
+  match_lens <- match_lens %>%
+    mutate(qNum=as.character(qNum),
+           tNum=as.character(tNum),
+           Species=factor(Species, levels = lvls)) %>%
+    # Filter out artificial chromosomes
+    filter(tNum != "0")
+    # # Pivot dataframe longer to plot metrics on same graph
+    # pivot_longer(!c(tNum, tSize, Species),
+    #              names_to = "metric", values_to = "value")
+  return(match_lens)
+}
+# Summarize collapsed match_lens data frame
+sumMatch <- function(match_lens) {
+  match_lens_sum <- match_lens %>% group_by(index, tNum, tSize, Species) %>%
+    # Sums per ID (i.e., per contig)
+    summarize(sum_homolog=sum(qSize),
+              sum_match=sum(total_matches),
+              `n homologs`=n(),
+              .groups = "keep") %>% 
+    ungroup() %>% arrange(Species, desc(tSize)) 
+  return(match_lens_sum)
+}
 # Order query ID factors by max matches
 plotOrder <- function(match_name, match_list, df_list) {
   match <- match_list[[match_name]]
@@ -217,41 +252,6 @@ pivotPsl <- function(df_name, df_list) {
                  values_to = "qPercent") %>%
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
-}
-# Collapse list of maxMatch data frames into one data frame labeling target species
-collapseMatch <- function(match_list) {
-  # Subset species of interest
-  match_list <- match_list[grep(spc_int, names(match_list), value = T)]
-  # Rename data frames by target species
-  names(match_list) <- sapply(names(match_list), getGen, "target", USE.NAMES = F)
-  # Format species names
-  names(match_list) <- sapply(names(match_list), abbrevSpc, USE.NAMES = F)
-  # Collapse list of data frames
-  match_lens <- bind_rows(match_list, .id = "Species")
-  # Convert species column to ordered factor sorted by species relatedness
-  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
-  lvls <- unname(sapply(spc_order, grep, unique(match_lens$Species), value = T))
-  match_lens <- match_lens %>%
-    mutate(qNum=as.character(qNum),
-           tNum=as.character(tNum),
-           Species=factor(Species, levels = lvls)) %>%
-    # Filter out artificial chromosomes
-    filter(tNum != "0")
-    # # Pivot dataframe longer to plot metrics on same graph
-    # pivot_longer(!c(tNum, tSize, Species),
-    #              names_to = "metric", values_to = "value")
-  return(match_lens)
-}
-# Summarize collapsed match_lens data frame
-sumMatch <- function(match_lens) {
-  match_lens_sum <- match_lens %>% group_by(index, tNum, tSize, Species) %>%
-    # Sums per ID (i.e., per contig)
-    summarize(sum_homolog=sum(qSize),
-              sum_match=sum(total_matches),
-              `n homologs`=n(),
-              .groups = "keep") %>% 
-    ungroup() %>% arrange(Species, desc(tSize)) 
-  return(match_lens_sum)
 }
 # Plot number and length of scaffold matches vs. chromosome length (match_lens)
 plotLens <- function(match_lens_sum) {
@@ -436,7 +436,6 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
   return(fname)
 }
 
-
 # Input
 # Only take command line input if not running interactively
 if (interactive()) {
@@ -454,6 +453,11 @@ if (interactive()) {
   spc_int <- line_args[2]
   outdir <- line_args[3]
 }
+# Output files
+homolog_lens_plot <- "homolog_lengths.png"
+align_report_file <- "alignment_report.txt"
+# Prepend output directory to file name (if it exists)
+if (dir.exists(outdir)) align_report_file <- paste0(outdir, align_report_file)
 # Import dataframe of species and associated file names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
@@ -491,9 +495,26 @@ psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 match_lens <- collapseMatch(psl_match)
 match_lens_sum <- sumMatch(match_lens)
 # Report alignment statistics for tables
-match_lens_sum %>% group_by(Species) %>%
-  # Species averages
-  summarize(`Average n aligned`=mean(`n homologs`))
+align_report <- match_lens_sum %>% 
+# Convert bp to Mb
+  mutate_at(grep("sum|size", colnames(.), ignore.case = T, value = T),
+            ~.*1e-6) %>%
+  # Per species statistics
+  group_by(Species) %>%
+  summarize(`Average homologs mapped per chromosome`=
+              paste(round(smean.sd(`n homologs`), 2), collapse = " ± "),
+            `Maximum homologs mapped per chromosome`=max(`n homologs`),
+            `Minimum homologs mapped per chromosome`=min(`n homologs`),
+            `Total homologs mapped`=sum(`n homologs`),
+            `Average exact matches (Mb) per chromosome`=
+              paste(round(smean.sd(sum_match), 2), collapse = " ± "),
+            `Maximum exact matches (Mb) per chromosome`=max(sum_match),
+            `Minimum exact matches (Mb) per chromosome`=min(sum_match),
+            `Total exact matches (Mb)`=sum(sum_match),
+            .groups = "keep")
+write.table(align_report, file = align_report_file,
+            quote = F, row.names = F, sep = "\t")
+print(paste("Table of alignment statistics in:", align_report_file))
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 
@@ -502,7 +523,7 @@ psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 # Alignment statistics against species of interest
 len_fig <- plotLens(match_lens_sum)
 showtext_opts(dpi = 300)
-ggsave(plot = len_fig, filename = "homolog_lengths.png", path = outdir,
+ggsave(plot = len_fig, filename = homolog_lens_plot, path = outdir,
        bg = "white", width = 6.5, height = 9.5, units = "in")
 showtext_opts(dpi = 100)
 # Heatmaps of genome vs. genome synteny
@@ -511,14 +532,14 @@ psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
 h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
                           outdir, 7, 10, simplify = F))
 print(unname(h_fnames))
-# # Dotplots of genome vs. genome
-# # Rearrange scaffold ID factors by matches for plotting
-# psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
-#                    simplify = F)
-# psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
-# d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
-#                    15, 10, simplify = F))
-# print(unname(d_fnames))
+# Dotplots of genome vs. genome
+# Rearrange scaffold ID factors by matches for plotting
+psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
+                   simplify = F)
+psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
+d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
+                   15, 10, simplify = F))
+print(unname(d_fnames))
 
 
 # # Separate out certain syntenic regions
