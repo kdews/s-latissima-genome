@@ -112,7 +112,7 @@ Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/i
 ```
 sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
-![alt text](alignment_report.tsv)
+[Alignment report](alignment_report.tsv)
 ![alt text](homolog_lengths_Saccharina_latissima.png)
 ![alt text](heatmap_Saccharina_latissima_vs_Saccharina_japonica.png)
 ![alt text](dotplot_Saccharina_latissima_vs_Saccharina_japonica.png)
