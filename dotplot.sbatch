@@ -10,8 +10,11 @@
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Script variables
-R_mod_file="modules_for_Rscript.txt"
+# Script variables / defaults
+# Rscript file
+r_script="${job_name}.R"
+# seqFile
+seqFile="s_lat_alignment.txt"
 
 # Help message
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
@@ -26,12 +29,12 @@ Requires:
 fi
 
 # Prepend scripts_dir
-R_mod_file="${scripts_dir}${R_mod_file}"
+r_script="${scripts_dir}${r_script}"
+seqFile="${scripts_dir}${seqFile}"
 
 # Load R module
 module purge
-IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
-module load "${R_mods[@]}"
+$load_R_mods
 
 # Input
 # Cactus-formatted seqFile, i.e.,
@@ -41,10 +44,7 @@ module load "${R_mods[@]}"
 # ...
 # nameN pathN
 # seqFile: (s-latissima-genome/s_lat_alignment.txt)
-seqFile="${scripts_dir}s_lat_alignment.txt"
 [[ -z "$1" ]] || seqFile="$1"
-# Rscript file
-r_script="${scripts_dir}${job_name}.R"
 
 # Run Rscript
 cmd="Rscript $r_script $seqFile Saccharina_latissima $scripts_dir"

@@ -1,13 +1,13 @@
 # Clear environment
 rm(list = ls())
 # Required packages
-library(Hmisc)
-library(scales)
+library(Hmisc, quietly = T, warn.conflicts = F)
+library(scales, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
-library(ggpubr, quietly = T)
-library(ggpmisc)
+library(ggpubr, quietly = T, warn.conflicts = F)
+suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F))
 library(RColorBrewer, quietly = T)
-library(BiocManager)
+library(BiocManager, quietly = T)
 suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 # library(gridExtra, quietly = T)
 if (require(showtext, quietly = T)) {
@@ -204,6 +204,32 @@ sumMatch <- function(match_lens) {
     ungroup() %>% arrange(Species, desc(tSize)) 
   return(match_lens_sum)
 }
+# Report alignment statistics in table
+alnReport <- function(match_lens_sum) {
+  align_report <- match_lens_sum %>% 
+    # Convert bp to Mb
+    mutate_at(grep("sum|size", colnames(.), ignore.case = T, value = T),
+              ~.*1e-6) %>%
+    # Per species statistics
+    group_by(Species) %>%
+    summarize(`Average homologs mapped per chromosome`=
+                paste(round(smean.sd(`n homologs`), 2), collapse = " ± "),
+              `Maximum homologs mapped per chromosome`=max(`n homologs`),
+              `Minimum homologs mapped per chromosome`=min(`n homologs`),
+              `Total homologs mapped`=sum(`n homologs`),
+              `Average exact matches (Mb) per chromosome`=
+                paste(round(smean.sd(sum_match), 2), collapse = " ± "),
+              `Average exact matches (%) per chromosome`=
+                paste(round(smean.sd(sum_match/tSize*100), 2), collapse = " ± "),
+              `Maximum exact matches (Mb) per chromosome`=max(sum_match),
+              `Minimum exact matches (Mb) per chromosome`=min(sum_match),
+              `Total exact matches (Mb)`=sum(sum_match),
+              .groups = "keep")
+  write.table(align_report, file = align_report_file,
+              quote = F, row.names = F, sep = "\t")
+  print(paste("Table of alignment statistics in:", align_report_file))
+  return(align_report)
+}
 # Order query ID factors by max matches
 plotOrder <- function(match_name, match_list, df_list) {
   match <- match_list[[match_name]]
@@ -215,7 +241,8 @@ plotOrder <- function(match_name, match_list, df_list) {
     pull(qNum) %>%
     as.character()
   df <- df %>%
-    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
+    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T),
+           qindex = as.integer(qNum))
   return(df)
 }
 # Correlate alignments between all species
@@ -294,6 +321,7 @@ plotLens <- function(match_lens_sum) {
   p2 <- annotSpcInt(p2 + theme(legend.position = "none"))
   p <- ggarrange(p1, p2, nrow = 2, align = "hv",
                  legend.grob = leg1, legend = "right")
+  p <- setNames(list(p), spc_int)
   return(p)
 }
 # Plot heatmap of given matrix
@@ -305,6 +333,7 @@ heatPsl <- function(match_name, match_list, df_list) {
   x_label <- abbrevSpc(target)
   y_label <- abbrevSpc(query)
   ttl <- gsub("_", " ", match_name)
+  leg_name <- paste("Synteny", "coverage", sep = "\n")
   # Filter out artificial chromosomes
   match <- match %>% filter(tNum != "0", qNum != "0")
     # # Filter out small scaffolds/contigs from query (remove <1Mb)
@@ -312,20 +341,18 @@ heatPsl <- function(match_name, match_list, df_list) {
   # Order of query contigs while their respective homologs (tNum) are size-ordered
   h_order <- match %>% arrange(tNum) %>% pull(qNum) %>% as.character()
   # Apply filtering from match data frame
-  df <- df %>% filter(tNum %in% match$tNum, qNum %in% h_order) %>%
+  df <- df %>% filter(tNum %in% match$tNum, qNum %in% match$qNum) %>%
     # Use "match" data frame to order query contig factors in heatmap
-    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T))
-  p <- ggplot(mapping = aes(x = tNum, y = qNum)) +
-    geom_tile(data = df,
-              mapping = aes(fill = qPercent)) +
-    scale_fill_viridis_c(option = "turbo") +
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          axis.line = element_line(color = "black"),
-          legend.position = "left") +
+    mutate(qNum = factor(x = qNum, levels = h_order, ordered = T),
+           qindex = as.integer(qNum))
+  p <- ggplot(data = df, mapping = aes(x = tNum, y = qindex)) +
+    geom_tile(mapping = aes(fill = qPercent)) +
+    scale_fill_viridis_c(option = "turbo", labels = label_percent(),
+                         name = leg_name) +
+    scale_y_continuous(expand = c(0, 0), breaks = breaks_width(100)) +
     labs(x = x_label, y = y_label) +
-    theme(axis.title = element_text(face="italic"))
+    theme(axis.title = element_text(face="italic"),
+          legend.position = "left")
   # # R base heatmap version
   # fname <- paste0(match_name, "_heatmap.png")
   # h <- heatmap(mat, scale = "row", keep.dendro = T,
@@ -341,6 +368,7 @@ heatPsl <- function(match_name, match_list, df_list) {
 dotPlot <- function(df_name, df_list, filter_ids = NULL) {
   df <- df_list[[df_name]]
   if (missing(filter_ids)) {
+    df <- df %>% filter(qSize > 1e6, qNum != "0", tNum != "0")
   } else {
     if (all(filter_ids %in% df$tNum)) {
       df <- df %>%
@@ -363,10 +391,9 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
            tStart = tStart/1e6,
            tEnd = tEnd/1e6)
   target <- getGen(df_name, "target")
-  target_nice <- gsub("_", " ", target)
   query <- getGen(df_name, "query")
-  query_nice <- gsub("_", " ", query)
-  fname <- paste0(df_name, "_dotplot.png")
+  x_label <- abbrevSpc(target)
+  y_label <- abbrevSpc(query)
   p <- ggplot(data = df,
               mapping = aes(x = tStart, y = qStart, color = strand)) +
     geom_segment(mapping = aes(xend = tEnd, yend = qEnd),
@@ -387,12 +414,10 @@ dotPlot <- function(df_name, df_list, filter_ids = NULL) {
           strip.placement = "outside",
           strip.background.x = element_rect(color = NA,  fill=NA),
           strip.background.y = element_rect(color = NA,  fill=NA)) +
-    xlab("") +
-    ylab("")
+    labs(x = "", y = "")
   if (missing(filter_ids)) {
     p <- p +
-      labs(title = "Genome synteny by scaffold",
-           x = target_nice, y = query_nice) +
+      labs(title = "Genome synteny by scaffold", x = x_label, y = y_label) +
       theme(axis.ticks = element_blank(),
             axis.text = element_blank(),
             panel.border = element_rect(color = "grey", fill = NA, linewidth = 0.1),
@@ -426,13 +451,10 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
                      width, height) {
   p <- plot_list[[plot_name]]
   fname <- paste0(plot_type, "_", plot_name, ".png")
-  if (dir.exists(outdir)) {
-      fname <- paste0(outdir, fname)
-  }
-  showtext_opts(dpi = 300)
-  ggsave(filename = fname, plot = p,
+  if (dir.exists(outdir)) fname <- paste0(outdir, fname)
+  ggsave(filename = fname, plot = p, bg = "white",
          width = width, height = height, units = "in")
-  showtext_opts(dpi = 100)
+  print(fname)
   return(fname)
 }
 
@@ -454,8 +476,7 @@ if (interactive()) {
   outdir <- line_args[3]
 }
 # Output files
-homolog_lens_plot <- "homolog_lengths.png"
-align_report_file <- "alignment_report.txt"
+align_report_file <- "alignment_report.tsv"
 # Prepend output directory to file name (if it exists)
 if (dir.exists(outdir)) align_report_file <- paste0(outdir, align_report_file)
 # Import dataframe of species and associated file names
@@ -478,6 +499,7 @@ species_versus <- c(paste(spc_int,
 psl_files <- sapply(species_versus, grep, list.files(pattern = "\\.psl",
                                                      path = ".",
                                                      full.names = T), value = T)
+# Select out PSLs with new filtering
 psl_files <- grep("new", psl_files, value = T, invert = T)
 # Read PSL files into list of dataframes
 psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
@@ -493,53 +515,41 @@ psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 psl_match <- sapply(names(psl_sums), maxMatches, psl_sums, simplify = F)
 # Compare alignment statistics between genomes and species of interest
 match_lens <- collapseMatch(psl_match)
+# Summarize alignment statistics per reference contig
 match_lens_sum <- sumMatch(match_lens)
-# Report alignment statistics for tables
-align_report <- match_lens_sum %>% 
-# Convert bp to Mb
-  mutate_at(grep("sum|size", colnames(.), ignore.case = T, value = T),
-            ~.*1e-6) %>%
-  # Per species statistics
-  group_by(Species) %>%
-  summarize(`Average homologs mapped per chromosome`=
-              paste(round(smean.sd(`n homologs`), 2), collapse = " ± "),
-            `Maximum homologs mapped per chromosome`=max(`n homologs`),
-            `Minimum homologs mapped per chromosome`=min(`n homologs`),
-            `Total homologs mapped`=sum(`n homologs`),
-            `Average exact matches (Mb) per chromosome`=
-              paste(round(smean.sd(sum_match), 2), collapse = " ± "),
-            `Maximum exact matches (Mb) per chromosome`=max(sum_match),
-            `Minimum exact matches (Mb) per chromosome`=min(sum_match),
-            `Total exact matches (Mb)`=sum(sum_match),
-            .groups = "keep")
-write.table(align_report, file = align_report_file,
-            quote = F, row.names = F, sep = "\t")
-print(paste("Table of alignment statistics in:", align_report_file))
+# Save report of alignment statistics by reference species used
+align_report <- alnReport(match_lens_sum)
 # Pivot summarized data for heatmaps
 psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
-
 
 # Plots
 # Alignment statistics against species of interest
 len_fig <- plotLens(match_lens_sum)
-showtext_opts(dpi = 300)
-ggsave(plot = len_fig, filename = homolog_lens_plot, path = outdir,
-       bg = "white", width = 6.5, height = 9.5, units = "in")
-showtext_opts(dpi = 100)
+homolog_lens_plot <- plotSave(spc_int, "homolog_lengths", len_fig, outdir,
+                              6.5, 9.5)
 # Heatmaps of genome vs. genome synteny
 psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
                     simplify = F)
+print("Saving heatmaps...")
 h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-                          outdir, 7, 10, simplify = F))
-print(unname(h_fnames))
+                          outdir, 7, 6, simplify = F))
 # Dotplots of genome vs. genome
 # Rearrange scaffold ID factors by matches for plotting
 psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
                    simplify = F)
+dotPlot(names(psl_list)[[4]], psl_list)
+print("Saving dotplots...")
 psl_dots <- sapply(names(psl_list), dotPlot, psl_list, simplify = F)
 d_fnames <- unlist(sapply(names(psl_dots), plotSave, "dotplot", psl_dots, outdir,
-                   15, 10, simplify = F))
-print(unname(d_fnames))
+                   10, 10, simplify = F))
+
+
+
+
+
+
+
+
 
 
 # # Separate out certain syntenic regions
