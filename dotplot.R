@@ -345,11 +345,16 @@ heatPsl <- function(match_name, match_list, df_list) {
     # Use "match" data frame to order query contig factors in heatmap
     mutate(qNum = factor(x = qNum, levels = h_order, ordered = T),
            qindex = as.integer(qNum))
-  p <- ggplot(data = df, mapping = aes(x = tNum, y = qindex)) +
-    geom_tile(mapping = aes(fill = qPercent)) +
+  if (query == spc_int) {
+    p <- ggplot(data = df,
+                mapping = aes(fill = qPercent, x = tNum, y = qindex)) +
+      scale_y_continuous(expand = c(0, 0), breaks = breaks_width(100))
+  } else {
+    p <- ggplot(data = df, mapping = aes(fill = qPercent, x = tNum, y = qNum))
+    }
+  p <- p + geom_tile() +
     scale_fill_viridis_c(option = "turbo", labels = label_percent(),
                          name = leg_name) +
-    scale_y_continuous(expand = c(0, 0), breaks = breaks_width(100)) +
     labs(x = x_label, y = y_label) +
     theme(axis.title = element_text(face="italic"),
           legend.position = "left")
@@ -532,7 +537,7 @@ psl_heats <- sapply(names(psl_match), heatPsl, psl_match, psl_pivs,
                     simplify = F)
 print("Saving heatmaps...")
 h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-                          outdir, 7, 6, simplify = F))
+                          outdir, 9, 9, simplify = F))
 # Dotplots of genome vs. genome
 # Rearrange scaffold ID factors by matches for plotting
 psl_list <- sapply(names(psl_match), plotOrder, psl_match, psl_list,
