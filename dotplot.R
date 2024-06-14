@@ -9,11 +9,34 @@ suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F)
 library(RColorBrewer, quietly = T)
 library(BiocManager, quietly = T)
 suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
-# library(gridExtra, quietly = T)
 if (require(showtext, quietly = T)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
+
+# Input
+# Only take command line input if not running interactively
+if (interactive()) {
+  wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
+  setwd(wd)
+  # Cactus seqFile
+  seq_file <- "s-latissima-genome/s_lat_alignment.txt"
+  # Species of interest
+  spc_int <- "Saccharina_latissima"
+  # Output directory
+  outdir <- "s-latissima-genome/"
+} else {
+  line_args <- commandArgs(trailingOnly = T)
+  seq_file <- line_args[1]
+  spc_int <- line_args[2]
+  outdir <- line_args[3]
+}
+# Output files
+max_match_file <- "max_matches.tsv"
+align_report_file <- "alignment_report.tsv"
+# Prepend output directory to file name (if it exists)
+if (dir.exists(outdir)) align_report_file <- paste0(outdir, align_report_file)
+
 
 # Functions
 # Set column names for PSL data frames
@@ -187,10 +210,11 @@ collapseMatch <- function(match_list) {
            tNum=as.character(tNum),
            Species=factor(Species, levels = lvls)) %>%
     # Filter out artificial chromosomes
-    filter(tNum != "0")
-    # # Pivot dataframe longer to plot metrics on same graph
-    # pivot_longer(!c(tNum, tSize, Species),
-    #              names_to = "metric", values_to = "value")
+    filter(tNum != "0") %>%
+    arrange(Species)
+  write.table(match_lens, file = max_match_file,
+              quote = F, row.names = F, sep = "\t")
+  print(paste("Table of maximal matches in:", max_match_file))
   return(match_lens)
 }
 # Summarize collapsed match_lens data frame
@@ -224,7 +248,13 @@ alnReport <- function(match_lens_sum) {
               `Maximum exact matches (Mb) per chromosome`=max(sum_match),
               `Minimum exact matches (Mb) per chromosome`=min(sum_match),
               `Total exact matches (Mb)`=sum(sum_match),
-              .groups = "keep")
+              .groups = "keep") %>%
+    # Coerce all values to characters
+    ungroup() %>% mutate(across(everything(), as.character)) %>%
+    # Transpose table
+    pivot_longer(cols = !Species,
+                 names_to = " ", values_to = "Value") %>%
+    pivot_wider(names_from = "Species", values_from = "Value")
   write.table(align_report, file = align_report_file,
               quote = F, row.names = F, sep = "\t")
   print(paste("Table of alignment statistics in:", align_report_file))
@@ -320,7 +350,7 @@ plotLens <- function(match_lens_sum) {
   p2 <- lenPlot("summed match lengths (Mb)", c(x = "right", y = "top"))
   p2 <- annotSpcInt(p2 + theme(legend.position = "none"))
   p <- ggarrange(p1, p2, nrow = 2, align = "hv",
-                 legend.grob = leg1, legend = "right")
+                 legend.grob = leg1, legend = "right", labels = "AUTO")
   p <- setNames(list(p), spc_int)
   return(p)
 }
@@ -463,27 +493,6 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
   return(fname)
 }
 
-# Input
-# Only take command line input if not running interactively
-if (interactive()) {
-  wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
-  setwd(wd)
-  # Cactus seqFile
-  seq_file <- "s-latissima-genome/s_lat_alignment.txt"
-  # Species of interest
-  spc_int <- "Saccharina_latissima"
-  # Output directory
-  outdir <- "s-latissima-genome/"
-} else {
-  line_args <- commandArgs(trailingOnly = T)
-  seq_file <- line_args[1]
-  spc_int <- line_args[2]
-  outdir <- line_args[3]
-}
-# Output files
-align_report_file <- "alignment_report.tsv"
-# Prepend output directory to file name (if it exists)
-if (dir.exists(outdir)) align_report_file <- paste0(outdir, align_report_file)
 # Import dataframe of species and associated file names
 species_tab <- read.table(seq_file, sep = "\t", skip = 1)
 species <- species_tab$V1
@@ -530,6 +539,7 @@ psl_pivs <- sapply(names(psl_sums), pivotPsl, psl_sums, simplify = F)
 # Plots
 # Alignment statistics against species of interest
 len_fig <- plotLens(match_lens_sum)
+showtext_opts(dpi = 300)
 homolog_lens_plot <- plotSave(spc_int, "homolog_lengths", len_fig, outdir,
                               6.5, 9.5)
 # Heatmaps of genome vs. genome synteny
