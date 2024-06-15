@@ -35,7 +35,11 @@ if (interactive()) {
 max_match_file <- "max_matches.tsv"
 align_report_file <- "alignment_report.tsv"
 # Prepend output directory to file name (if it exists)
-if (dir.exists(outdir)) align_report_file <- paste0(outdir, align_report_file)
+if (dir.exists(outdir)) {
+  max_match_file <- paste0(outdir, max_match_file)
+  align_report_file <- paste0(outdir, align_report_file)
+  
+}
 
 
 # Functions
@@ -115,55 +119,6 @@ orderPsl <- function(df_name, df_list) {
   ) %>%
     arrange(qName)
   return(df)
-}
-# Calculate metrics from PSL table
-metricsPsl <- function(df_name, df_list) {
-  df <- df_list[[df_name]]
-  query <- getGen(df_name, "query")
-  target <- getGen(df_name, "target")
-  df <- df %>%
-    # Calculate synteny within each alignment range
-    mutate(synt=matches/abs(qStart-qEnd)) %>%
-    # Keep only highest synteny for each scaffold-scaffold pair
-    group_by(qName, tName) %>%
-    filter(synt == max(synt)) %>%
-    ungroup()
-  # %>%
-  return(df)
-    # # Calculate fragmentedness of alignment
-    # mutate(p_blockCount=blockCount/abs(qStart-qEnd)) %>%
-    # # Calculate maximum block size (bp) of each alignment
-    # mutate(max_block=max(as.numeric(unlist(strsplit(blockSizes, ","))))) %>%
-    # # Calculate each alignment size
-    # mutate(aln_size=abs(qStart-qEnd))
-  df_cov <- df %>%
-    group_by(qName, tName) %>%
-    summarize(total_aln = sum(aln_size),
-              total_p_blockCount = sum(p_blockCount)) %>%
-    ungroup()
-  df <- merge(df, df_cov)
-  df_scale <- df %>%
-    # Calculate coverage of each alignment
-    mutate(cov = total_aln/qSize) %>%
-    # Scale metrics [0,1] for each query scaffold
-    group_by(qName) %>%
-    mutate(
-      synt_scaled=
-        (synt-min(synt))/(max(synt)-min(synt)),
-      cov_scaled=
-        (cov-min(cov))/(max(cov)-min(cov)),
-      max_block_scaled=
-        (max_block-min(max_block))/(max(max_block)-min(max_block)),
-      blockCount_scaled=
-        (blockCount-min(blockCount))/(max(blockCount)-min(blockCount)),
-      p_blockCount_scaled=
-             (p_blockCount-min(p_blockCount))/(max(p_blockCount)-min(p_blockCount)),
-      total_p_blockCount_scaled=
-        (total_p_blockCount-min(total_p_blockCount))/(max(total_p_blockCount)-min(total_p_blockCount))
-      )
-  # For query scaffolds with 1 match, scale to 1
-  df_scale[is.na.data.frame(df_scale)] <- 1
-  return(df_scale)
 }
 # Summarize PSL table by summing matches for each contig pair
 sumPsl <- function(df_name, df_list) {
@@ -259,6 +214,55 @@ alnReport <- function(match_lens_sum) {
               quote = F, row.names = F, sep = "\t")
   print(paste("Table of alignment statistics in:", align_report_file))
   return(align_report)
+}
+# Calculate metrics from PSL table
+metricsPsl <- function(df_name, df_list) {
+  df <- df_list[[df_name]]
+  query <- getGen(df_name, "query")
+  target <- getGen(df_name, "target")
+  df <- df %>%
+    # Calculate synteny within each alignment range
+    mutate(synt=matches/abs(qStart-qEnd)) %>%
+    # Keep only highest synteny for each scaffold-scaffold pair
+    group_by(qName, tName) %>%
+    filter(synt == max(synt)) %>%
+    ungroup()
+  # %>%
+  return(df)
+    # # Calculate fragmentedness of alignment
+    # mutate(p_blockCount=blockCount/abs(qStart-qEnd)) %>%
+    # # Calculate maximum block size (bp) of each alignment
+    # mutate(max_block=max(as.numeric(unlist(strsplit(blockSizes, ","))))) %>%
+    # # Calculate each alignment size
+    # mutate(aln_size=abs(qStart-qEnd))
+  df_cov <- df %>%
+    group_by(qName, tName) %>%
+    summarize(total_aln = sum(aln_size),
+              total_p_blockCount = sum(p_blockCount)) %>%
+    ungroup()
+  df <- merge(df, df_cov)
+  df_scale <- df %>%
+    # Calculate coverage of each alignment
+    mutate(cov = total_aln/qSize) %>%
+    # Scale metrics [0,1] for each query scaffold
+    group_by(qName) %>%
+    mutate(
+      synt_scaled=
+        (synt-min(synt))/(max(synt)-min(synt)),
+      cov_scaled=
+        (cov-min(cov))/(max(cov)-min(cov)),
+      max_block_scaled=
+        (max_block-min(max_block))/(max(max_block)-min(max_block)),
+      blockCount_scaled=
+        (blockCount-min(blockCount))/(max(blockCount)-min(blockCount)),
+      p_blockCount_scaled=
+             (p_blockCount-min(p_blockCount))/(max(p_blockCount)-min(p_blockCount)),
+      total_p_blockCount_scaled=
+        (total_p_blockCount-min(total_p_blockCount))/(max(total_p_blockCount)-min(total_p_blockCount))
+      )
+  # For query scaffolds with 1 match, scale to 1
+  df_scale[is.na.data.frame(df_scale)] <- 1
+  return(df_scale)
 }
 # Order query ID factors by max matches
 plotOrder <- function(match_name, match_list, df_list) {
