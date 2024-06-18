@@ -2,11 +2,16 @@
 rm(list = ls())
 # Required packages
 library(Hmisc, quietly = T, warn.conflicts = F)
-suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
+suppressPackageStartupMessages(library(tidyverse, quietly = T,
+                                       warn.conflicts = F))
+library(VennDiagram, quietly = T)
+library(ggVennDiagram, quietly = T)
 library(ggpubr, quietly = T, warn.conflicts = F)
-suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F))
+suppressPackageStartupMessages(library(ggpmisc, quietly = T,
+                                       warn.conflicts = F))
 library(RColorBrewer, quietly = T)
 library(BiocManager, quietly = T)
+
 
 # Input
 # Only take command line input if not running interactively
@@ -27,14 +32,15 @@ if (interactive()) {
 }
 # Output files
 match_sums_file <- "align_sums.tsv"
+venn_file <- "align_venn_diagram.png"
 max_match_file <- "max_matches.tsv"
 align_report_file <- "alignment_report.tsv"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
+  venn_file <- paste0(outdir, venn_file)
   max_match_file <- paste0(outdir, max_match_file)
   align_report_file <- paste0(outdir, align_report_file)
-  
 }
 
 # Functions
@@ -150,7 +156,8 @@ sumPsl <- function(df_name, df_list) {
     # Add columns for query and target
     mutate(query=query, target=target, .before = 1) %>%
     # Calculate and sort by percentage of query covered by matches
-    mutate(qPercent=total_matches/qSize) %>% arrange(qNum, desc(qPercent))
+    mutate(qPercent=total_matches/qSize, tPercent=total_matches/tSize) %>% 
+    arrange(qNum, desc(qPercent))
   return(df_sum)
 }
 # Collapse list of sumPsl data frames into one data frame
@@ -163,17 +170,39 @@ collapseSums <- function(psl_sums) {
 # Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(match_sums) {
   max_matches <- match_sums %>% group_by(query, target, qNum) %>%
-    filter(qPercent == max(qPercent)) %>%
-    ungroup() %>% arrange(query, target, tNum)
+    filter(qPercent == max(qPercent)) %>% ungroup %>%
+    arrange(query, target, tNum)
   return(max_matches)
 }
 # Summarize statistics per species alignment
-perSpecies <- function(df) {
-  sum_df <- df %>% group_by(query, target) %>%
+perSpecies <- function(max_matches) {
+  max_matches_sum <- max_matches %>% group_by(query, target) %>%
     summarize(n_and_sum=paste(n(), sum(qSize)*1e-6, sep = ", "),
               .groups = "drop") %>%
     pivot_wider(names_from = "target", values_from = "n_and_sum")
-  return(sum_df)
+  return(max_matches_sum)
+}
+# Summarize alignment statistics between species of interest and all references
+homoOverlap <- function(match_sums) {
+  df_filt <- match_sums %>% filter(query == spc_int) %>%
+    rowwise() %>% mutate(Species=abbrevSpc(target))
+  df_venn <- df_filt %>% group_by(Species) %>%
+    summarize(uniq_qName=list(unique(qName)), n=length(unique(qName)),
+              .groups = "drop")
+  unique_n <- df_filt %>% select(qName, qSize) %>% unique %>%
+    pull(qName) %>% length
+  unique_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
+  unique_len_perc <- unique_len/spc_int_len*100
+  ttl <- paste0("Uniquely mapped homologs: ", unique_n,
+                " (", round(unique_len*1e-6, 2), " Mb)")
+  v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
+                     fill = rainbow(length(df_venn$Species)),
+                     main = ttl, print.mode = "raw", cat.fontface = "italic",
+                     filename = NULL, disable.logging = T)
+  png(filename = venn_file, res = 110, width = 7, height = 5, units = "in")
+  grid.newpage()
+  grid.draw(v1)
+  dev.off()
 }
 # Summarize statistics per homolog with species of interest
 perHomolog <- function(df) {
@@ -193,36 +222,59 @@ perHomolog <- function(df) {
     arrange(Species, desc(tSize)) 
   return(match_lens_sum)
 }
+# Function to calculate mean and standard deviation and paste with sep "±" 
+calcMeanSd <- function(x) {
+  x_ <- paste(round(smean.sd(x), 2), collapse = " ± ")
+  return(x_)
+}
+# Function to dynamically summarize variable
+makeSummary <- function(df, col_nm, new_col) {
+  av_col <- paste("Average", new_col, "per chromosome")
+  av_p_col <- paste("Average", gsub(" \\(.*\\)", "", new_col),
+                    "(%) per chromosome")
+  max_col <- paste("Maximum", new_col, "per chromosome")
+  min_col <- paste("Minimum", new_col, "per chromosome")
+  tot_col <- paste("Total", new_col)
+  sum_df <- df %>% summarize({{av_col}}:=calcMeanSd({{col_nm}}),
+                             {{av_p_col}}:=calcMeanSd({{col_nm}}/tSize*100),
+                             {{max_col}}:=max({{col_nm}}),
+                             {{min_col}}:=min({{col_nm}}),
+                             {{tot_col}}:=sum({{col_nm}}),
+                             .groups = "drop")
+  if (!grepl("exact", new_col)) {
+    sum_df <- sum_df[,grep("%", colnames(sum_df), invert = T, value = T)]
+  }
+  return(sum_df)
+}
+# Make report
+makeReport <- function(df) {
+  rpt <- cbind(makeSummary(df, `n homologs`, "n homologs mapped"),
+               makeSummary(df, sum_homolog, "length of homologs (Mb)"),
+               makeSummary(df, sum_match, "exact matches (Mb)"))
+  # Remove any duplicated grouping colunns
+  rpt <- rpt[!duplicated(colnames(rpt))]
+  return(rpt)
+}
 # Report alignment statistics in table
-alnReport <- function(match_lens_sum) {
-  align_report <- match_lens_sum %>% 
+alnReport <- function(df) {
+  df <- df %>% 
     # Convert bp to Mb
     mutate_at(grep("sum|size", colnames(.), ignore.case = T, value = T),
-              ~.*1e-6) %>%
-    # Per species statistics
-    group_by(Species) %>%
-    summarize(`Average homologs mapped per chromosome`=
-                paste(round(smean.sd(`n homologs`), 2), collapse = " ± "),
-              `Maximum homologs mapped per chromosome`=max(`n homologs`),
-              `Minimum homologs mapped per chromosome`=min(`n homologs`),
-              `Total homologs mapped`=sum(`n homologs`),
-              `Total length of homologs`=sum(sum_homolog),
-              `Average exact matches (Mb) per chromosome`=
-                paste(round(smean.sd(sum_match), 2), collapse = " ± "),
-              `Average exact matches (%) per chromosome`=
-                paste(round(smean.sd(sum_match/tSize*100), 2), collapse = " ± "),
-              `Maximum exact matches (Mb) per chromosome`=max(sum_match),
-              `Minimum exact matches (Mb) per chromosome`=min(sum_match),
-              `Total exact matches (Mb)`=sum(sum_match),
-              .groups = "keep") %>%
+              ~.*1e-6)
+  # Per-species statistics
+  spc_report <- df %>% group_by(Species) %>% makeReport
+  # Statistics across all species
+  tot_report <- df %>% makeReport %>% mutate(Species="All", .before = 1)
+  # Combine reports
+  align_report <- rbind(spc_report, tot_report) %>%
     # Coerce all values to characters
-    ungroup() %>% mutate(across(everything(), as.character)) %>%
+    mutate(across(everything(), as.character)) %>%
     # Transpose table
     pivot_longer(cols = !Species,
-                 names_to = " ", values_to = "Value") %>%
-    pivot_wider(names_from = "Species", values_from = "Value")
-  # write.table(align_report, file = align_report_file,
-  #             quote = F, row.names = F, sep = "\t")
+                 names_to = "Statistic", values_to = "Value") %>%
+    pivot_wider(names_from = "Species", values_from = "Value") %>%
+    column_to_rownames(var = "Statistic")
+  # write.table(align_report, file = align_report_file, quote = F, sep = "\t")
   # print(paste("Table of alignment statistics in:", align_report_file))
   return(align_report)
 }
@@ -294,29 +346,23 @@ if (file.exists(match_sums_file)) {
   print(paste("Table of match sums in:", match_sums_file))
 }
 
+# Plot Venn diagram of species of interest homologs versus references
+homoOverlap(match_sums)
+
 # Select maximal matching contigs
-match_sums_no_0 <- match_sums %>% filter(tNum != "0", qNum != "0")
+# match_sums_no_0 <- match_sums %>% filter(tNum != "0", qNum != "0")
 max_matches <- maxMatches(match_sums)
-max_matches_no_0 <- maxMatches(match_sums_no_0)
+# max_matches_no_0 <- maxMatches(match_sums_no_0)
 
-613375999/spc_int_len
 # Summary for all alignments
-(all_sum <- perSpecies(match_sums))
-(all_sum_no_0 <- perSpecies(match_sums_no_0))
+# (all_sum <- perSpecies(match_sums))
+# (all_sum_no_0 <- perSpecies(match_sums_no_0))
 (max_sum <- perSpecies(max_matches))
-(max_sum_no_0 <- perSpecies(max_matches_no_0))
-
-# Summarize alignment statistics between species of interest and references
-unique_n <- match_sums %>% filter(query == spc_int) %>%
-  select(qName, qSize) %>% unique() %>% pull(qName) %>% length()
-unique_len <- match_sums %>% filter(query == spc_int) %>%
-  select(qName, qSize) %>% unique() %>% pull(qSize) %>% sum()
-unique_len_perc <- unique_len/spc_int_len*100
+# (max_sum_no_0 <- perSpecies(max_matches_no_0))
 
 # _sums or max_ doesn't matter here because of unique()
 match_sums %>% filter(query == spc_int) %>%
   select(qName, qPercent) %>% unique() %>% mutate(qPercent=qPercent*100) %>%
-  # group_by(qName) %>%
   summarize(`Average exact match per query (%)`=
               paste(round(smean.sd(qPercent), 2), collapse = " ± "),
             `Median exact match per query (%)`=median(qPercent),
@@ -324,10 +370,13 @@ match_sums %>% filter(query == spc_int) %>%
             `Minimum exact match per query (%)`=min(qPercent))
 
 
-match_lens_sum <- perHomolog(match_sums)
+# match_lens_sum <- perHomolog(match_sums)
+# match_lens_sum_no_0 <- perHomolog(match_sums_no_0)
 max_match_lens_sum <- perHomolog(max_matches)
+# max_match_lens_sum_no_0 <- perHomolog(max_matches_no_0)
 
 # Save report of alignment statistics by reference species used
-(align_report <- alnReport(match_lens_sum))
+# (align_report <- alnReport(match_lens_sum))
+# (align_report_no_0 <- alnReport(match_lens_sum_no_0))
 (max_align_report <- alnReport(max_match_lens_sum))
-
+# (max_align_report_no_0 <- alnReport(max_match_lens_sum_no_0))
