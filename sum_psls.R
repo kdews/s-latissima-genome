@@ -11,7 +11,10 @@ suppressPackageStartupMessages(library(ggpmisc, quietly = T,
                                        warn.conflicts = F))
 library(RColorBrewer, quietly = T)
 library(BiocManager, quietly = T)
-
+if (require(showtext, quietly = T)) {
+  showtext_auto()
+  if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
+}
 
 # Input
 # Only take command line input if not running interactively
@@ -189,17 +192,20 @@ homoOverlap <- function(match_sums) {
   df_venn <- df_filt %>% group_by(Species) %>%
     summarize(uniq_qName=list(unique(qName)), n=length(unique(qName)),
               .groups = "drop")
-  unique_n <- df_filt %>% select(qName, qSize) %>% unique %>%
-    pull(qName) %>% length
-  unique_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
-  unique_len_perc <- unique_len/spc_int_len*100
-  ttl <- paste0("Uniquely mapped homologs: ", unique_n,
-                " (", round(unique_len*1e-6, 2), " Mb)")
+  un_n <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qName) %>% length
+  un_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
+  un_len_perc <- un_len/spc_int_len*100
+  ttl <- abbrevSpc(spc_int)
+  subttl <- paste0(un_n, " unique homologs (", round(un_len*1e-6, 2), " Mb)")
   v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
                      fill = rainbow(length(df_venn$Species)),
-                     main = ttl, print.mode = "raw", cat.fontface = "italic",
+                     main = ttl, sub = subttl, print.mode = "raw",
+                     main.cex = 2,
+                     # Italicize species names
+                     main.fontface = "italic", cat.fontface = "italic",
                      filename = NULL, disable.logging = T)
-  png(filename = venn_file, res = 110, width = 7, height = 5, units = "in")
+  png(filename = venn_file, res = showtext_opts()$dpi,
+      width = 7, height = 5, units = "in")
   grid.newpage()
   grid.draw(v1)
   dev.off()
