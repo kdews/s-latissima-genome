@@ -1,10 +1,14 @@
- 	S. japonica	M. pyrifera	U. pinnatifida	E. siliculosus
-Average homologs mapped per chromosome	24.55 ± 10.76	18.18 ± 15.5	31.03 ± 16.71	31.89 ± 11.47
-Maximum homologs mapped per chromosome	56	57	60	74
-Minimum homologs mapped per chromosome	6	1	1	16
-Total homologs mapped	761	1091	1024	861
-Average exact matches (Mb) per chromosome	4.73 ± 1.8	1.52 ± 1.39	1.07 ± 0.74	0.63 ± 0.38
-Average exact matches (%) per chromosome	41.88 ± 8.25	18.92 ± 9.56	6.76 ± 3.58	9.62 ± 3.76
-Maximum exact matches (Mb) per chromosome	8.820528	5.065786	2.522421	1.774656
-Minimum exact matches (Mb) per chromosome	1.684755	0.012321	0.002287	0.206719
-Total exact matches (Mb)	146.530515	90.932973	35.362516	17.032372
+E. siliculosus	M. pyrifera	S. japonica	U. pinnatifida	All
+Average n homologs mapped per chromosome	31.57 ± 11.38	18.18 ± 15.5	35.09 ± 60.59	31.03 ± 16.71	26.94 ± 31.23
+Maximum n homologs mapped per chromosome	74	57	362	60	362
+Minimum n homologs mapped per chromosome	16	1	6	1	1
+Total n homologs mapped	884	1091	1123	1024	4122
+Average length of homologs (Mb) per chromosome	19 ± 6.95	10.11 ± 8.34	19.17 ± 20.77	17.77 ± 8.62	15.28 ± 12.52
+Maximum length of homologs (Mb) per chromosome	35.044315	28.396741	126.179055	34.659219	126.179055
+Minimum length of homologs (Mb) per chromosome	7.071743	0.033278	4.211817	0.032404	0.032404
+Total length of homologs (Mb)	531.980578	606.343932	613.375999	586.296307	2337.996816
+Average exact matches (Mb) per chromosome	0.62 ± 0.38	1.52 ± 1.39	5.68 ± 5.7	1.07 ± 0.74	2.13 ± 3.31
+Average exact matches (%) per chromosome	9.32 ± 4.02	18.92 ± 9.56	41.14 ± 9.14	6.76 ± 3.58	19.19 ± 14.52
+Maximum exact matches (Mb) per chromosome	1.774656	5.065786	35.364214	2.522421	35.364214
+Minimum exact matches (Mb) per chromosome	0.206719	0.012321	1.684755	0.002287	0.002287
+Total exact matches (Mb)	17.239655	90.932973	181.894729	35.362516	325.429873

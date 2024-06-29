@@ -2,19 +2,20 @@
 rm(list = ls())
 # Required packages
 library(Hmisc, quietly = T, warn.conflicts = F)
+# library(scales, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(tidyverse, quietly = T,
                                        warn.conflicts = F))
-library(VennDiagram, quietly = T)
-library(ggVennDiagram, quietly = T)
-library(ggpubr, quietly = T, warn.conflicts = F)
-suppressPackageStartupMessages(library(ggpmisc, quietly = T,
-                                       warn.conflicts = F))
-library(RColorBrewer, quietly = T)
-library(BiocManager, quietly = T)
-if (require(showtext, quietly = T)) {
-  showtext_auto()
-  if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
-}
+# library(VennDiagram, quietly = T)
+# library(ggVennDiagram, quietly = T)
+# library(ggpubr, quietly = T, warn.conflicts = F)
+# suppressPackageStartupMessages(library(ggpmisc, quietly = T,
+#                                        warn.conflicts = F))
+# library(RColorBrewer, quietly = T)
+# library(BiocManager, quietly = T)
+# if (require(showtext, quietly = T)) {
+#   showtext_auto()
+#   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
+# }
 
 # Input
 # Only take command line input if not running interactively
@@ -35,14 +36,14 @@ if (interactive()) {
 }
 # Output files
 match_sums_file <- "align_sums.tsv"
-venn_file <- "align_venn_diagram.png"
 max_match_file <- "max_matches.tsv"
+lens_file <- "lens_by_chrom.tsv"
 align_report_file <- "alignment_report.tsv"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
-  venn_file <- paste0(outdir, venn_file)
   max_match_file <- paste0(outdir, max_match_file)
+  lens_file <- paste0(outdir, lens_file)
   align_report_file <- paste0(outdir, align_report_file)
 }
 
@@ -185,31 +186,6 @@ perSpecies <- function(max_matches) {
     pivot_wider(names_from = "target", values_from = "n_and_sum")
   return(max_matches_sum)
 }
-# Summarize alignment statistics between species of interest and all references
-homoOverlap <- function(match_sums) {
-  df_filt <- match_sums %>% filter(query == spc_int) %>%
-    rowwise() %>% mutate(Species=abbrevSpc(target))
-  df_venn <- df_filt %>% group_by(Species) %>%
-    summarize(uniq_qName=list(unique(qName)), n=length(unique(qName)),
-              .groups = "drop")
-  un_n <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qName) %>% length
-  un_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
-  un_len_perc <- un_len/spc_int_len*100
-  ttl <- abbrevSpc(spc_int)
-  subttl <- paste0(un_n, " unique homologs (", round(un_len*1e-6, 2), " Mb)")
-  v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
-                     fill = rainbow(length(df_venn$Species)),
-                     main = ttl, sub = subttl, print.mode = "raw",
-                     main.cex = 2,
-                     # Italicize species names
-                     main.fontface = "italic", cat.fontface = "italic",
-                     filename = NULL, disable.logging = T)
-  png(filename = venn_file, res = showtext_opts()$dpi,
-      width = 7, height = 5, units = "in")
-  grid.newpage()
-  grid.draw(v1)
-  dev.off()
-}
 # Summarize statistics per homolog with species of interest
 perHomolog <- function(df) {
   # Subset species of interest
@@ -236,7 +212,10 @@ calcMeanSd <- function(x) {
 # Function to dynamically summarize variable
 makeSummary <- function(df, col_nm, new_col) {
   av_col <- paste("Average", new_col, "per chromosome")
+  sd_col <- paste("SD", new_col, "per chromosome")
   av_p_col <- paste("Average", gsub(" \\(.*\\)", "", new_col),
+                    "(%) per chromosome")
+  sd_p_col <- paste("SD", gsub(" \\(.*\\)", "", new_col),
                     "(%) per chromosome")
   max_col <- paste("Maximum", new_col, "per chromosome")
   min_col <- paste("Minimum", new_col, "per chromosome")
@@ -275,114 +254,49 @@ alnReport <- function(df) {
   align_report <- rbind(spc_report, tot_report) %>%
     # Coerce all values to characters
     mutate(across(everything(), as.character)) %>%
-    # Transpose table
+    # Pivot longer for plotting
     pivot_longer(cols = !Species,
-                 names_to = "Statistic", values_to = "Value") %>%
-    pivot_wider(names_from = "Species", values_from = "Value") %>%
-    column_to_rownames(var = "Statistic")
-  # write.table(align_report, file = align_report_file, quote = F, sep = "\t")
-  # print(paste("Table of alignment statistics in:", align_report_file))
+                 names_to = "Statistic", values_to = "Value")
   return(align_report)
 }
-# Plot number and length of scaffold matches vs. chromosome length
-plotLens <- function(match_lens_sum) {
-  # Clean up data frame for plotting
-  # Order "Species" column by decreasing relatedness
-  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
-  lvls <- unname(sapply(spc_order, grep, unique(match_lens$Species), value = T))
-  match_lens_sum <- match_lens_sum %>%
-    mutate(Species=factor(Species, levels = lvls),
-           # Convert bp to Mb
-           `Reference chromosome length (Mb)`=tSize*1e-6,
-           `summed homolog lengths (Mb)`=sum_homolog*1e-6,
-           `summed match lengths (Mb)`=sum_match*1e-6,
-           # Change Species variable name for legend
-           Reference=Species)
-  # Function for individual plots
-  lenPlot <- function(my_var, lab_pos) {
-    p <- ggplot(data = match_lens_sum,
-                mapping = aes(x = `Reference chromosome length (Mb)`,
-                              y = .data[[my_var]], group = Reference,
-                              col = Reference, fill = Reference)) +
-      geom_point(alpha = 0.5) +
-      stat_poly_line(formula = y~x+0, alpha = 0.1) +
-      stat_poly_eq(formula = y~x+0, mapping = use_label(labels = c("R2", "eq")),
-                   label.x = lab_pos[["x"]], label.y = lab_pos[["y"]]) +
-      scale_x_continuous(breaks = pretty_breaks()) +
-      scale_y_continuous(breaks = pretty_breaks()) +
-      theme_bw() +
-      theme(legend.text = element_text(face = "italic"))
-    return(p)
-  }
-  # Function to annotate left of plot with italicized name of species of interest
-  annotSpcInt <- function(p) {
-    p <- annotate_figure(
-      p,
-      left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
-    )
-    return(p)
-  }
-  p1 <- lenPlot("summed homolog lengths (Mb)", c(x = "right", y = "bottom"))
-  leg1 <- get_legend(p1)
-  p1 <- annotSpcInt(p1 + theme(legend.position = "none"))
-  p2 <- lenPlot("summed match lengths (Mb)", c(x = "right", y = "top"))
-  p2 <- annotSpcInt(p2 + theme(legend.position = "none"))
-  p <- ggarrange(p1, p2, nrow = 2, align = "hv",
-                 legend.grob = leg1, legend = "right", labels = "AUTO")
-  p <- setNames(list(p), spc_int)
-  return(p)
+# Write transposed alignment report to file
+writeReport <- function(df) {
+  # Transpose table
+  df <- df %>% pivot_wider(names_from = "Species", values_from = "Value") %>%
+    column_to_rownames(var = "Statistic")
+  write.table(df, file = align_report_file, quote = F, sep = "\t")
+  print(paste("Table of alignment statistics in:", align_report_file))
 }
 
-# Use PSL summary file if available
-if (file.exists(match_sums_file)) {
-  match_sums <- read.table(match_sums_file, header = T, sep = "\t")
-} else {
-  # Wrangle raw data
-  psl_files <- listFiles(seq_file)
-  # Read PSL files into list of data frames
-  psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
-  # Remove file extensions from list names
-  names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
-  # Convert scaffold names to size-ordered factors
-  psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
-  # Summarize by contig vs. contig of each syntenic comparison
-  psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
-  match_sums <- collapseSums(psl_sums)
-  write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
-  print(paste("Table of match sums in:", match_sums_file))
-}
-
-# Plot Venn diagram of species of interest homologs versus references
-homoOverlap(match_sums)
-
+# Summarize input data
+# Wrangle raw data
+psl_files <- listFiles(seq_file)
+# Read PSL files into list of data frames
+psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
+# Remove file extensions from list names
+names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
+# Convert scaffold names to size-ordered factors
+psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
+# Summarize by contig vs. contig of each syntenic comparison
+psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+# Combine list of data frames into one labeled by species
+match_sums <- collapseSums(psl_sums)
+write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
+print(paste("Table of match sums in:", match_sums_file))
 # Select maximal matching contigs
-# match_sums_no_0 <- match_sums %>% filter(tNum != "0", qNum != "0")
 max_matches <- maxMatches(match_sums)
-# max_matches_no_0 <- maxMatches(match_sums_no_0)
+print(paste("Table of maximal matches in:", max_match_file))
+write.table(max_matches, max_match_file, quote = F, row.names = F, sep = "\t")
+# Per chromosome view
+max_match_lens_sum <- perHomolog(max_matches)
+write.table(max_match_lens_sum, lens_file, quote = F, row.names = F, sep = "\t")
+print(paste("Table of n and length aligned per chromosome in:", lens_file))
+
+# Summary table
+# Save report of alignment statistics by reference species used
+max_align_report <- alnReport(max_match_lens_sum)
+writeReport(max_align_report)
+
 
 # Summary for all alignments
-# (all_sum <- perSpecies(match_sums))
-# (all_sum_no_0 <- perSpecies(match_sums_no_0))
-(max_sum <- perSpecies(max_matches))
-# (max_sum_no_0 <- perSpecies(max_matches_no_0))
-
-# _sums or max_ doesn't matter here because of unique()
-match_sums %>% filter(query == spc_int) %>%
-  select(qName, qPercent) %>% unique() %>% mutate(qPercent=qPercent*100) %>%
-  summarize(`Average exact match per query (%)`=
-              paste(round(smean.sd(qPercent), 2), collapse = " ± "),
-            `Median exact match per query (%)`=median(qPercent),
-            `Maximum exact match per query (%)`=max(qPercent),
-            `Minimum exact match per query (%)`=min(qPercent))
-
-
-# match_lens_sum <- perHomolog(match_sums)
-# match_lens_sum_no_0 <- perHomolog(match_sums_no_0)
-max_match_lens_sum <- perHomolog(max_matches)
-# max_match_lens_sum_no_0 <- perHomolog(max_matches_no_0)
-
-# Save report of alignment statistics by reference species used
-# (align_report <- alnReport(match_lens_sum))
-# (align_report_no_0 <- alnReport(match_lens_sum_no_0))
-(max_align_report <- alnReport(max_match_lens_sum))
-# (max_align_report_no_0 <- alnReport(max_match_lens_sum_no_0))
+max_sum <- perSpecies(max_matches)
