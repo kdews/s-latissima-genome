@@ -19,6 +19,22 @@ if (require(showtext, quietly = T)) {
 }
 
 # Input
+# Only take command line input if not running interactively
+if (interactive()) {
+  wd <- "/project/noujdine_61/kdeweese/latissima/genome_stats"
+  setwd(wd)
+  # Cactus seqFile
+  seq_file <- "s-latissima-genome/s_lat_alignment.txt"
+  # Species of interest
+  spc_int <- "Saccharina_latissima"
+  # Output directory
+  outdir <- "s-latissima-genome/"
+} else {
+  line_args <- commandArgs(trailingOnly = T)
+  seq_file <- line_args[1]
+  spc_int <- line_args[2]
+  outdir <- line_args[3]
+}
 match_sums_file <- "align_sums.tsv"
 max_match_file <- "max_matches.tsv"
 lens_file <- "lens_by_chrom.tsv"
@@ -29,6 +45,10 @@ lens_plot_file <- "align_length_slopes.png"
 n_box_file <- "align_n_boxplots.png"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
+  match_sums_file <- paste0(outdir, match_sums_file)
+  max_match_file <- paste0(outdir, max_match_file)
+  lens_file <- paste0(outdir, lens_file)
+  align_report_file <- paste0(outdir, align_report_file)
   venn_file <- paste0(outdir, venn_file)
   lens_plot_file <- paste0(outdir, lens_plot_file)
   n_box_file <- paste0(outdir, n_box_file)

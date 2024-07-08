@@ -2,20 +2,8 @@
 rm(list = ls())
 # Required packages
 library(Hmisc, quietly = T, warn.conflicts = F)
-# library(scales, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(tidyverse, quietly = T,
                                        warn.conflicts = F))
-# library(VennDiagram, quietly = T)
-# library(ggVennDiagram, quietly = T)
-# library(ggpubr, quietly = T, warn.conflicts = F)
-# suppressPackageStartupMessages(library(ggpmisc, quietly = T,
-#                                        warn.conflicts = F))
-# library(RColorBrewer, quietly = T)
-# library(BiocManager, quietly = T)
-# if (require(showtext, quietly = T)) {
-#   showtext_auto()
-#   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
-# }
 
 # Input
 # Only take command line input if not running interactively
@@ -262,9 +250,10 @@ alnReport <- function(df) {
 # Write transposed alignment report to file
 writeReport <- function(df) {
   # Transpose table
-  df <- df %>% pivot_wider(names_from = "Species", values_from = "Value") %>%
-    column_to_rownames(var = "Statistic")
-  write.table(df, file = align_report_file, quote = F, sep = "\t")
+  df <- df %>% pivot_wider(names_from = "Species", values_from = "Value")
+    # column_to_rownames(var = "Statistic")
+  write.table(df, file = align_report_file, quote = F, sep = "\t",
+              row.names = F)
   print(paste("Table of alignment statistics in:", align_report_file))
 }
 
