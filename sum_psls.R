@@ -24,12 +24,14 @@ if (interactive()) {
 }
 # Output files
 match_sums_file <- "align_sums.tsv"
+core_scafs_file <- "core_scafs.tsv"
 max_match_file <- "max_matches.tsv"
 lens_file <- "lens_by_chrom.tsv"
 align_report_file <- "alignment_report.tsv"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
+  core_scafs_file <- paste0(outdir, core_scafs_file)
   max_match_file <- paste0(outdir, max_match_file)
   lens_file <- paste0(outdir, lens_file)
   align_report_file <- paste0(outdir, align_report_file)
@@ -159,6 +161,14 @@ collapseSums <- function(psl_sums) {
     arrange(Alignment) %>% select(!Alignment)
   return(match_sums)
 }
+# Intersection of homologous scaffolds between species
+getIntersect <- function(match_sums) {
+  core_scafs <- match_sums %>% filter(query == spc_int) %>%
+    select(target, qName, qSize) %>% unique %>%
+    group_by(qName, qSize) %>% summarize(n=n(), .groups = "drop") %>%
+    filter(n == 4) %>% select(qName, qSize)
+  return(core_scafs)
+}
 # Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(match_sums) {
   max_matches <- match_sums %>% group_by(query, target, qNum) %>%
@@ -200,10 +210,7 @@ calcMeanSd <- function(x) {
 # Function to dynamically summarize variable
 makeSummary <- function(df, col_nm, new_col) {
   av_col <- paste("Average", new_col, "per chromosome")
-  sd_col <- paste("SD", new_col, "per chromosome")
   av_p_col <- paste("Average", gsub(" \\(.*\\)", "", new_col),
-                    "(%) per chromosome")
-  sd_p_col <- paste("SD", gsub(" \\(.*\\)", "", new_col),
                     "(%) per chromosome")
   max_col <- paste("Maximum", new_col, "per chromosome")
   min_col <- paste("Minimum", new_col, "per chromosome")
@@ -224,7 +231,7 @@ makeReport <- function(df) {
   rpt <- cbind(makeSummary(df, `n homologs`, "n homologs mapped"),
                makeSummary(df, sum_homolog, "length of homologs (Mb)"),
                makeSummary(df, sum_match, "exact matches (Mb)"))
-  # Remove any duplicated grouping colunns
+  # Remove any duplicated grouping columns
   rpt <- rpt[!duplicated(colnames(rpt))]
   return(rpt)
 }
@@ -272,6 +279,11 @@ psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
 match_sums <- collapseSums(psl_sums)
 write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
 print(paste("Table of match sums in:", match_sums_file))
+# Save core intersecting scaffolds
+core_scafs <- getIntersect(match_sums)
+write.table(core_scafs, core_scafs_file, quote = F, row.names = F, sep = "\t")
+print(paste("Table of core scaffolds:", core_scafs_file,
+      "(n =", dim(core_scafs)[1], sum(core_scafs$qSize)*1e-6, "Mb)"))
 # Select maximal matching contigs
 max_matches <- maxMatches(match_sums)
 print(paste("Table of maximal matches in:", max_match_file))
@@ -285,7 +297,6 @@ print(paste("Table of n and length aligned per chromosome in:", lens_file))
 # Save report of alignment statistics by reference species used
 max_align_report <- alnReport(max_match_lens_sum)
 writeReport(max_align_report)
-
 
 # Summary for all alignments
 max_sum <- perSpecies(max_matches)
