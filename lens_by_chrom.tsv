@@ -1,4 +1,4 @@
-index	tNum	tSize	Species	sum_homolog	sum_match	n homologs
+index	tNum	tSize	Species	sum_homolog	sum_match	n homologous scaffolds
 0	0	18946431	E. siliculosus	9202176	207283	23
 1	1	10318834	E. siliculosus	27665517	1774656	74
 2	5	9103504	E. siliculosus	35044315	373076	34

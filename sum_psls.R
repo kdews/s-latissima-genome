@@ -43,6 +43,8 @@ psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
              "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
              "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
              "blockCount", "blockSizes", "qStarts", "tStarts")
+# Order species by decreasing relatedness
+spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
 # Total genome length of species of interest
 spc_int_len <- 615545555
 # Get PSL file list from seqFile
@@ -184,7 +186,7 @@ perSpecies <- function(max_matches) {
     pivot_wider(names_from = "target", values_from = "n_and_sum")
   return(max_matches_sum)
 }
-# Summarize statistics per homolog with species of interest
+# Summarize statistics per homologous scaffold with species of interest
 perHomolog <- function(df) {
   # Subset species of interest
   match_lens <- df %>% filter(query == spc_int) %>%
@@ -193,12 +195,11 @@ perHomolog <- function(df) {
     # # Filter out artificial chromosomes
     # mutate(qNum=as.character(qNum), tNum=as.character(tNum)) %>%
     # filter(tNum != "0")
-  # Convert species column to ordered factor sorted by species relatedness
   match_lens_sum <- match_lens %>% group_by(index, tNum, tSize, Species) %>%
     # Sums per ID (i.e., per contig)
     summarize(sum_homolog=sum(qSize),
               sum_match=sum(total_matches),
-              `n homologs`=n(), .groups = "drop") %>% 
+              `n homologous scaffolds`=n(), .groups = "drop") %>% 
     arrange(Species, desc(tSize)) 
   return(match_lens_sum)
 }
@@ -210,26 +211,29 @@ calcMeanSd <- function(x) {
 # Function to dynamically summarize variable
 makeSummary <- function(df, col_nm, new_col) {
   av_col <- paste("Average", new_col, "per chromosome")
+  sd_col <- paste("SD", new_col, "per chromosome")
   av_p_col <- paste("Average", gsub(" \\(.*\\)", "", new_col),
                     "(%) per chromosome")
   max_col <- paste("Maximum", new_col, "per chromosome")
   min_col <- paste("Minimum", new_col, "per chromosome")
   tot_col <- paste("Total", new_col)
-  sum_df <- df %>% summarize({{av_col}}:=calcMeanSd({{col_nm}}),
-                             {{av_p_col}}:=calcMeanSd({{col_nm}}/tSize*100),
-                             {{max_col}}:=max({{col_nm}}),
-                             {{min_col}}:=min({{col_nm}}),
-                             {{tot_col}}:=sum({{col_nm}}),
+  sum_df <- df %>% summarize({{av_col}}:=round(mean({{col_nm}}), digits = 2),
+                             {{sd_col}}:=round(sd({{col_nm}}), digits = 2),
+                             {{av_p_col}}:=round(mean({{col_nm}}/tSize*100), digits = 2),
+                             {{max_col}}:=round(max({{col_nm}}), digits = 2),
+                             {{min_col}}:=round(min({{col_nm}}), digits = 2),
+                             {{tot_col}}:=round(sum({{col_nm}}), digits = 2),
                              .groups = "drop")
-  if (!grepl("exact", new_col)) {
+  # Only include percentage calculation if statistic is matches
+  if (!grepl("matches", new_col)) {
     sum_df <- sum_df[,grep("%", colnames(sum_df), invert = T, value = T)]
   }
   return(sum_df)
 }
 # Make report
 makeReport <- function(df) {
-  rpt <- cbind(makeSummary(df, `n homologs`, "n homologs mapped"),
-               makeSummary(df, sum_homolog, "length of homologs (Mb)"),
+  rpt <- cbind(makeSummary(df, `n homologous scaffolds`, "n homologous scaffolds mapped"),
+               makeSummary(df, sum_homolog, "length of homologous scaffolds (Mb)"),
                makeSummary(df, sum_match, "exact matches (Mb)"))
   # Remove any duplicated grouping columns
   rpt <- rpt[!duplicated(colnames(rpt))]
@@ -258,7 +262,10 @@ alnReport <- function(df) {
 writeReport <- function(df) {
   # Transpose table
   df <- df %>% pivot_wider(names_from = "Species", values_from = "Value")
-    # column_to_rownames(var = "Statistic")
+  # Order "Species" column by increasing relatedness
+  col_ord <- unname(sapply(spc_order, grep, colnames(df), value = T))
+  col_ord <- c("Statistic", rev(col_ord), "All")
+  df <- df[,col_ord]
   write.table(df, file = align_report_file, quote = F, sep = "\t",
               row.names = F)
   print(paste("Table of alignment statistics in:", align_report_file))

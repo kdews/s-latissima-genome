@@ -41,8 +41,7 @@ lens_file <- "lens_by_chrom.tsv"
 align_report_file <- "alignment_report.tsv"
 # Output
 venn_file <- "align_venn_diagram.png"
-lens_plot_file <- "align_length_slopes.png"
-n_box_file <- "align_n_boxplots.png"
+align_plot_file <- "align_length_and_n.png"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
@@ -50,8 +49,7 @@ if (dir.exists(outdir)) {
   lens_file <- paste0(outdir, lens_file)
   align_report_file <- paste0(outdir, align_report_file)
   venn_file <- paste0(outdir, venn_file)
-  lens_plot_file <- paste0(outdir, lens_plot_file)
-  n_box_file <- paste0(outdir, n_box_file)
+  align_plot_file <- paste0(outdir, align_plot_file)
 }
 
 # df <- read.table(max_match_file, sep = "\t", header = T)
@@ -64,6 +62,16 @@ if (dir.exists(outdir)) {
 # 146.5/615
 
 # Functions
+# Total genome length of species of interest
+spc_int_len <- 615545555
+# Abbreviate species genus name
+abbrevSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  let1 <- substr(spc[1], 1, 1)
+  spc[1] <- paste0(let1, ".")
+  spc_a <- paste(spc, collapse = " ")
+  return(spc_a)
+}
 # Clean up data frame for plotting
 cleanDf <- function(df) {
   # Order "Species" column by decreasing relatedness
@@ -73,13 +81,12 @@ cleanDf <- function(df) {
   df_clean <- df %>% mutate(Species=factor(Species, levels = lvls),
                             # Convert bp to Mb
                             `Reference chromosome length (Mb)`=tSize*1e-6,
-                            `summed homolog lengths (Mb)`=sum_homolog*1e-6,
-                            `summed match lengths (Mb)`=sum_match*1e-6,
+                            `Homologous scaffolds (Mb)`=sum_homolog*1e-6,
+                            `Exact matches (Mb)`=sum_match*1e-6,
                             # Change Species variable name for legend
-                            Reference=Species) 
-  # %>%
-  #   # Filter out artificial chromosomes
-  #   filter(tNum != 0)
+                            Reference=Species)
+  # Catch spaces converted to periods in read.table
+  colnames(df_clean) <- gsub("\\.", " ", colnames(df_clean))
   return(df_clean)
 }
 # Summarize alignment statistics between species of interest and all references
@@ -93,7 +100,7 @@ homoOverlap <- function(match_sums) {
   un_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
   un_len_perc <- un_len/spc_int_len*100
   ttl <- abbrevSpc(spc_int)
-  subttl <- paste0(un_n, " unique homologs (", round(un_len*1e-6, 2), " Mb)")
+  subttl <- paste0(un_n, " unique homologous scaffolds (", round(un_len*1e-6, 2), " Mb)")
   v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
                      fill = rainbow(length(df_venn$Species)),
                      main = ttl, sub = subttl, print.mode = "raw",
@@ -111,8 +118,13 @@ homoOverlap <- function(match_sums) {
 plotLens <- function(df) {
   # Clean up data frame for plotting
   df <- cleanDf(df)
+  # Filter out artificial chromosomes
+  df <- df %>% filter(tNum != 0)
   # Function for individual plots
   lenPlot <- function(my_var, lab_pos) {
+    y_label <- gsub("(\\(.+\\))",
+                    paste0("in \\*", abbrevSpc(spc_int), "\\* \\1"),
+                    my_var)
     p <- ggplot(data = df,
                 mapping = aes(x = `Reference chromosome length (Mb)`,
                               y = .data[[my_var]], group = Reference,
@@ -123,55 +135,48 @@ plotLens <- function(df) {
                    label.x = lab_pos[["x"]], label.y = lab_pos[["y"]]) +
       scale_x_continuous(breaks = pretty_breaks()) +
       scale_y_continuous(breaks = pretty_breaks()) +
+      ylab(y_label) +
       theme_bw() +
-      theme(legend.text = element_text(face = "italic"))
+      theme(legend.text = element_text(face = "italic"),
+            axis.title.y = ggtext::element_markdown())
     return(p)
   }
-  # Function to annotate left of plot with italicized name of species of interest
-  annotSpcInt <- function(p) {
-    p <- annotate_figure(
-      p,
-      left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
-    )
-    return(p)
-  }
-  p1 <- lenPlot("summed homolog lengths (Mb)", c(x = "right", y = "bottom"))
-  leg1 <- get_legend(p1)
-  p1 <- annotSpcInt(p1 + theme(legend.position = "none"))
-  p2 <- lenPlot("summed match lengths (Mb)", c(x = "right", y = "top"))
-  p2 <- annotSpcInt(p2 + theme(legend.position = "none"))
-  p <- ggarrange(p1, p2, nrow = 2, align = "hv",
-                 legend.grob = leg1, legend = "right", labels = "AUTO")
-  p <- setNames(list(p), spc_int)
+  p1 <- lenPlot("Homologous scaffolds (Mb)", c(x = "right", y = "bottom"))
+  p2 <- lenPlot("Exact matches (Mb)", c(x = "left", y = "top"))
+  p <- ggarrange(p1, p2, nrow = 2, labels = "AUTO", common.legend = T,
+                 legend = "left", align = "hv")
   return(p)
 }
 # Boxplots of n aligned per species
 plotN <- function(df) {
   # Clean up data frame for plotting
   df <- cleanDf(df)
-  p <- ggplot(data = df, mapping = aes(x = Reference, y = `n homologs`,
+  y_label <- paste0("*", abbrevSpc(spc_int), "* scaffolds aligned per chromosome")
+  p <- ggplot(data = df, mapping = aes(x = Reference, y = `n homologous scaffolds`,
                                        col = Reference, fill = Reference)) +
     geom_point(show.legend = F) +
     geom_boxplot(alpha = 0.5, width = 0.3,
                  outlier.alpha = 1, outlier.shape = 24, outlier.size = 2,
                  show.legend = F) +
     scale_y_continuous(breaks = breaks_width(20)) +
+    ylab(y_label) +
     theme_bw() +
-    theme(axis.text.x = element_text(face = "italic"))
+    theme(axis.text.x = element_text(face = "italic"),
+          axis.title.y = ggtext::element_markdown())
   # If highest point is outlier, separate plot into high and low range
-  rng <- diff(range(df$`n homologs`))
-  max_y <- sort(df$`n homologs`, decreasing = T)[1]
-  max_y_2 <- sort(df$`n homologs`, decreasing = T)[2]
+  rng <- diff(range(df$`n homologous scaffolds`))
+  max_y <- sort(df$`n homologous scaffolds`, decreasing = T)[1]
+  max_y_2 <- sort(df$`n homologous scaffolds`, decreasing = T)[2]
   if ((max_y - max_y_2)/rng > 0.5) {
-    low_rng <- p + coord_cartesian(ylim = c(0, max_y_2)) +
-      theme(axis.title.y = element_blank())
+    low_rng <- p + coord_cartesian(ylim = c(0, max_y_2))
     hi_rng <- p + coord_cartesian(ylim = c(max_y-10, max_y+10)) +
-      theme(axis.title = element_blank(),
+      theme(axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank())
-    p <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 4), align = "v")
-    p <- annotate_figure(p, left = "n aligned per chromosome")
+    p <- ggarrange(hi_rng, low_rng, nrow = 2, heights = c(1, 5), align = "v")
   }
+  # p <- annotate_figure(p, fig.lab = "C", fig.lab.face = "bold")
   return(p)
 }
 
@@ -181,14 +186,16 @@ max_matches <- read.table(max_match_file, header = T, sep = "\t")
 max_match_lens_sum <- read.table(lens_file, header = T, sep = "\t")
 
 # Plots
-# Venn diagram of species of interest homologs versus references
+# Venn diagram of species of interest homologous scaffolds versus references
 homoOverlap(match_sums)
 # Length of alignment by chromosome and species
 lens_plot <- plotLens(max_match_lens_sum)
 # n aligned by chromosome and species
 n_box <- plotN(max_match_lens_sum)
+fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
+                 widths = c(1, 0.8))
 # Save plots
 showtext_opts(dpi = 300)
-ggsave(filename = lens_plot_file, plot = lens_plot, bg = "white")
-ggsave(filename = n_box_file, plot = n_box, bg = "white")
+ggsave(filename = align_plot_file, plot = fig, bg = "white",
+       width = 10, height = 8, units = "in")
 showtext_opts(dpi = 100)

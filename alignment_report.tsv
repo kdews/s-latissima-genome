@@ -1,14 +1,17 @@
-Statistic	E. siliculosus	M. pyrifera	S. japonica	U. pinnatifida	All
-Average n homologs mapped per chromosome	31.57 ± 11.38	18.18 ± 15.5	35.09 ± 60.59	31.03 ± 16.71	26.94 ± 31.23
-Maximum n homologs mapped per chromosome	74	57	362	60	362
-Minimum n homologs mapped per chromosome	16	1	6	1	1
-Total n homologs mapped	884	1091	1123	1024	4122
-Average length of homologs (Mb) per chromosome	19 ± 6.95	10.11 ± 8.34	19.17 ± 20.77	17.77 ± 8.62	15.28 ± 12.52
-Maximum length of homologs (Mb) per chromosome	35.044315	28.396741	126.179055	34.659219	126.179055
-Minimum length of homologs (Mb) per chromosome	7.071743	0.033278	4.211817	0.032404	0.032404
-Total length of homologs (Mb)	531.980578	606.343932	613.375999	586.296307	2337.996816
-Average exact matches (Mb) per chromosome	0.62 ± 0.38	1.52 ± 1.39	5.68 ± 5.7	1.07 ± 0.74	2.13 ± 3.31
-Average exact matches (%) per chromosome	9.32 ± 4.02	18.92 ± 9.56	41.14 ± 9.14	6.76 ± 3.58	19.19 ± 14.52
-Maximum exact matches (Mb) per chromosome	1.774656	5.065786	35.364214	2.522421	35.364214
-Minimum exact matches (Mb) per chromosome	0.206719	0.012321	1.684755	0.002287	0.002287
-Total exact matches (Mb)	17.239655	90.932973	181.894729	35.362516	325.429873
+Statistic	E. siliculosus	U. pinnatifida	M. pyrifera	S. japonica	All
+Average n homologous scaffolds mapped per chromosome	31.57	31.03	18.18	35.09	26.94
+SD n homologous scaffolds mapped per chromosome	11.38	16.71	15.5	60.59	31.23
+Maximum n homologous scaffolds mapped per chromosome	74	60	57	362	362
+Minimum n homologous scaffolds mapped per chromosome	16	1	1	6	1
+Total n homologous scaffolds mapped	884	1024	1091	1123	4122
+Average length of homologous scaffolds (Mb) per chromosome	19	17.77	10.11	19.17	15.28
+SD length of homologous scaffolds (Mb) per chromosome	6.95	8.62	8.34	20.77	12.52
+Maximum length of homologous scaffolds (Mb) per chromosome	35.04	34.66	28.4	126.18	126.18
+Minimum length of homologous scaffolds (Mb) per chromosome	7.07	0.03	0.03	4.21	0.03
+Total length of homologous scaffolds (Mb)	531.98	586.3	606.34	613.38	2338
+Average exact matches (Mb) per chromosome	0.62	1.07	1.52	5.68	2.13
+SD exact matches (Mb) per chromosome	0.38	0.74	1.39	5.7	3.31
+Average exact matches (%) per chromosome	9.32	6.76	18.92	41.14	19.19
+Maximum exact matches (Mb) per chromosome	1.77	2.52	5.07	35.36	35.36
+Minimum exact matches (Mb) per chromosome	0.21	0	0.01	1.68	0
+Total exact matches (Mb)	17.24	35.36	90.93	181.89	325.43
