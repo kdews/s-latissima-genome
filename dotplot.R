@@ -314,50 +314,6 @@ pivotPsl <- function(df_name, df_list) {
     mutate(tNum = factor(tNum, levels = levels(df$tNum)))
   return(df_p)
 }
-# Plot number and length of scaffold matches vs. chromosome length (match_lens)
-plotLens <- function(match_lens_sum) {
-  # Clean up data frame for plotting
-  match_lens_sum <- match_lens_sum %>%
-    # Convert bp to Mb
-    mutate(`Reference chromosome length (Mb)`=tSize*1e-6,
-           `summed homolog lengths (Mb)`=sum_homolog*1e-6,
-           `summed match lengths (Mb)`=sum_match*1e-6,
-           # Change Species variable name for legend
-           Reference=Species)
-  # Function for individual plots
-  lenPlot <- function(my_var, lab_pos) {
-    p <- ggplot(data = match_lens_sum,
-                mapping = aes(x = `Reference chromosome length (Mb)`,
-                              y = .data[[my_var]], group = Reference,
-                              col = Reference, fill = Reference)) +
-      geom_point(alpha = 0.5) +
-      stat_poly_line(formula = y~x+0, alpha = 0.1) +
-      stat_poly_eq(formula = y~x+0, mapping = use_label(labels = c("R2", "eq")),
-                   label.x = lab_pos[["x"]], label.y = lab_pos[["y"]]) +
-      scale_x_continuous(breaks = pretty_breaks()) +
-      scale_y_continuous(breaks = pretty_breaks()) +
-      theme_bw() +
-      theme(legend.text = element_text(face = "italic"))
-    return(p)
-  }
-  # Function to annotate left of plot with italicized name of species of interest
-  annotSpcInt <- function(p) {
-    p <- annotate_figure(
-      p,
-      left = text_grob(abbrevSpc(spc_int), face = "italic", rot = 90)
-    )
-    return(p)
-  }
-  p1 <- lenPlot("summed homolog lengths (Mb)", c(x = "right", y = "bottom"))
-  leg1 <- get_legend(p1)
-  p1 <- annotSpcInt(p1 + theme(legend.position = "none"))
-  p2 <- lenPlot("summed match lengths (Mb)", c(x = "right", y = "top"))
-  p2 <- annotSpcInt(p2 + theme(legend.position = "none"))
-  p <- ggarrange(p1, p2, nrow = 2, align = "hv",
-                 legend.grob = leg1, legend = "right", labels = "AUTO")
-  p <- setNames(list(p), spc_int)
-  return(p)
-}
 # Plot heatmap of given matrix
 heatPsl <- function(match_name, match_list, df_list) {
   match <- match_list[[match_name]]
@@ -370,8 +326,8 @@ heatPsl <- function(match_name, match_list, df_list) {
   leg_name <- paste("Synteny", "coverage", sep = "\n")
   # Filter out artificial chromosomes
   match <- match %>% filter(tNum != "0", qNum != "0")
-    # # Filter out small scaffolds/contigs from query (remove <1Mb)
-    # filter(qSize > 1e6)
+  # # Filter out small scaffolds/contigs from query (remove <1Mb)
+  # filter(qSize > 1e6)
   # Order of query contigs while their respective homologs (tNum) are size-ordered
   h_order <- match %>% arrange(tNum) %>% pull(qNum) %>% as.character()
   # Apply filtering from match data frame
@@ -385,7 +341,7 @@ heatPsl <- function(match_name, match_list, df_list) {
       scale_y_continuous(expand = c(0, 0), breaks = breaks_width(100))
   } else {
     p <- ggplot(data = df, mapping = aes(fill = qPercent, x = tNum, y = qNum))
-    }
+  }
   p <- p + geom_tile() +
     scale_fill_viridis_c(option = "turbo", labels = label_percent(),
                          name = leg_name) +
