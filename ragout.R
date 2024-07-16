@@ -546,7 +546,9 @@ pre_gaps <- findGaps(pre_genome_file)
 ragout_dirs <- list.files(pattern = "ragout-out-")
 # ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
 ragout_dirs <- grep("solid.*refine", ragout_dirs, value = T)
-result_list1 <- runAnalysis(ragout_dir, seqs, pre_gaps, outfiles$len_plot, outfiles$map_plot)
-# result_list2 <- runAnalysis(ragout_dirs, seqs, pre_gaps, outfiles$comp_len_plot, outfiles$comp_map_plot)
+result_list1 <- runAnalysis(ragout_dir, seqs, pre_gaps, outfiles$len_plot,
+                            outfiles$map_plot)
+# result_list2 <- runAnalysis(ragout_dirs, seqs, pre_gaps, outfiles$comp_len_plot,
+#                             outfiles$comp_map_plot)
 
 sumAgp(result_list1$idx_agp_list$`ragout-out-all-solid-refine-update`)
