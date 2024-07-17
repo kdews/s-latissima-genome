@@ -266,25 +266,32 @@ writeReport <- function(df) {
   col_ord <- unname(sapply(spc_order, grep, colnames(df), value = T))
   col_ord <- c("Statistic", rev(col_ord), "All")
   df <- df[,col_ord]
-  write.table(df, file = align_report_file, quote = F, sep = "\t",
-              row.names = F)
+  # Save TSV
+  write.table(df, file = align_report_file, quote = F, sep = "\t", row.names = F)
   print(paste("Table of alignment statistics in:", align_report_file))
+  return(df)
 }
 
 # Summarize input data
-# Wrangle raw data
-psl_files <- listFiles(seq_file)
-# Read PSL files into list of data frames
-psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
-# Remove file extensions from list names
-names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
-# Convert scaffold names to size-ordered factors
-psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
-# Summarize by contig vs. contig of each syntenic comparison
-psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
-# Combine list of data frames into one labeled by species
-match_sums <- collapseSums(psl_sums)
-write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
+# Check for existing summary file
+if (file.exists(match_sums_file)) {
+  print("Skipping summary step.")
+  match_sums <- read.table(match_sums_file, header = T, sep = "\t")
+} else {
+  # Wrangle raw data
+  psl_files <- listFiles(seq_file)
+  # Read PSL files into list of data frames
+  psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
+  # Remove file extensions from list names
+  names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
+  # Convert scaffold names to size-ordered factors
+  psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
+  # Summarize by contig vs. contig of each syntenic comparison
+  psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+  # Combine list of data frames into one labeled by species
+  match_sums <- collapseSums(psl_sums)
+  write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
+}
 print(paste("Table of match sums in:", match_sums_file))
 # Save core intersecting scaffolds
 core_scafs <- getIntersect(match_sums)
@@ -303,7 +310,21 @@ print(paste("Table of n and length aligned per chromosome in:", lens_file))
 # Summary table
 # Save report of alignment statistics by reference species used
 max_align_report <- alnReport(max_match_lens_sum)
-writeReport(max_align_report)
+max_align_report_pretty <- writeReport(max_align_report)
+# Update README.md with summary table
+align_report_md_file <- gsub("\\..*", ".md", align_report_file)
+max_align_report_md <- knitr::kable(max_align_report_pretty)
+write(x = max_align_report_md, file = align_report_md_file)
+max_align_report_md <- read_file(align_report_md_file)
+readme <- read_file(paste0(outdir, "README.md"))
+rep_md <- paste("\\1", max_align_report_md, "\\2", sep = "\n\n")
+new_readme <- gsub("(<!-- align_table_start -->).*(<!-- align_table_end -->)",
+                   rep_md, readme)
+readme_file <- paste0(outdir, "new_README.md")
+write(x = new_readme, file = readme_file)
 
-# Summary for all alignments
-max_sum <- perSpecies(max_matches)
+
+# # Summary for all alignments
+# max_sum <- perSpecies(max_matches)
+
+
