@@ -28,6 +28,7 @@ core_scafs_file <- "core_scafs.tsv"
 max_match_file <- "max_matches.tsv"
 lens_file <- "lens_by_chrom.tsv"
 align_report_file <- "alignment_report.tsv"
+readme_file <- "README.md"
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
@@ -35,6 +36,7 @@ if (dir.exists(outdir)) {
   max_match_file <- paste0(outdir, max_match_file)
   lens_file <- paste0(outdir, lens_file)
   align_report_file <- paste0(outdir, align_report_file)
+  readme_file <- paste0(outdir, readme_file)
 }
 
 # Functions
@@ -312,19 +314,15 @@ print(paste("Table of n and length aligned per chromosome in:", lens_file))
 max_align_report <- alnReport(max_match_lens_sum)
 max_align_report_pretty <- writeReport(max_align_report)
 # Update README.md with summary table
+readme <- read_file(readme_file)
 align_report_md_file <- gsub("\\..*", ".md", align_report_file)
 max_align_report_md <- knitr::kable(max_align_report_pretty)
 write(x = max_align_report_md, file = align_report_md_file)
 max_align_report_md <- read_file(align_report_md_file)
-readme <- read_file(paste0(outdir, "README.md"))
 rep_md <- paste("\\1", max_align_report_md, "\\2", sep = "\n\n")
 new_readme <- gsub("(<!-- align_table_start -->).*(<!-- align_table_end -->)",
                    rep_md, readme)
-readme_file <- paste0(outdir, "new_README.md")
 write(x = new_readme, file = readme_file)
-
 
 # # Summary for all alignments
 # max_sum <- perSpecies(max_matches)
-
-
