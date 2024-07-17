@@ -212,18 +212,21 @@ calcMeanSd <- function(x) {
 }
 # Function to dynamically summarize variable
 makeSummary <- function(df, col_nm, new_col) {
-  av_col <- paste("Average", new_col, "per chromosome")
+  av_col <- paste("Mean", new_col, "per chromosome")
   sd_col <- paste("SD", new_col, "per chromosome")
-  av_p_col <- paste("Average", gsub(" \\(.*\\)", "", new_col),
+  av_p_col <- paste("Mean", gsub(" \\(.*\\)", "", new_col),
                     "(%) per chromosome")
-  max_col <- paste("Maximum", new_col, "per chromosome")
-  min_col <- paste("Minimum", new_col, "per chromosome")
+  med_col <- paste("Median", new_col, "per chromosome")
+  # max_col <- paste("Maximum", new_col, "per chromosome")
+  # min_col <- paste("Minimum", new_col, "per chromosome")
   tot_col <- paste("Total", new_col)
   sum_df <- df %>% summarize({{av_col}}:=round(mean({{col_nm}}), digits = 2),
                              {{sd_col}}:=round(sd({{col_nm}}), digits = 2),
-                             {{av_p_col}}:=round(mean({{col_nm}}/tSize*100), digits = 2),
-                             {{max_col}}:=round(max({{col_nm}}), digits = 2),
-                             {{min_col}}:=round(min({{col_nm}}), digits = 2),
+                             {{av_p_col}}:=round(mean({{col_nm}}/tSize*100),
+                                                 digits = 2),
+                             {{med_col}}:=round(median({{col_nm}}), digits = 2),
+                             # {{max_col}}:=round(max({{col_nm}}), digits = 2),
+                             # {{min_col}}:=round(min({{col_nm}}), digits = 2),
                              {{tot_col}}:=round(sum({{col_nm}}), digits = 2),
                              .groups = "drop")
   # Only include percentage calculation if statistic is matches
