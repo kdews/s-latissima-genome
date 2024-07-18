@@ -59,17 +59,17 @@ sizeSort <- function(df, id_col, size_col) {
 }
 # Order PSL data frame by contig size by converting contig names to factors
 orderPsl <- function(df) {
-  df <- df %>%
-    mutate(tName=paste(target, tName, sep = ";")) %>%
-    mutate(qName=paste(query, qName, sep = ";"))
+  # df <- df %>%
+  #   mutate(tName=paste(target, tName, sep = ";")) %>%
+  #   mutate(qName=paste(query, qName, sep = ";"))
   # Order ID character vectors by size
-  query_contigs <- sizeSort(df, "qName", "qSize")
-  target_contigs <- sizeSort(df, "tName", "tSize")
+  # query_contigs <- sizeSort(df, "qName", "qSize")
+  # target_contigs <- sizeSort(df, "tName", "tSize")
   # query_nums <- sizeSort(df, "qNum", "qSize")
   # target_nums <- sizeSort(df, "tNum", "tSize")
   # Capture size rank of each target ID with index
-  target_idx <- df %>% select(tName, tSize) %>%
-    arrange(desc(tSize)) %>% unique %>%
+  target_idx <- df %>% select(tName, tSize, qSize) %>%
+    arrange(desc(tSize), desc(qSize)) %>% unique %>%
     # # Filter out artificial chromosomes for ranking
     # filter(fixChrom(tName) != "0") %>%
     # Use row ids for index
@@ -80,22 +80,26 @@ orderPsl <- function(df) {
     # Convert to named vector
     deframe()
   df <- df %>%
-    arrange(target, desc(tSize), desc(qSize)) %>%
+    # arrange(target, desc(tSize), desc(qSize)) %>%
+    arrange(desc(tSize), desc(qSize)) %>%
     # Convert all IDs to factors ordered by size
-    mutate(qName=factor(qName, levels = unique(qName)),
-           tName=factor(tName, levels = unique(tName)),
-           # qNum=factor(qNum, levels = query_nums),
-           # tNum=factor(tNum, levels = target_nums),
-           # Add integer index column using named vector
-           index=as.integer(target_idx[tName])) %>%
-    arrange(qName)
+    mutate(
+      qName=factor(qName, levels = unique(qName)),
+      tName=factor(tName, levels = unique(tName)),
+      # qNum=factor(qNum, levels = query_nums),
+      # tNum=factor(tNum, levels = target_nums),
+      # Add integer index column using named vector
+      # index=as.integer(target_idx[tName])
+      )
+    # arrange(qName)
   return(df)
 }
 # Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(match_sums) {
   max_matches <- match_sums %>% group_by(query, target, qNum) %>%
     filter(qPercent == max(qPercent)) %>% ungroup %>%
-    arrange(query, target, tNum)
+    # arrange(query, target, tNum)
+    arrange(desc(tSize), desc(qSize))
   return(max_matches)
 }
 # Pivot PSL summary data frame for ggplot2 heatmap
@@ -113,18 +117,21 @@ pivotPsl <- function(df) {
            target = abbrevSpc(gsub(";.*", "", tName))) %>%
     ungroup %>%
     # Preserve factor order
-    mutate(tName = factor(tName, levels = levels(df$tName)))
+    # mutate(tName = factor(tName, levels = levels(df$tName)))
+    mutate(qName = factor(qName, levels = levels(df$qName)))
   return(df_p)
 }
 # Order query ID factors by max matches
 plotOrder <- function(match_sums, max_matches) {
-  h_order <- max_matches %>%
-    arrange(target, desc(tSize), desc(qSize)) %>%
-    pull(qName) %>%
-    as.character %>% unique
+  h_order_y <- max_matches %>% arrange(desc(tSize), desc(qSize)) %>%
+    # arrange(target, desc(tSize), desc(qSize)) %>%
+    pull(qName) %>% as.character %>% unique
+  h_order_x <- max_matches %>% arrange(desc(tSize), desc(qSize)) %>%
+    pull(tName) %>% as.character %>% unique
   match_sums <- match_sums %>%
     filter(tName %in% max_matches$tName, qName %in% max_matches$qName) %>%
-    mutate(qName = factor(x = qName, levels = h_order, ordered = T),
+    mutate(qName = factor(x = qName, levels = h_order_y),
+           tName = factor(x = tName, levels = h_order_x),
            qindex = as.integer(qName))
   return(match_sums)
 }
@@ -144,9 +151,7 @@ heatPsl <- function(match_sums_piv) {
   leg_name <- paste("Synteny", "coverage", sep = "\n")
   match_sums_piv <- match_sums_piv %>%
     # Filter out artificial chromosomes
-    filter(fixChrom(tName) != "0", fixChrom(qName) != "0",
-           # Keep only species of interest queries
-           query == abbrevSpc(spc_int))
+    filter(fixChrom(tName) != "0", fixChrom(qName) != "0")
   # x_label <- abbrevSpc(spc_int)
   # y_label <- abbrevSpc("Saccharina_japonica")
   # ttl <- paste(x_label, "vs", y_label)
@@ -186,16 +191,57 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
 
 # Read in PSL summary files
 match_sums <- read.table(match_sums_file, header = T, sep = "\t")
-max_matches <- maxMatches(match_sums)
-# Convert scaffold names to size-ordered factors
-match_sums_ord <- orderPsl(match_sums)
-max_matches_ord <- orderPsl(max_matches)
-# Pivot PSL summary data frame for ggplot2 heatmap
-match_sums_piv <- pivotPsl(match_sums_ord)
-match_sums_piv <- plotOrder(match_sums_piv, max_matches_ord)
+match_sums <- match_sums %>%
+  filter(query == spc_int) %>%
+  mutate(tName=paste(target, tName, sep = ";"),
+         qName=paste(query, qName, sep = ";"))
+# match_sums <- orderPsl(match_sums)
+# max_matches <- maxMatches(match_sums)
+# match_sums_pivs <- pivotPsl(match_sums)
+# match_sums_pivs_ord <- plotOrder(match_sums_pivs, max_matches)
+q_ord <- sizeSort(match_sums, "qName", "qSize")
+t_ord <- sizeSort(match_sums, "tName", "tSize")
+match_sums <- match_sums %>%
+  mutate(qName=factor(qName, levels = q_ord, ordered = T),
+         tName=factor(tName, levels = t_ord, ordered = T))
+max_matches <- match_sums %>%
+  group_by(tName) %>%
+  filter(qPercent == max(qPercent)) %>% ungroup %>%
+  arrange(tName)
+h_order <- max_matches %>%
+  arrange(tName) %>%
+  pull(qName) %>%
+  as.character %>% unique
+match_sums_pivs <- match_sums %>%
+  pivot_wider(id_cols = qName,
+              names_from = tName,
+              values_from = qPercent,
+              values_fill = 0) %>%
+  pivot_longer(!qName,
+               names_to = "tName",
+               values_to = "qPercent") %>%
+  rowwise %>%
+  mutate(query = abbrevSpc(gsub(";.*", "", qName)),
+         target = abbrevSpc(gsub(";.*", "", tName))) %>%
+  ungroup %>%
+  # Preserve factor order
+  mutate(tName = factor(tName, levels = levels(match_sums$tName)))
+match_sums_pivs <- match_sums_pivs %>%
+  filter(tName %in% max_matches$tName, qName %in% max_matches$qName) %>%
+  mutate(qName = factor(x = qName, levels = h_order, ordered = T))
+heatPsl(match_sums_pivs)
+ 
+# match_sums <- read.table(match_sums_file, header = T, sep = "\t")
+# max_matches <- maxMatches(match_sums)
+# # Convert scaffold names to size-ordered factors
+# match_sums_ord <- orderPsl(match_sums)
+# max_matches_ord <- orderPsl(max_matches)
+# # Pivot PSL summary data frame for ggplot2 heatmap
+# match_sums_piv <- pivotPsl(match_sums_ord)
+# match_sums_piv <- plotOrder(match_sums_piv, max_matches_ord)
 
 # # Plots
-(psl_heat <- heatPsl(match_sums_piv))
+# (psl_heat <- heatPsl(match_sums_piv))
 # # Heatmaps of genome vs. genome synteny
 # print("Saving heatmaps...")
 # h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,

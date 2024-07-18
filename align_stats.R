@@ -151,6 +151,8 @@ plotLens <- function(df) {
 plotN <- function(df) {
   # Clean up data frame for plotting
   df <- cleanDf(df)
+  sum_df <- df %>% group_by(Species) %>%
+    summarize(med_n=median(`n homologous scaffolds`))
   y_label <- paste0("*", abbrevSpc(spc_int), "* scaffolds aligned per chromosome")
   p <- ggplot(data = df, mapping = aes(x = Reference, y = `n homologous scaffolds`,
                                        col = Reference, fill = Reference)) +
@@ -158,6 +160,8 @@ plotN <- function(df) {
     geom_boxplot(alpha = 0.5, width = 0.3,
                  outlier.alpha = 1, outlier.shape = 24, outlier.size = 2,
                  show.legend = F) +
+    stat_summary(geom = "text", label = sum_df$med_n, fun = median,
+                 position = position_nudge(x = 0.35, y = 0), show.legend = F) +
     scale_y_continuous(breaks = breaks_width(20)) +
     ylab(y_label) +
     theme_bw() +
@@ -192,11 +196,10 @@ homoOverlap(match_sums)
 lens_plot <- plotLens(max_match_lens_sum)
 # n aligned by chromosome and species
 n_box <- plotN(max_match_lens_sum)
-n_box
-# fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
-#                  widths = c(1, 0.8))
-# # Save plots
-# showtext_opts(dpi = 300)
-# ggsave(filename = align_plot_file, plot = fig, bg = "white",
-#        width = 10, height = 8, units = "in")
-# showtext_opts(dpi = 100)
+fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
+                 widths = c(1, 0.8))
+# Save plots
+showtext_opts(dpi = 300)
+ggsave(filename = align_plot_file, plot = fig, bg = "white",
+       width = 10, height = 8, units = "in")
+showtext_opts(dpi = 100)
