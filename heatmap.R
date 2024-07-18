@@ -2,6 +2,8 @@
 rm(list = ls())
 # Load required packages
 library(scales, quietly = T, warn.conflicts = F)
+library(cooccur)
+# library(visNetwork)
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 
@@ -34,6 +36,8 @@ if (dir.exists(outdir)) {
 
 
 # Functions
+# Order species by decreasing relatedness
+spc_order <- c("latissima","japonica", "pyrifera", "pinnatifida", "siliculosus")
 # Abbreviate species genus name
 abbrevSpc <- function(spc) {
   spc <- unlist(strsplit(spc, "_| "))
@@ -96,7 +100,7 @@ orderPsl <- function(df) {
 }
 # Pull out maximal matching contigs, where most of query contig maps onto target
 maxMatches <- function(match_sums) {
-  max_matches <- match_sums %>% group_by(query, target, qNum) %>%
+  max_matches <- match_sums %>% group_by(query, target, qName) %>%
     filter(qPercent == max(qPercent)) %>% ungroup %>%
     # arrange(query, target, tNum)
     arrange(desc(tSize), desc(qSize))
@@ -168,8 +172,8 @@ heatPsl <- function(match_sums_piv) {
     geom_tile() +
     scale_fill_viridis_c(option = "turbo", labels = label_percent(),
                          name = leg_name) +
-    facet_grid(rows = vars(query), cols = vars(target),
-               scales = "free", space = "free", switch = "both") +
+    # facet_grid(rows = vars(query), cols = vars(target),
+    #            scales = "free", space = "free", switch = "both") +
     # labs(x = x_label, y = y_label) +
     theme(axis.title = element_text(face = "italic"),
           axis.text = element_blank(),
@@ -191,10 +195,53 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
 
 # Read in PSL summary files
 match_sums <- read.table(match_sums_file, header = T, sep = "\t")
+match_sums <- match_sums %>% rowwise %>%
+  # Make unique column ID for each chr Num
+  mutate(tID=paste(target, tNum, sep = ";"),
+         qID=paste(query, qNum, sep = ";"),
+         # Format species names
+         query=abbrevSpc(query),
+         target=abbrevSpc(target)) %>% ungroup
+# Order species by decreasing relatedness to species of interest
+spc_lvls <- unname(sapply(spc_order, grep,
+                          unique(c(match_sums$target, match_sums$query)),
+                          value = T))
 match_sums <- match_sums %>%
-  filter(query == spc_int) %>%
-  mutate(tName=paste(target, tName, sep = ";"),
-         qName=paste(query, qName, sep = ";"))
+  mutate(query=factor(query, levels = spc_lvls),
+         target=factor(target, levels = spc_lvls))
+# Keep only species of interest
+match_sums <- match_sums %>% filter(query == abbrevSpc(spc_int))
+# Get maximal match information per query scaffold
+max_matches <- match_sums %>%
+  group_by(target, qName) %>% filter(qPercent == max(qPercent)) %>% ungroup
+scaf_groups <- max_matches %>% select(qNum, tNum, target) %>%
+  filter(tNum != 0) %>%
+  pivot_wider(id_cols = qNum,
+              names_from = target,
+              values_from = tNum)
+  # arrange(Saccharina_japonica)
+
+
+
+perc_heat <- max_matches %>% filter(tNum != 0) %>% 
+  select(qNum, qPercent, target) %>%
+  pivot_wider(id_cols = qNum,
+              names_from = target,
+              values_from = qPercent,
+              values_fill = 0) %>%
+  column_to_rownames(var = "qNum") %>%
+  as.matrix
+heatmap(chr_heat, scale = "none")
+chr_heat <- max_matches %>% filter(tNum != 0) %>% 
+  select(qNum, tName, target) %>%
+  pivot_wider(id_cols = qNum,
+              names_from = target,
+              values_from = tName) %>%
+  filter(!if_any(everything(), is.na)) %>%
+  column_to_rownames(var = "qNum") %>%
+  as.matrix
+heatmap(chr_heat, scale = "none")
+?heatmap
 # match_sums <- orderPsl(match_sums)
 # max_matches <- maxMatches(match_sums)
 # match_sums_pivs <- pivotPsl(match_sums)
@@ -203,21 +250,17 @@ q_ord <- sizeSort(match_sums, "qName", "qSize")
 t_ord <- sizeSort(match_sums, "tName", "tSize")
 match_sums <- match_sums %>%
   mutate(qName=factor(qName, levels = q_ord, ordered = T),
-         tName=factor(tName, levels = t_ord, ordered = T))
-max_matches <- match_sums %>%
-  group_by(tName) %>%
-  filter(qPercent == max(qPercent)) %>% ungroup %>%
-  arrange(tName)
+         tName=factor(tName, levels = t_ord, ordered = T),
+         qIndex=as.numeric(qName))
 h_order <- max_matches %>%
-  arrange(tName) %>%
-  pull(qName) %>%
-  as.character %>% unique
+  arrange(tName) %>% pull(qName) %>% as.character %>% unique
+
 match_sums_pivs <- match_sums %>%
   pivot_wider(id_cols = qName,
               names_from = tName,
               values_from = qPercent,
               values_fill = 0) %>%
-  pivot_longer(!qName,
+  pivot_longer(!c(qName, qIndex),
                names_to = "tName",
                values_to = "qPercent") %>%
   rowwise %>%
@@ -227,7 +270,10 @@ match_sums_pivs <- match_sums %>%
   # Preserve factor order
   mutate(tName = factor(tName, levels = levels(match_sums$tName)))
 match_sums_pivs <- match_sums_pivs %>%
-  filter(tName %in% max_matches$tName, qName %in% max_matches$qName) %>%
+  filter(
+    tName %in% max_matches$tName,
+    qName %in% max_matches$qName
+  ) %>%
   mutate(qName = factor(x = qName, levels = h_order, ordered = T))
 heatPsl(match_sums_pivs)
  
