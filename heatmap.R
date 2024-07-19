@@ -3,9 +3,9 @@ rm(list = ls())
 # Load required packages
 library(scales, quietly = T, warn.conflicts = F)
 library(cooccur)
-# library(visNetwork)
+library(visNetwork)
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
-suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
+# suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 
 
 # Input
@@ -197,8 +197,8 @@ plotSave <- function(plot_name, plot_type, plot_list, outdir = NULL,
 match_sums <- read.table(match_sums_file, header = T, sep = "\t")
 match_sums <- match_sums %>% rowwise %>%
   # Make unique column ID for each chr Num
-  mutate(tID=paste(target, tNum, sep = ";"),
-         qID=paste(query, qNum, sep = ";"),
+  mutate(tID=paste(target, tNum, sep = "."),
+         qID=paste(query, qNum, sep = "."),
          # Format species names
          query=abbrevSpc(query),
          target=abbrevSpc(target)) %>% ungroup
@@ -212,16 +212,11 @@ match_sums <- match_sums %>%
 # Keep only species of interest
 match_sums <- match_sums %>% filter(query == abbrevSpc(spc_int))
 # Get maximal match information per query scaffold
+match_sums <- match_sums %>% group_by(target, qName) %>%
+  mutate(max_match=case_when(qPercent == max(qPercent) ~ 1,
+                             .default = 0)) %>% ungroup
 max_matches <- match_sums %>%
   group_by(target, qName) %>% filter(qPercent == max(qPercent)) %>% ungroup
-scaf_groups <- max_matches %>% select(qNum, tNum, target) %>%
-  filter(tNum != 0) %>%
-  pivot_wider(id_cols = qNum,
-              names_from = target,
-              values_from = tNum)
-  # arrange(Saccharina_japonica)
-
-
 
 perc_heat <- max_matches %>% filter(tNum != 0) %>% 
   select(qNum, qPercent, target) %>%
@@ -231,17 +226,41 @@ perc_heat <- max_matches %>% filter(tNum != 0) %>%
               values_fill = 0) %>%
   column_to_rownames(var = "qNum") %>%
   as.matrix
-heatmap(chr_heat, scale = "none")
-chr_heat <- max_matches %>% filter(tNum != 0) %>% 
-  select(qNum, tName, target) %>%
+heatmap(perc_heat, scale = "none")
+
+scaf_groups <- max_matches %>%
+  filter(tNum != 0) %>%
+  select(qNum, tNum, target) %>%
   pivot_wider(id_cols = qNum,
               names_from = target,
-              values_from = tName) %>%
-  filter(!if_any(everything(), is.na)) %>%
-  column_to_rownames(var = "qNum") %>%
+              values_from = tNum)
+
+
+scaf_by_chrom <- match_sums %>%
+  filter(tNum != 0) %>%
+  select(qID, tID, max_match) %>%
+  pivot_wider(id_cols = tID,
+              names_from = qID,
+              values_from = max_match,
+              values_fill = 0) %>%
+  column_to_rownames(var = "tID") %>%
   as.matrix
-heatmap(chr_heat, scale = "none")
-?heatmap
+# hc <- heatmap(crossprod(scaf_by_chrom), symm = T, keep.dendro = T)
+hc <- hclust(dist(crossprod(scaf_by_chrom)))
+my_clust <- cutree(hc, k = 32)
+match_sums <- match_sums %>% mutate(clust=my_clust[qID])
+
+df <- match_sums %>% select(qNum, qSize, qPercent, clust) %>% unique %>%
+  mutate(clust=as.character(clust))
+match_sums <- match_sums %>% filter(tNum != 0) %>%
+  mutate(clust=as.character(clust))
+ggplot(data = df,
+       mapping = aes(x = qSize, y = qPercent,
+                     color = clust)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_point()
+
 # match_sums <- orderPsl(match_sums)
 # max_matches <- maxMatches(match_sums)
 # match_sums_pivs <- pivotPsl(match_sums)
