@@ -5,6 +5,8 @@ library(scales, quietly = T, warn.conflicts = F)
 library(cooccur)
 library(visNetwork)
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
+library(ggpubr)
+library(paletteer)
 # suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 
 
@@ -226,7 +228,7 @@ perc_heat <- max_matches %>% filter(tNum != 0) %>%
               values_fill = 0) %>%
   column_to_rownames(var = "qNum") %>%
   as.matrix
-heatmap(perc_heat, scale = "none")
+# heatmap(perc_heat, scale = "none")
 
 scaf_groups <- max_matches %>%
   filter(tNum != 0) %>%
@@ -235,66 +237,197 @@ scaf_groups <- max_matches %>%
               names_from = target,
               values_from = tNum)
 
-
-scaf_by_chrom <- match_sums %>%
+# Query scaffolds correlation
+# scafs_perc <- match_sums %>%
+#   # filter(tNum != 0) %>%
+#   select(qID, tID, qPercent) %>%
+#   pivot_wider(id_cols = qID,
+#               names_from = tID,
+#               values_from = qPercent,
+#               values_fill = 0) %>%
+#   column_to_rownames(var = "qID") %>%
+#   as.matrix
+scafs_max <- match_sums %>%
   filter(tNum != 0) %>%
   select(qID, tID, max_match) %>%
-  pivot_wider(id_cols = tID,
-              names_from = qID,
+  pivot_wider(id_cols = qID,
+              names_from = tID,
               values_from = max_match,
               values_fill = 0) %>%
-  column_to_rownames(var = "tID") %>%
+  column_to_rownames(var = "qID") %>%
   as.matrix
-# hc <- heatmap(crossprod(scaf_by_chrom), symm = T, keep.dendro = T)
-hc <- hclust(dist(crossprod(scaf_by_chrom)))
-my_clust <- cutree(hc, k = 32)
-match_sums <- match_sums %>% mutate(clust=my_clust[qID])
+cross_scafs <- tcrossprod(scafs_max)
+# hc <- hclust(dist(cross_scafs))
+hc <- heatmap(cross_scafs, symm = T, keep.dendro = T)
+hclust_mat <- as.hclust(hc$Rowv)
+# hclust_mat$labels <- unname(sapply(hclust_mat$labels, fixChrom))
+# h_order <- hclust_mat$order
+# heatmap(scafs_max, scale = "none")
+# heatmap(scafs_max[rev(h_order),], scale = "none")
+# ggdendro::ggdendrogram(hclust_mat)
+clust <- cutree(hclust_mat, k = 32)
+# h_lvls <- as.data.frame(clust) %>%
+#   summarize(n=n(), .by = clust) %>%
+#   arrange(desc(n)) %>% pull(clust)
+# clust <- as.data.frame(clust) %>%
+#   rownames_to_column("qID") %>%
+#   mutate(clust=factor(clust, levels = h_lvls)) %>%
+#   deframe
+match_sums <- match_sums %>%
+  mutate(clust=clust[qID]) %>%
+  filter(!is.na(clust))
+  # mutate(clust=as.factor(clust))
 
-df <- match_sums %>% select(qNum, qSize, qPercent, clust) %>% unique %>%
-  mutate(clust=as.character(clust))
-match_sums <- match_sums %>% filter(tNum != 0) %>%
-  mutate(clust=as.character(clust))
-ggplot(data = df,
-       mapping = aes(x = qSize, y = qPercent,
-                     color = clust)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_point()
+prepDf <- function(df) {
+  df <- df %>% filter(!grepl("contig", tName), tNum <= 36)
+  ord_tID <- df %>% 
+    group_by(tID, clust) %>% summarize(n = n(), .groups = "drop") %>%
+    pivot_wider(id_cols = tID,
+                names_from = clust,
+                values_from = n,
+                values_fill = 0) %>%
+    gather(key = "clust", value = "n", !tID) %>%
+    group_by(tID) %>%
+    mutate(likely_assignment=clust[which.max(n)],
+           assignment_prob=max(n)) %>%
+    arrange(as.integer(likely_assignment), desc(assignment_prob)) %>% 
+    ungroup
+  ord_tID_1 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) != 0) %>%
+    pull(tID) %>% unique
+  ord_tID_0 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) == 0) %>%
+    pull(tID) %>% unique
+  ord_tID <- c(ord_tID_1, ord_tID_0)
+  df <- df %>%
+    mutate(tID=factor(tID, levels = ord_tID)) %>%
+    arrange(clust, tID) %>%
+    mutate(qID=factor(qID, levels = unique(qID)))
+  return(df)
+}
+pivDf <- function(df) {
+  df_p <- df %>%
+    pivot_wider(id_cols = qID,
+                names_from = tID,
+                # values_from = clust) %>%
+                values_from = qPercent,
+                values_fill = 0) %>%
+    pivot_longer(!qID,
+                 names_to = "tID",
+                 # values_to = "clust") %>%
+                 values_to = "qPercent") %>%
+    rowwise %>%
+    mutate(query=abbrevSpc(gsub("\\..*", "", qID)),
+           target=abbrevSpc(gsub("\\..*", "", tID)),
+           target=factor(target, levels = spc_lvls)) %>%
+    ungroup %>%
+    # Preserve factor ordering
+    mutate(tID=factor(tID, levels = levels(df$tID)),
+           qID=factor(qID, levels = rev(levels(df$qID))))
+  return(df_p)
+}
+barClust <- function(df, pal) {
+  k <- length(unique(df$clust))
+  leg_name <- paste("k = ", k)
+  pal <- colorRampPalette(paletteer_d(pal))
+  df <- df %>% summarize(n=n(), .by = c(tID, clust, query, target))
+  p <- ggplot(data = df, mapping = aes(x = tID, y = n, fill = as.factor(clust))) +
+    geom_col(width = 1, position = "fill") +
+    scale_x_discrete(labels = as_labeller(fixChrom)) +
+    scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
+    scale_fill_manual(values = pal(k), name = leg_name) +
+    facet_grid(rows = vars(query), cols = vars(target),
+               scales = "free", switch = "both") +
+    theme_minimal() +
+    theme(strip.text = element_text(face = "italic"),
+          strip.placement = "outside",
+          panel.grid = element_blank(),
+          axis.title = element_blank(),
+          axis.text.x = element_text(angle = 90))
+  return(p)
+}
+heatClust <- function(df_p, pal) {
+  leg_name <- paste("Synteny", "coverage", sep = "\n")
+  p <- ggplot(data = df_p,
+              mapping = aes(x = tID, y = qID,
+                            fill = qPercent)) +
+                            # fill = clust)) +
+    geom_tile() +
+    scale_x_discrete(labels = as_labeller(fixChrom)) +
+    scale_y_discrete(labels = as_labeller(fixChrom)) +
+    scale_fill_paletteer_c(pal) +
+    # scale_fill_viridis_c(option = "turbo", labels = label_percent, name = leg_name) +
+    facet_grid(rows = vars(query), cols = vars(target),
+               scales = "free", switch = "both") +
+    theme_minimal() +
+    theme(strip.text = element_text(face = "italic"),
+          strip.placement = "outside",
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          axis.text.x = element_text(angle = 90))
+  return(p)
+}
+makePlots <- function(df, df_p, pal_b, pal_h) {
+  p_bar <- barClust(df, pal_b)
+  p_heat <- heatClust(df_p, pal_h)
+  p <- ggarrange(p_bar, p_heat, nrow = 2, labels = "AUTO", align = "hv")
+  return(p)
+}
+
+df <- match_sums
+df <- df %>% filter(max_match == 1)
+df <- prepDf(df)
+df_p <- pivDf(df)
+
+# pal_name <- "colorBlindness::Blue2Orange8Steps"
+makePlots(df, df_p,
+          "khroma::smoothrainbow",
+          "ggthemes::Sunset-Sunrise Diverging")
+
+
+# clust_cross <- match_sums %>%
+#   filter(!is.na(clust),
+#          max_match == 1) %>%
+#   select(tNum, clust) %>%
+#   pivot_wider(id_cols = tNum,
+#               names_from = clust,
+#               )
+  # as.matrix %>% crossprod
+
+
 
 # match_sums <- orderPsl(match_sums)
 # max_matches <- maxMatches(match_sums)
 # match_sums_pivs <- pivotPsl(match_sums)
 # match_sums_pivs_ord <- plotOrder(match_sums_pivs, max_matches)
-q_ord <- sizeSort(match_sums, "qName", "qSize")
-t_ord <- sizeSort(match_sums, "tName", "tSize")
-match_sums <- match_sums %>%
-  mutate(qName=factor(qName, levels = q_ord, ordered = T),
-         tName=factor(tName, levels = t_ord, ordered = T),
-         qIndex=as.numeric(qName))
-h_order <- max_matches %>%
-  arrange(tName) %>% pull(qName) %>% as.character %>% unique
-
-match_sums_pivs <- match_sums %>%
-  pivot_wider(id_cols = qName,
-              names_from = tName,
-              values_from = qPercent,
-              values_fill = 0) %>%
-  pivot_longer(!c(qName, qIndex),
-               names_to = "tName",
-               values_to = "qPercent") %>%
-  rowwise %>%
-  mutate(query = abbrevSpc(gsub(";.*", "", qName)),
-         target = abbrevSpc(gsub(";.*", "", tName))) %>%
-  ungroup %>%
-  # Preserve factor order
-  mutate(tName = factor(tName, levels = levels(match_sums$tName)))
-match_sums_pivs <- match_sums_pivs %>%
-  filter(
-    tName %in% max_matches$tName,
-    qName %in% max_matches$qName
-  ) %>%
-  mutate(qName = factor(x = qName, levels = h_order, ordered = T))
-heatPsl(match_sums_pivs)
+# q_ord <- sizeSort(match_sums, "qName", "qSize")
+# t_ord <- sizeSort(match_sums, "tName", "tSize")
+# match_sums <- match_sums %>%
+#   mutate(qName=factor(qName, levels = q_ord, ordered = T),
+#          tName=factor(tName, levels = t_ord, ordered = T),
+#          qIndex=as.numeric(qName))
+# h_order <- max_matches %>%
+#   arrange(tName) %>% pull(qName) %>% as.character %>% unique
+# 
+# match_sums_pivs <- match_sums %>%
+#   pivot_wider(id_cols = qName,
+#               names_from = tName,
+#               values_from = qPercent,
+#               values_fill = 0) %>%
+#   pivot_longer(!c(qName, qIndex),
+#                names_to = "tName",
+#                values_to = "qPercent") %>%
+#   rowwise %>%
+#   mutate(query = abbrevSpc(gsub(";.*", "", qName)),
+#          target = abbrevSpc(gsub(";.*", "", tName))) %>%
+#   ungroup %>%
+#   # Preserve factor order
+#   mutate(tName = factor(tName, levels = levels(match_sums$tName)))
+# match_sums_pivs <- match_sums_pivs %>%
+#   filter(
+#     tName %in% max_matches$tName,
+#     qName %in% max_matches$qName
+#   ) %>%
+#   mutate(qName = factor(x = qName, levels = h_order, ordered = T))
+# heatPsl(match_sums_pivs)
  
 # match_sums <- read.table(match_sums_file, header = T, sep = "\t")
 # max_matches <- maxMatches(match_sums)
