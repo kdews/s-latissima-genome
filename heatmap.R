@@ -4,11 +4,11 @@ rm(list = ls())
 library(scales, quietly = T, warn.conflicts = F)
 library(cooccur)
 library(visNetwork)
+library(dendextend)
+suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(ggpubr)
 library(paletteer)
-# suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
-
 
 # Input
 # Only take command line input if not running interactively
@@ -254,29 +254,98 @@ scafs_max <- match_sums %>%
               names_from = tID,
               values_from = max_match,
               values_fill = 0) %>%
-  column_to_rownames(var = "qID") %>%
-  as.matrix
-cross_scafs <- tcrossprod(scafs_max)
-# hc <- hclust(dist(cross_scafs))
-hc <- heatmap(cross_scafs, symm = T, keep.dendro = T)
-hclust_mat <- as.hclust(hc$Rowv)
-# hclust_mat$labels <- unname(sapply(hclust_mat$labels, fixChrom))
-# h_order <- hclust_mat$order
-# heatmap(scafs_max, scale = "none")
-# heatmap(scafs_max[rev(h_order),], scale = "none")
-# ggdendro::ggdendrogram(hclust_mat)
-clust <- cutree(hclust_mat, k = 32)
-# h_lvls <- as.data.frame(clust) %>%
-#   summarize(n=n(), .by = clust) %>%
-#   arrange(desc(n)) %>% pull(clust)
-# clust <- as.data.frame(clust) %>%
-#   rownames_to_column("qID") %>%
-#   mutate(clust=factor(clust, levels = h_lvls)) %>%
-#   deframe
-match_sums <- match_sums %>%
-  mutate(clust=clust[qID]) %>%
-  filter(!is.na(clust))
-  # mutate(clust=as.factor(clust))
+  column_to_rownames(var = "qID") %>% as.matrix %>% tcrossprod
+scafs_max_0 <- match_sums %>%
+  # filter(tNum != 0) %>%
+  select(qID, tID, max_match) %>%
+  pivot_wider(id_cols = qID,
+              names_from = tID,
+              values_from = max_match,
+              values_fill = 0) %>%
+  column_to_rownames(var = "qID") %>% as.matrix %>% tcrossprod
+# Heatmap with k splits showing clustering
+heatClust <- function(mat, k) {
+  h_labs <- sapply(rownames(mat), fixChrom)
+  # hc <- hclust(dist(mat))
+  # h <- heatmap(mat, scale = "none", keep.dendro = T,
+  #              labRow = h_labs, labCol = h_labs, revC = F)
+  # hclust_mat <- as.hclust(h$Rowv)
+  # return(hclust_mat)
+  pal <- circlize::colorRamp2(
+    breaks = 0:4,
+    reverse = T,
+    # hcl_palette = "Grays",
+    hcl_palette = "Inferno",
+  )
+  linecol <- "grey"
+  row_dend <- hclust(dist(mat)) # row clustering
+  col_dend <- hclust(dist(t(mat))) # column clustering
+  h2 <- Heatmap(mat, name = "my_heat",
+                show_row_names = F, show_column_names = F,
+                border = linecol, col = pal,
+                row_split = k, column_split = k,
+                row_gap = unit(0, "mm"), column_gap = unit(0, "mm"),
+                heatmap_legend_param = list(title = "Co-ocurrence"),
+                row_title_gp = gpar(fontsize = 10),
+                column_title_gp = gpar(fontsize = 10),
+                # column_title_gp = gpar(fontsize = 10, col = rainbow(k)),
+                # column_title_gp = gpar(fontsize = 10, col = rainbow(k)),
+                # cluster_rows = color_branches(row_dend, k = k),
+                # cluster_columns = color_branches(col_dend, k = k),
+                )
+  # for (i in 1:k) {
+  #   decorate_heatmap_body("my_heat", row_slice = i, column_slice = i, {
+  #     grid.rect(gp = gpar(col = rainbow(32)[i], fill = NA))
+  #   })
+  # }
+  return(h2)
+}
+h <- heatClust(scafs_max, 32)
+h_0 <- heatClust(scafs_max_0, 32)
+
+getKH <- function(mat) {
+  hc <- hclust(dist(mat))
+  dend <- as.dendrogram(hc)
+  kh <- heights_per_k.dendrogram(dend)
+  kh <- tibble(k=names(kh), height=unname(kh)) %>%
+    mutate(across(everything(), .fns = as.numeric)) %>%
+    filter(height >= 0)
+  return(kh)
+}
+kh_list <- list(no_chr0=getKH(scafs_max), all=getKH(scafs_max_0))
+elbowK <- function(kh_list) {
+  df <- bind_rows(kh_list, .id = "filter")
+  p <- ggplot(data = df, mapping = aes(x = k, y = height, col = filter)) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = scales::breaks_width(5), expand = c(0, 0),
+                       limits = c(0, 200)) +
+    # scale_x_log10() +
+    # scale_y_log10() +
+    geom_vline(xintercept = 39, col = "grey", lty = 2) +
+    geom_vline(xintercept = 27, col = "grey", lty = 2) +
+    theme_classic()
+  return(p)
+  # ggdendrogram(dend, leaf_labels = F, labels = F)
+}
+elbowK(kh_list)
+
+hc1 <- hclust(dist(scafs_max))
+clust <- cutree(hc1, k = 32)
+
+# p1 <- ggdendro::ggdendrogram(dend, leaf_labels = F, labels = F)
+# p2 <- ggdendro::ggdendrogram(dend_0, leaf_labels = F, labels = F)
+# as.data.frame(heights_per_k.dendrogram(dend))
+# plot(heights_per_k.dendrogram(dend_0))
+# ggarrange(p1, p2)
+# 
+# plot(hclust_mat, labels = F)
+# abline(h = 25)
+clust <- cutree(
+  hclust_mat,
+  k = 32,
+  # h = 25,
+)
 
 prepDf <- function(df) {
   df <- df %>% filter(!grepl("contig", tName), tNum <= 36)
@@ -292,11 +361,12 @@ prepDf <- function(df) {
            assignment_prob=max(n)) %>%
     arrange(as.integer(likely_assignment), desc(assignment_prob)) %>% 
     ungroup
-  ord_tID_1 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) != 0) %>%
-    pull(tID) %>% unique
-  ord_tID_0 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) == 0) %>%
-    pull(tID) %>% unique
-  ord_tID <- c(ord_tID_1, ord_tID_0)
+  # ord_tID_1 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) != 0) %>%
+  #   pull(tID) %>% unique
+  # ord_tID_0 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) == 0) %>%
+  #   pull(tID) %>% unique
+  # ord_tID <- c(ord_tID_1, ord_tID_0)
+  ord_tID <- ord_tID %>% pull(tID) %>% unique
   df <- df %>%
     mutate(tID=factor(tID, levels = ord_tID)) %>%
     arrange(clust, tID) %>%
@@ -329,7 +399,9 @@ barClust <- function(df, pal) {
   leg_name <- paste("k = ", k)
   pal <- colorRampPalette(paletteer_d(pal))
   df <- df %>% summarize(n=n(), .by = c(tID, clust, query, target))
-  p <- ggplot(data = df, mapping = aes(x = tID, y = n, fill = as.factor(clust))) +
+  # Convert cluster from integer to factor
+  df <- df %>% mutate(clust=as.factor(clust))
+  p <- ggplot(data = df, mapping = aes(x = tID, y = n, fill = clust)) +
     geom_col(width = 1, position = "fill") +
     scale_x_discrete(labels = as_labeller(fixChrom)) +
     scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
@@ -346,6 +418,7 @@ barClust <- function(df, pal) {
 }
 heatClust <- function(df_p, pal) {
   leg_name <- paste("Synteny", "coverage", sep = "\n")
+  # pal <- colorRampPalette(paletteer_d(pal))
   p <- ggplot(data = df_p,
               mapping = aes(x = tID, y = qID,
                             fill = qPercent)) +
@@ -353,8 +426,11 @@ heatClust <- function(df_p, pal) {
     geom_tile() +
     scale_x_discrete(labels = as_labeller(fixChrom)) +
     scale_y_discrete(labels = as_labeller(fixChrom)) +
-    scale_fill_paletteer_c(pal) +
-    # scale_fill_viridis_c(option = "turbo", labels = label_percent, name = leg_name) +
+    # scale_fill_paletteer_c(name = leg_name, palette = pal) +
+    # scale_fill_paletteer_d(name = leg_name, palette = pal) +
+    # scale_fill_gradient(name = leg_name, low = "black", high = "white") +
+    scale_fill_viridis_c(name = leg_name, option = "turbo",
+                         labels = scales::label_percent()) +
     facet_grid(rows = vars(query), cols = vars(target),
                scales = "free", switch = "both") +
     theme_minimal() +
@@ -372,15 +448,20 @@ makePlots <- function(df, df_p, pal_b, pal_h) {
   return(p)
 }
 
+match_sums <- match_sums %>%
+  mutate(clust=clust[qID]) %>%
+  filter(!is.na(clust))
+  # mutate(clust=as.factor(clust))
 df <- match_sums
-df <- df %>% filter(max_match == 1)
+# df <- df %>% filter(tNum != 0)
+# df <- df %>% filter(max_match == 1)
 df <- prepDf(df)
 df_p <- pivDf(df)
-
-# pal_name <- "colorBlindness::Blue2Orange8Steps"
-makePlots(df, df_p,
-          "khroma::smoothrainbow",
-          "ggthemes::Sunset-Sunrise Diverging")
+makePlots(df, df_p, "khroma::smoothrainbow", "grDevices::Oslo")
+# pal <- "dichromat::BluetoGray_8"
+# pal <- "colorBlindness::Blue2Orange8Steps"
+# pal <- "grDevices::Grays"
+# pal <- "ggprism::black_and_white"
 
 
 # clust_cross <- match_sums %>%
