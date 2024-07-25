@@ -169,3 +169,16 @@ sbatch s-latissima-genome/orthofinder.sbatch s-latissima-genome/species_table.tx
 ```
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -6,14 +6,15 @@ rm(list = ls())
 library(scales, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(tidyverse, quietly = T,
                                        warn.conflicts = F))
-library(VennDiagram, quietly = T)
-library(ggVennDiagram, quietly = T)
+library(VennDiagram, quietly = T, warn.conflicts = F)
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
+# library(ggVennDiagram, quietly = T)
 library(ggpubr, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(ggpmisc, quietly = T,
                                        warn.conflicts = F))
-library(RColorBrewer, quietly = T)
-library(BiocManager, quietly = T)
-if (require(showtext, quietly = T)) {
+library(RColorBrewer, quietly = T, warn.conflicts = F)
+library(BiocManager, quietly = T, warn.conflicts = F)
+if (require(showtext, quietly = T, warn.conflicts = F)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
@@ -101,18 +102,19 @@ homoOverlap <- function(match_sums) {
   un_len_perc <- un_len/spc_int_len*100
   ttl <- abbrevSpc(spc_int)
   subttl <- paste0(un_n, " unique homologous scaffolds (", round(un_len*1e-6, 2), " Mb)")
-  v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
-                     fill = rainbow(length(df_venn$Species)),
-                     main = ttl, sub = subttl, print.mode = "raw",
-                     main.cex = 2,
-                     # Italicize species names
-                     main.fontface = "italic", cat.fontface = "italic",
-                     filename = NULL, disable.logging = T)
   png(filename = venn_file, res = showtext_opts()$dpi,
       width = 7, height = 5, units = "in")
-  grid.newpage()
-  grid.draw(v1)
+  venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
+               fill = rainbow(length(df_venn$Species)),
+               main = ttl, sub = subttl, print.mode = "raw",
+               main.cex = 2,
+               # Italicize species names
+               main.fontface = "italic", cat.fontface = "italic",
+               filename = NULL, disable.logging = T)
   dev.off()
+  print(paste("Wrote Venn diagram of scaffold alignments to:", venn_file))
+  # grid.newpage()
+  # grid.draw(v1)
 }
 # Plot length of scaffold matches vs. chromosome length
 plotLens <- function(df) {
@@ -199,7 +201,6 @@ n_box <- plotN(max_match_lens_sum)
 fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
                  widths = c(1, 0.8))
 # Save plots
-showtext_opts(dpi = 300)
 ggsave(filename = align_plot_file, plot = fig, bg = "white",
        width = 10, height = 8, units = "in")
-showtext_opts(dpi = 100)
+print(paste("Wrote linear regressions of alignments to:", venn_file))

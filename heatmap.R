@@ -2,15 +2,23 @@
 rm(list = ls())
 # Load required packages
 library(scales, quietly = T, warn.conflicts = F)
-library(cooccur)
-library(visNetwork)
-library(dendextend)
-suppressPackageStartupMessages(library(ggpmisc, quietly = T, warn.conflicts = F))
-suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T))
-suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
-library(ggpubr)
-library(ggrepel)
-library(paletteer)
+# library(cooccur, quietly = T, warn.conflicts = F)
+# library(visNetwork, quietly = T, warn.conflicts = F)
+suppressPackageStartupMessages(library(dendextend, quietly = T,
+                                       warn.conflicts = F))
+suppressPackageStartupMessages(library(ggpmisc, quietly = T,
+                                       warn.conflicts = F))
+suppressPackageStartupMessages(library(ComplexHeatmap, quietly = T,
+                                       warn.conflicts = F))
+suppressPackageStartupMessages(library(tidyverse, quietly = T,
+                                       warn.conflicts = F))
+library(ggpubr, quietly = T, warn.conflicts = F)
+library(ggrepel, quietly = T, warn.conflicts = F)
+library(paletteer, quietly = T, warn.conflicts = F)
+if (require(showtext, quietly = T, warn.conflicts = F)) {
+  showtext_auto()
+  if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
+}
 
 # Input
 # Only take command line input if not running interactively
@@ -30,12 +38,16 @@ if (interactive()) {
   outdir <- line_args[3]
 }
 match_sums_file <- "align_sums.tsv"
-max_match_file <- "max_matches.tsv"
 # Output files
-
+comp_heatmap_file <- "clust_complexheatmap.png"
+elbow_k_file <- "elbow_k.png"
+clust_align_file <- "align_clustered.png"
 # Prepend output directory to file name (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
+  comp_heatmap_file <- paste0(outdir, comp_heatmap_file)
+  elbow_k_file <- paste0(outdir, elbow_k_file)
+  clust_align_file <- paste0(outdir, clust_align_file)
 }
 
 # Functions
@@ -191,28 +203,6 @@ heatPsl <- function(match_sums_piv) {
   
   return(p)
 }
-# Function to use ggsave on plots
-plotSave <- function(plot_name,
-                     plot_type,
-                     plot_list,
-                     outdir = NULL,
-                     width,
-                     height) {
-  p <- plot_list[[plot_name]]
-  fname <- paste0(plot_type, "_", plot_name, ".png")
-  if (dir.exists(outdir))
-    fname <- paste0(outdir, fname)
-  ggsave(
-    filename = fname,
-    plot = p,
-    bg = "white",
-    width = width,
-    height = height,
-    units = "in"
-  )
-  print(fname)
-  return(fname)
-}
 ### CURRENT FUNCTIONS ###
 # Order species by decreasing relatedness
 spc_order <-
@@ -291,15 +281,18 @@ coMat <- function(df) {
 }
 # Heatmap with k splits showing clustering
 heatClust <- function(mat, k) {
+  if (!interactive()) {
+  # pal <- circlize::colorRamp2(breaks = 0:4, reverse = T, hcl_palette = "Grays")
+  # row_dend <- hclust(dist(mat)) # row clustering
+  # col_dend <- hclust(dist(t(mat))) # column clustering
   h_labs <- sapply(rownames(mat), fixChrom)
   pal <-
     circlize::colorRamp2(breaks = 0:4,
                          reverse = T,
                          hcl_palette = "Inferno")
-  # pal <- circlize::colorRamp2(breaks = 0:4, reverse = T, hcl_palette = "Grays")
-  # row_dend <- hclust(dist(mat)) # row clustering
-  # col_dend <- hclust(dist(t(mat))) # column clustering
-  h <- Heatmap(
+  png(comp_heatmap_file, res = showtext_opts()$dpi,
+      height = 10, width = 11, units = "in")
+  ht <- Heatmap(
     mat,
     name = "my_heat",
     show_row_names = F,
@@ -311,19 +304,24 @@ heatClust <- function(mat, k) {
     row_gap = unit(0, "mm"),
     column_gap = unit(0, "mm"),
     heatmap_legend_param = list(title = "Co-ocurrence"),
-    row_title_gp = gpar(fontsize = 10),
-    column_title_gp = gpar(fontsize = 10),
+    row_title_gp = gpar(fontsize = 6),
+    column_title_gp = gpar(fontsize = 6),
     # column_title_gp = gpar(fontsize = 10, col = rainbow(k)),
     # column_title_gp = gpar(fontsize = 10, col = rainbow(k)),
     # cluster_rows = color_branches(row_dend, k = k),
     # cluster_columns = color_branches(col_dend, k = k),
   )
+  draw(ht)
+  dev.off()
+  print(paste("Wrote clustered heatmap to:", comp_heatmap_file))
+  }
   # for (i in 1:k) {
   #   decorate_heatmap_body("my_heat", row_slice = i, column_slice = i, {
   #     grid.rect(gp = gpar(col = rainbow(32)[i], fill = NA))
   #   })
   # }
-  return(h)
+  hc <- hclust(dist(cross_mat))
+  return(hc)
 }
 # Get dataframe of k vs. height by hierarchical clustering of input matrix
 getKH <- function(mat) {
@@ -399,15 +397,15 @@ clustDf <- function(df) {
     mutate(likely_assignment = clust[which.max(n)],
            assignment_prob = max(n)) %>%
     arrange(as.integer(likely_assignment), desc(assignment_prob)) %>%
-    ungroup %>%
-    pull(tID) %>%
-    unique()
+    ungroup()
+    # pull(tID) %>%
+    # unique()
   # Move artificial chromosomes to back of ordering
-  # ord_tID_1 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) != 0) %>%
-  #   pull(tID) %>% unique
-  # ord_tID_0 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) == 0) %>%
-  #   pull(tID) %>% unique
-  # ord_tID <- c(ord_tID_1, ord_tID_0)
+  ord_tID_1 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) != 0) %>%
+    pull(tID) %>% unique
+  ord_tID_0 <- ord_tID %>% rowwise %>% filter(fixChrom(tID) == 0) %>%
+    pull(tID) %>% unique
+  ord_tID <- c(ord_tID_1, ord_tID_0)
   df <- df %>%
     mutate(tID = factor(tID, levels = ord_tID)) %>%
     arrange(clust, tID) %>%
@@ -454,8 +452,8 @@ barClust <- function(df, pal = "khroma::smoothrainbow") {
     ggplot(data = df, mapping = aes(x = tID, y = n, fill = clust)) +
     geom_col(width = 1, position = "fill") +
     scale_x_discrete(labels = as_labeller(fixChrom)) +
-    scale_y_continuous(labels = scales::percent, expand = c(0, 0)) +
-    scale_fill_manual(values = pal(k), name = leg_name) +
+    scale_y_continuous(labels = label_percent(), expand = c(0, 0)) +
+    scale_fill_manual(name = leg_name, values = pal(k)) +
     facet_grid(
       rows = vars(query),
       cols = vars(target),
@@ -489,7 +487,7 @@ alignHeat <- function(df_p, pal = "turbo") {
     scale_fill_viridis_c(
       name = leg_name,
       option = pal,
-      labels = scales::label_percent()
+      labels = label_percent()
     ) +
     facet_grid(
       rows = vars(query),
@@ -507,98 +505,60 @@ alignHeat <- function(df_p, pal = "turbo") {
     )
   return(p)
 }
-makePlots <- function(df, df_p) {
-  p_bar <- barClust(df)
-  p_aln <- alignHeat(df_p)
-  p <-
-    ggarrange(p_bar,
-              p_aln,
-              nrow = 2,
-              labels = "AUTO",
-              align = "hv")
-  return(p)
-}
 
 # Read in PSL summary file and prepare for analysis
 match_sums <- read.table(match_sums_file, header = T, sep = "\t")
 match_sums <- cleanDf(match_sums)
 # Mark maximal matches with only species of interest as query
 match_sums_ann <- markMax(match_sums, abbrevSpc(spc_int))
-# Filter out artificial chromosomes
-match_sums_ann <- match_sums_ann %>% filter(tNum != 0)
+# Filter out artificial chromosomes for clustering
 # Co-occurrence matrix for query scaffolds
-co_match <- coMat(match_sums_ann)
+co_match <- coMat(match_sums_ann %>% filter(tNum != 0))
 cross_mat <- tcrossprod(co_match)
 # Choose optimal k
 kh <- getKH(cross_mat)
 p_elb <- elbowK(kh)
-k_opt <- max(kh$k_opt, na.rm = T)
-p_heat <- heatClust(cross_mat, k_opt)
+k_opt <- kh %>% filter(k_opt == "k_opt") %>% pull(k)
+print(paste("Optimal k chosen:", k_opt))
 # Extract k clusters
-hc <- hclust(dist(cross_mat))
+hc <- heatClust(cross_mat, k_opt)
 clust <- cutree(hc, k = k_opt)
 df <- clustDf(match_sums_ann)
 # df <- df %>% filter(tNum != 0)
 # df <- df %>% filter(max_match == 1)
+test <- clustDf(match_sums_ann) %>%
+  select(query, target, tID, qID, qSize, tSize, clust, max_match) %>%
+  unique() %>%
+  filter(target == "M. pyrifera",
+         max_match == 1)
+dim(match_sums_ann)
+dim(test)
+# Need starting position from PSL
+ggplot(data = test,
+       mapping = aes(x = tSize, y = qSize,
+                     # alpha = max_match,
+                     color = clust)) +
+  geom_point() +
+  # scale_alpha(range = c(0, 1), guide = "none") +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_viridis_c() +
+  facet_grid(
+    rows = vars(query),
+    cols = vars(target),
+    scales = "free",
+    switch = "both"
+  )
+
 df_p <- pivDf(df)
-ps <- makePlots(df, df_p)
-p_elb
-p_heat
-ps
-# makePlots(df, df_p, "khroma::smoothrainbow", "grDevices::Oslo")
-# pal <- "dichromat::BluetoGray_8"
-# pal <- "colorBlindness::Blue2Orange8Steps"
-# pal <- "grDevices::Grays"
-# pal <- "ggprism::black_and_white"
+p_bar <- barClust(df, "LaCroixColoR::Lemon")
+p_aln <- alignHeat(df_p)
+ps <- ggarrange(p_bar, p_aln, nrow = 2, labels = "AUTO", align = "hv")
 
+# Save plots
+ggsave(p_elb, filename = elbow_k_file, bg = "white")
+print(paste("Wrote elbow plot of k to:", elbow_k_file))
+ggsave(ps, filename = clust_align_file, bg = "white",
+       height = 10, width = 14, units = "in")
+print(paste("Wrote clustered alignment plots to:", clust_align_file))
 
-# match_sums <- orderPsl(match_sums)
-# max_matches <- maxMatches(match_sums)
-# match_sums_pivs <- pivotPsl(match_sums)
-# match_sums_pivs_ord <- plotOrder(match_sums_pivs, max_matches)
-# q_ord <- sizeSort(match_sums, "qName", "qSize")
-# t_ord <- sizeSort(match_sums, "tName", "tSize")
-# match_sums <- match_sums %>%
-#   mutate(qName=factor(qName, levels = q_ord, ordered = T),
-#          tName=factor(tName, levels = t_ord, ordered = T),
-#          qIndex=as.numeric(qName))
-# h_order <- max_matches %>%
-#   arrange(tName) %>% pull(qName) %>% as.character %>% unique
-#
-# match_sums_pivs <- match_sums %>%
-#   pivot_wider(id_cols = qName,
-#               names_from = tName,
-#               values_from = qPercent,
-#               values_fill = 0) %>%
-#   pivot_longer(!c(qName, qIndex),
-#                names_to = "tName",
-#                values_to = "qPercent") %>%
-#   rowwise %>%
-#   mutate(query = abbrevSpc(gsub(";.*", "", qName)),
-#          target = abbrevSpc(gsub(";.*", "", tName))) %>%
-#   ungroup %>%
-#   # Preserve factor order
-#   mutate(tName = factor(tName, levels = levels(match_sums$tName)))
-# match_sums_pivs <- match_sums_pivs %>%
-#   filter(
-#     tName %in% max_matches$tName,
-#     qName %in% max_matches$qName
-#   ) %>%
-#   mutate(qName = factor(x = qName, levels = h_order, ordered = T))
-# heatPsl(match_sums_pivs)
-
-# match_sums <- read.table(match_sums_file, header = T, sep = "\t")
-# max_matches <- maxMatches(match_sums)
-# # Convert scaffold names to size-ordered factors
-# match_sums_ord <- orderPsl(match_sums)
-# max_matches_ord <- orderPsl(max_matches)
-# # Pivot PSL summary data frame for ggplot2 heatmap
-# match_sums_piv <- pivotPsl(match_sums_ord)
-# match_sums_piv <- plotOrder(match_sums_piv, max_matches_ord)
-
-# # Plots
-# (psl_heat <- heatPsl(match_sums_piv))
-# # Heatmaps of genome vs. genome synteny
-# print("Saving heatmaps...")
-# h_fnames <- unlist(sapply(names(psl_heats), plotSave, "heatmap", psl_heats,
-#                           outdir, 9, 9, simplify = F))

@@ -1,9 +1,8 @@
 #!/bin/bash
 #SBATCH -J align_analysis
 #SBATCH -p gpu
-#SBATCH --mem=50gb
+#SBATCH --mem=100gb
 #SBATCH --time=01:00:00
-#SBATCH --cpus-per-task=12
 #SBATCH -o %x.log
 
 # Initialize script
@@ -15,7 +14,7 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 r_scripts=(
   "sum_psls.R"
   "align_stats.R"
-  # "heatmap.R"
+  "heatmap.R"
   # "dotplot.R"
 )
 

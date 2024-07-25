@@ -151,6 +151,7 @@ sumPsl <- function(df_name, df_list) {
   df_sum <- df %>% group_by(index, qName, tName, qNum, tNum, qSize, tSize) %>%
     # Sum matches per ID pair
     summarize(total_matches=as.numeric(sum(matches)), .groups = "drop") %>%
+    # mutate(total_matches=as.numeric(sum(matches))) %>%
     # Add columns for query and target
     mutate(query=query, target=target, .before = 1) %>%
     # Calculate and sort by percentage of query covered by matches
@@ -286,13 +287,47 @@ if (file.exists(match_sums_file)) {
   # Wrangle raw data
   psl_files <- listFiles(seq_file)
   # Read PSL files into list of data frames
-  psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col, simplify = F)
+  psl_list_raw <- sapply(psl_files, read.table, col.names = psl_col,
+                         simplify = F)
   # Remove file extensions from list names
   names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
   # Convert scaffold names to size-ordered factors
   psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
   # Summarize by contig vs. contig of each syntenic comparison
   psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+  max_dict <- psl_sums$Saccharina_latissima_vs_Undaria_pinnatifida %>%
+    group_by(qName) %>%
+    filter(qPercent == max(qPercent)) %>%
+    ungroup() %>%
+    pull(var = tName, name = qName)
+  df <- psl_list$Saccharina_latissima_vs_Undaria_pinnatifida %>%
+    mutate(max_match = case_when(tName == max_dict[qName] ~ "max_match")) %>%
+    filter(tName %in% max_dict,
+           !is.na(max_match)) %>%
+    # group_by(qName, tName) %>%
+    # summarize(av_tStart=mean(tStart),
+    #           max_tStart=max(tStart),
+    #           min_tStart=min(tStart),
+    #           .groups = "keep") %>%
+    ungroup() %>%
+    filter(fixChrom(tName) == "17")
+  (p <- ggplot(df, aes(y = tName, group = qName)) +
+      scale_color_viridis_d(option = "turbo") +
+      geom_boxplot(aes(x = tStart, col = qName), outliers = F,
+                   show.legend = F) +
+      geom_point(aes(x = tStart, col = qName),
+                 position = position_dodge2(width = 2, padding = 0),
+                 show.legend = F) +
+      # geom_segment(aes(x = min_tStart, xend = max_tStart, col = qName),
+      #              position = position_dodge2(width = 1),
+      #              show.legend = F) +
+      # geom_point(aes(x = av_tStart, col = qName), size = 7, shape = "|",
+      #            position = position_dodge2(width = 1),
+      #            show.legend = F) +
+      scale_x_continuous(labels = scales::label_log()) +
+      scale_y_discrete(labels = as_labeller(fixChrom)) +
+      coord_flip() +
+      theme_linedraw())
   # Combine list of data frames into one labeled by species
   match_sums <- collapseSums(psl_sums)
   write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
