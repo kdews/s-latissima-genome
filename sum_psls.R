@@ -110,8 +110,15 @@ orderPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  # Extract numeric information from IDs
-  df <- df %>% mutate(qNum=fixChrom(qName), tNum=fixChrom(tName))
+  df <- df %>%
+    # Add columns for query and target
+    mutate(query=query, target=target,
+           # Extract numeric information from IDs
+           qNum=fixChrom(qName), tNum=fixChrom(tName),
+           .before = 1) %>%
+    rowwise() %>%
+    mutate(sumBlocks=sum(as.integer(unlist(strsplit(blockSizes, ","))))) %>%
+    ungroup()
   # Order ID character vectors by size
   query_contigs <- sizeSort(df, "qName", "qSize")
   target_contigs <- sizeSort(df, "tName", "tSize")
@@ -147,13 +154,11 @@ sumPsl <- function(df_name, df_list) {
   df <- df_list[[df_name]]
   query <- getGen(df_name, "query")
   target <- getGen(df_name, "target")
-  # Group by columns to keep (ID pairs)
-  df_sum <- df %>% group_by(index, qName, tName, qNum, tNum, qSize, tSize) %>%
+  df_sum <- df %>%
+    # Group by columns to keep (ID pairs)
+    group_by(index, qName, tName, qNum, tNum, qSize, tSize, query, target) %>%
     # Sum matches per ID pair
     summarize(total_matches=as.numeric(sum(matches)), .groups = "drop") %>%
-    # mutate(total_matches=as.numeric(sum(matches))) %>%
-    # Add columns for query and target
-    mutate(query=query, target=target, .before = 1) %>%
     # Calculate and sort by percentage of query covered by matches
     mutate(qPercent=total_matches/qSize, tPercent=total_matches/tSize) %>% 
     arrange(qNum, desc(qPercent))
@@ -293,8 +298,28 @@ if (file.exists(match_sums_file)) {
   names(psl_list_raw) <- gsub(".*ment_|.psl", "", names(psl_list_raw))
   # Convert scaffold names to size-ordered factors
   psl_list <- sapply(names(psl_list_raw), orderPsl, psl_list_raw, simplify = F)
+  test <- psl_list %>% bind_rows(.id = "Alignment")
+  test2 <- test %>%
+    # group_by(query, target, tName, qName) %>%
+    # separate_wider_delim(blockSizes, delim = ",", names_sep = "_",
+    #                      too_few = "align_start") %>%
+    separate_longer_delim(c(blockSizes, qStarts, tStarts), delim = ",") %>%
+    mutate(across(matches(c("blockSizes","qStarts", "tStarts")),
+                  .fns = as.integer),
+           qEnds=qStarts+blockSizes,
+           tEnds=tStarts+blockSizes)
+  ggplot(test2 %>%
+           filter(query == "Saccharina_latissima",
+                  target == "Undaria_pinnatifida",
+                  as.integer(tNum) < 4),
+         aes(y = tNum)) +
+    geom_point(aes(x = tStart), shape = "|", color = "red", na.rm = T) +
+    geom_segment(aes(x = tStarts, xend = tEnds), color = "blue", na.rm = T)
+    
+  
   # Summarize by contig vs. contig of each syntenic comparison
   psl_sums <- sapply(names(psl_list), sumPsl, psl_list, simplify = F)
+    
   max_dict <- psl_sums$Saccharina_latissima_vs_Undaria_pinnatifida %>%
     group_by(qName) %>%
     filter(qPercent == max(qPercent)) %>%
@@ -309,25 +334,31 @@ if (file.exists(match_sums_file)) {
     #           max_tStart=max(tStart),
     #           min_tStart=min(tStart),
     #           .groups = "keep") %>%
-    ungroup() %>%
-    filter(fixChrom(tName) == "17")
-  (p <- ggplot(df, aes(y = tName, group = qName)) +
+    # ungroup() %>%
+    filter(fixChrom(tName) == "21")
+  (p <- ggplot(df, aes(x = qName,
+                       # group = tName,
+                       )) +
       scale_color_viridis_d(option = "turbo") +
-      geom_boxplot(aes(x = tStart, col = qName), outliers = F,
-                   show.legend = F) +
-      geom_point(aes(x = tStart, col = qName),
-                 position = position_dodge2(width = 2, padding = 0),
-                 show.legend = F) +
+      geom_boxplot(aes(y = tStart,
+                       # col = tName,
+                       ),
+                   show.legend = F, outlier.colour = "red") +
+      facet_wrap(~tName,
+                 labeller = as_labeller(fixChrom),
+                 scales = "free") +
+      geom_point(aes(y = tStart), show.legend = F) +
       # geom_segment(aes(x = min_tStart, xend = max_tStart, col = qName),
       #              position = position_dodge2(width = 1),
       #              show.legend = F) +
       # geom_point(aes(x = av_tStart, col = qName), size = 7, shape = "|",
       #            position = position_dodge2(width = 1),
       #            show.legend = F) +
-      scale_x_continuous(labels = scales::label_log()) +
-      scale_y_discrete(labels = as_labeller(fixChrom)) +
-      coord_flip() +
-      theme_linedraw())
+      scale_x_discrete(labels = as_labeller(fixChrom)) +
+      scale_y_continuous(labels = scales::label_log())
+      # coord_flip() +
+      # theme_linedraw() +
+  )
   # Combine list of data frames into one labeled by species
   match_sums <- collapseSums(psl_sums)
   write.table(match_sums, match_sums_file, quote = F, row.names = F, sep = "\t")
