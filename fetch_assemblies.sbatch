@@ -235,7 +235,7 @@ do
   fi
   if echo "${fnames[*]}" | grep -iq "ectsiv2"
   then
-    spc="Ectocarpus siliculosus Ec 32 V2"
+    spc="Ectocarpus Ec32 V2"
   elif echo "${fnames[*]}" | grep -iq "sacja"
   then
     spc="Saccharina japonica str. Ja"

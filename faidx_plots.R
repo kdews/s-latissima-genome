@@ -3,9 +3,9 @@ rm(list = ls())
 # Required packages
 suppressPackageStartupMessages(library(tidyverse, quietly = T, warn.conflicts = F))
 library(gridExtra, quietly = T, warn.conflicts = F)
-library(ggpubr, quietly = T)
-library(scales, quietly = T)
-if (require(showtext, quietly = T)) {
+library(ggpubr, quietly = T, warn.conflicts = F)
+library(scales, quietly = T, warn.conflicts = F)
+if (require(showtext, quietly = T, warn.conflicts = F)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi = 100) else showtext_opts(dpi = 300)
 }
@@ -35,8 +35,7 @@ if (interactive()) {
   outdir <- line_args[5]
 }
 # Order for species factor
-spc_order <- c("E. siliculosus", "U. pinnatifida", "M. pyrifera",
-               "S. japonica", "S. latissima")
+spc_order <- c("siliculosus", "pinnatifida", "pyrifera", "japonica", "latissima")
 # Output plot filenames
 vio_plot <- "scaffold_sizes_violin.png"
 bar_plot <- "scaffold_sizes_bar.png"
@@ -53,6 +52,11 @@ abbrevSpc <- function(spc) {
   spc[1] <- paste0(let1, ".")
   spc_a <- paste(spc, collapse = " ")
   return(spc_a)
+}
+formatSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  spc_f <- paste(spc, collapse = " ")
+  return(spc_f)
 }
 # Extract numbers from contig IDs for filtering
 fixChrom <- function(contigs) {
@@ -118,7 +122,7 @@ violinPlot <- function(idx, sum_idx, n50 = NULL) {
   # Calculate maximum y in density distributions of each species
   find_max_y <- function(spc) idx %>% filter(Species == spc) %>% pull(Length) %>%
     log10() %>% density() %>% .$x %>% max()
-  max_y <- 10^(max(sapply(species, find_max_y)))
+  max_y <- 10^(max(sapply(unique(idx$Species), find_max_y)))
   # size_fun <- function(x) max(density(x)$x)*1.1
   # Calculate N50 from original size distribution, then convert to log10
   n50_line_fun <- function(x) log10(Biostrings::N50(10^x))
@@ -201,37 +205,35 @@ violinPlot <- function(idx, sum_idx, n50 = NULL) {
   }
 }
 # Create annotated graphs of contig length distribution by species
-distPlot <- function(spc, idx) {
-  idx <- idx %>% mutate(`Length (log10 bp)` = log10(Length))
-  y_min <- min(idx$Length)
-  y_max <- max(idx$Length)
-  idx_filt <- idx %>%
-    filter(Species == spc) %>%
-    arrange(desc(Length)) %>%
-    # mutate(ID_num = factor(ID_num, levels = ID_num))
-    mutate(ID = factor(ID, levels = ID))
-  idx_high <- idx_filt %>%
-    filter(Length >= Biostrings::N50(Length))
-  p <- ggplot(data = idx_filt, mapping = aes(x = as.numeric(ID), y = Length)) +
-    geom_col(col = "lightgrey", fill = "lightgrey") +
+distPlot <- function(idx, limit = 1e6) {
+  idx <- idx %>%
+    arrange(Species, desc(Length)) %>%
+    group_by(Species) %>%
+    mutate(n=n(),
+           ID=1:unique(n),
+           n50=Biostrings::N50(Length),
+           high=case_when(Length >= n50 ~ "over_N50"),
+           cutoff=case_when(Length >= limit ~ paste0(">", limit),
+                            .default = paste0("<", limit))) %>%
+    ungroup() %>%
+    mutate(Species=factor(Species, levels = rev(levels(Species))))
+  p <- ggplot(data = idx, mapping = aes(x = ID, y = Length)) +
+    # geom_hline(aes(yintercept=n50), col = "red", lty = 2, ) +
+    # geom_col(aes(col = high, fill = high), show.legend = F) +
+    geom_hline(yintercept = limit, col = "red", lty = 2) +
+    geom_col(aes(col = cutoff, fill = cutoff), show.legend = F) +
+    scale_color_manual(name = "", aesthetics = c("color", "fill"),
+                       values = c("lightgrey", "darkblue")) +
     # Convert length to log10 scale
     scale_y_log10(labels = label_log()) +
-    geom_hline(yintercept = Biostrings::N50(idx_filt$Length),
-               col = "red", lty = 2) +
-    geom_col(data = idx_high,
-             mapping = aes(x = as.numeric(ID), y = Length),
-             col = "darkblue", fill = "darkblue") +
-    # annotate(geom = "text", col = "white",
-    #          label = paste0("n = ", dim(idx_high)[1]),
-    #          x = dim(idx_high)[1]/2,
-    #          y = mean(idx$`Length (log10 bp)`)) +
-    # coord_cartesian(ylim = c(y_min, log10(35*1e6))) +
-    labs(title = spc, x = "Scaffolds + contigs", y = "Length (bp)") +
-    theme_classic() +
+    # scale_y_log10(labels = label_log(), expand = c(0, 0)) +
+    # scale_x_continuous(expand = c(0, 0)) +
+    labs(x = "Scaffolds + contigs", y = "Length (bp)") +
+    facet_wrap(~Species, scales = "free_x") +
+    theme_bw() +
     # Italicize Latin species names
-    theme(plot.title = element_text(face = "italic"))
-    # axis.text.x = element_blank(),
-    # axis.ticks.x = element_blank()
+    theme(strip.text = element_text(face = "italic"),
+          strip.background = element_blank())
   return(p)
 }
 
@@ -239,12 +241,12 @@ distPlot <- function(spc, idx) {
 species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
 colnames(species_tab) <- c("Species", "Assembly", "Annotation")
 species_tab <- species_tab[,na.omit(colnames(species_tab))]
-spc_int <- abbrevSpc(spc_int)
-out_spc <- abbrevSpc(out_spc)
+spc_int <- formatSpc(spc_int)
+out_spc <- formatSpc(out_spc)
 species <- species_tab$Species
 # Keep only Latin species names and abbreviate
 species <- word(species, start = 1, end = 2, sep = " ")
-species <- sapply(species, abbrevSpc, USE.NAMES = F)
+species <- sapply(species, formatSpc, USE.NAMES = F)
 fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
   idx_temp <- read.table(fns[i])
@@ -258,9 +260,10 @@ for (i in 1:length(fns)) {
 }
 # Clean up data frame of combined length indices
 colnames(idx) <- c("ID", "Length", "Species")
+spc_lvls <- sapply(spc_order, grep, unique(idx$Species), value = T)
 idx <- idx %>%
   # Sort "Species" column with factor for plotting
-  mutate(Species = factor(Species, levels = spc_order)) %>%
+  mutate(Species = factor(Species, levels = spc_lvls)) %>%
   select(ID, Length, Species) %>%
   group_by(Species) %>%
   arrange(desc(Length), .by_group = T) %>%
@@ -275,19 +278,38 @@ sum_idx <- sumDf(idx)
 # Plots
 # Plot length distributions using violin plots
 p_l <- violinPlot(idx, sum_idx, n50 = T)
-# p_list <- lapply(species, distPlot, idx)
-# p3 <- ggarrange(plotlist = p_list, align = "hv")
+p_d <- distPlot(idx, 1e6)
 # Save plots
-showtext_opts(dpi = 300)
-ggsave(vio_plot, p_l,
-       # width = 20, height = 6, 
-       bg = "white")
-# ggsave(bar_plot, p3,
-#        # width = 10, height = 6,
-#        bg = "white")
+print(paste("Saving violin plot to:", vio_plot))
+ggsave(vio_plot, p_l, bg = "white", width = 20, height = 6)
+print(paste("Saving barplot plot to:", bar_plot))
+ggsave(bar_plot, p_d, bg = "white", width = 10, height = 6)
 
 
-
+compVersions <- function(version_list) {
+  df <- sapply(version_list, read.table, simplify = F) %>%
+    bind_rows(.id = "Species") %>%
+    mutate(Species=factor(Species, levels = names(version_list))) %>%
+    rename(ID=V1, Length=V2) %>%
+    select(Species, ID, Length)
+  sum_df <- sumDf(df)
+  p <- violinPlot(df, sum_df, n50 = T)
+  return(p)
+}
+ec <- list(
+  less_2kb="assemblies/old_genomes/Ectsi_genome_InfEg2kb.fasta.fai",
+  JGI="assemblies/old_genomes/Ectsil1_AssemblyScaffolds_Repeatmasked.fasta.fai",
+  ORCAE_V1="assemblies/old_genomes/Ectsi_genome_V2_cleaned.tfa.fai",
+  ORCAE_V2="assemblies/EctsiV2_genome.fasta.fai",
+  split_V2="assemblies/EctsiV2_genome_chr_00_split_in_genome.fasta.fai"
+)
+sj <- list(
+  JGI="assemblies/old_genomes/Sacja1_AssemblyScaffolds_Repeatmasked.fasta.fai",
+  ORCAE="assemblies/SJ_v6_2_chromosome.fa.fai",
+  ORCAE_split="assemblies/SJ_v6_2_chromosome_chr0_split_in_genome.fa.fai"
+)
+p_ec <- compVersions(ec)
+p_sj <- compVersions(sj)
 
 
 # # Size filtering (not used)

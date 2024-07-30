@@ -12,32 +12,42 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Extracts and splits artificial chromosomes from ORCAE FASTAs.
+Extracts and splits artificial chromosomes (chr 0) from ORCAE FASTAs.
 
-Usage: sbatch ${job_name}.sbatch <assembly.fa> <chr_ID> <minsize>
+Usage: sbatch ${job_name}.sbatch <species_table>
 
 Requires:
- - Samtools (https://www.htslib.org/)
+ - samtools (https://www.htslib.org/)
  - miscperlscripts (https://github.com/MadsAlbertsen/miscperlscripts/)"
   exit 0
 fi
 
-# Input and output variables
-assembly="$1"
-# ID of chromosome to split
-chr_ID="$2"
-# Minimum size of produced contigs (S. japonica=500bp, E. siliculosus=2002bp)
-minsize="$3"
-assembly_idx="${assembly}.fai"
-assembly_no_ext="${assembly%%.*}"
-assembly_ext="${assembly##*.}"
-assembly_no_chr_list="${assembly_no_ext}_no_${chr_ID}.list"
-assembly_no_chr="${assembly_no_ext}_no_${chr_ID}.${assembly_ext}"
-out1="${assembly_no_ext}_${chr_ID}.${assembly_ext}"
-out2="${assembly_no_ext}_${chr_ID}_split.${assembly_ext}"
-out3="${assembly_no_ext}_${chr_ID}_split_in_genome.${assembly_ext}"
+# Species table file
+assembly_file="$1"
 
-# Activate Samtools
+spcs=("Saccharina japonica" "Ectocarpus")
+# Minimum size of produced contigs (S. japonica=500bp, E. siliculosus=2002bp)
+minsizes=(500 2002)
+for i in "${!assemblies[@]}"
+do
+  spc="${spcs[i]}"
+  minsize="${minsizes[i]}"
+  assembly="$(grep "$spc" "$assembly_file" | awk -F '\t' '{print $2}')"
+  assembly_idx="${assembly}.fai"
+  # Find chromosome IDs with only 0 number
+  chr_ID="$(awk -F '\t' '{print $1}' "$fai"| grep -v "[1-9]" | grep "0\+$")"
+  assembly_no_ext="${assembly%%.*}"
+  assembly_ext="${assembly##*.}"
+  assembly_no_chr_list="${assembly_no_ext}_no_${chr_ID}.list"
+  assembly_no_chr="${assembly_no_ext}_no_${chr_ID}.${assembly_ext}"
+
+  out1="${assembly_no_ext}_${chr_ID}.${assembly_ext}"
+  out2="${assembly_no_ext}_${chr_ID}_split.${assembly_ext}"
+  out3="${assembly_no_ext}_${chr_ID}_split_in_genome.${assembly_ext}"
+
+done
+
+# Activate samtools
 conda activate samtools
 samtools --version | head -n1
 # Index assembly
@@ -50,7 +60,7 @@ echo "$cmd"
 $cmd
 conda deactivate
 # Subset all other IDs not chr_ID from assembly
-awk '{print $1}' "$assembly_idx" | grep -v "$chr_ID" > "$assembly_no_chr_list"
+awk '{print $1}' "$assembly_idx" | grep -v "^$chr_ID$" > "$assembly_no_chr_list"
 conda activate seqtk
 cmd="seqtk subseq $assembly $assembly_no_chr_list"
 echo "$cmd > $assembly_no_chr"
