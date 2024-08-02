@@ -210,7 +210,7 @@ spc_order <-
     "japonica",
     "pyrifera",
     "pinnatifida",
-    "siliculosus")
+    "Ectocarpus")
 # Abbreviate species genus name
 abbrevSpc <- function(spc) {
   spc <- unlist(strsplit(spc, "_| "))

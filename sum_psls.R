@@ -46,7 +46,7 @@ psl_col <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
              "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
              "blockCount", "blockSizes", "qStarts", "tStarts")
 # Order species by decreasing relatedness
-spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
+spc_order <- c("japonica", "pyrifera", "pinnatifida", "Ectocarpus")
 # Total genome length of species of interest
 spc_int_len <- 615545555
 # Get PSL file list from seqFile

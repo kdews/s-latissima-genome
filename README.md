@@ -31,7 +31,7 @@ Species 2     | PATH2        | PATH2           | PATH2         | PATH2          
 > bash genome_stats.sh [\<assembly_file\>](species_table.txt) [[path/to/aug_busco.sbatch]](aug_busco.sbatch) [[path/to/quast.sbatch]](quast.sbatch)
 ##### Example
 ```
-bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table_split_chr0.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
+bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/aug_busco.sbatch s-latissima-genome/quast.sbatch
 ```
 #### Visualize BUSCO results
 ##### Usage
@@ -48,12 +48,12 @@ For each lineage, a plot of BUSCO results across all genomes will be saved to
 ## 3. Evaluation of scaffoldedness
 Generates violin plots of contig size for each genome.
 ##### Usage
-> sbatch chromosome_extract.sbatch [\<assembly_file\>](species_table.txt) \<species_of_interest\> \<outgroup_species\>
+> sbatch scaffold_eval.sbatch [\<assembly_file\>](species_table.txt) \<species_of_interest\> \<outgroup_species\>
 
 >> **Note**: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
 ##### Example
 ```
-sbatch s-latissima-genome/chromosome_extract.sbatch s-latissima-genome/species_table_split_chr0.txt Saccharina_latissima Ectocarpus_siliculosus
+sbatch s-latissima-genome/scaffold_eval.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus
 ```
 Violin plot of scaffold and contig sizes per genome will be saved in
 `scaffold_sizes_violin.png`.

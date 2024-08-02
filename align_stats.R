@@ -76,7 +76,7 @@ abbrevSpc <- function(spc) {
 # Clean up data frame for plotting
 cleanDf <- function(df) {
   # Order "Species" column by decreasing relatedness
-  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
+  spc_order <- c("japonica", "pyrifera", "pinnatifida", "Ectocarpus")
   lvls <- unname(sapply(spc_order, grep,
                         unique(df$Species), value = T))
   df_clean <- df %>% mutate(Species=factor(Species, levels = lvls),

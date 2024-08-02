@@ -158,7 +158,7 @@ collapseMatch <- function(match_list) {
   # Collapse list of data frames
   match_lens <- bind_rows(match_list, .id = "Species")
   # Convert species column to ordered factor sorted by species relatedness
-  spc_order <- c("japonica", "pyrifera", "pinnatifida", "siliculosus")
+  spc_order <- c("japonica", "pyrifera", "pinnatifida", "Ectocarpus")
   lvls <- unname(sapply(spc_order, grep, unique(match_lens$Species), value = T))
   match_lens <- match_lens %>%
     mutate(qNum=as.character(qNum),
