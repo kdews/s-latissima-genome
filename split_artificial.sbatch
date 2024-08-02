@@ -26,7 +26,7 @@ fi
 assembly_file="$1"
 # Patterns to search for species with artificial chromosomes (chromosome 0)
 spc_pats=("Saccharina japonica" "Ectocarpus")
-# Minimum size of produced contigs (S. japonica=500bp, E. siliculosus=2002bp)
+# Minimum size of produced contigs (S. japonica=500bp, Ectocarpus=2002bp)
 minsizes=(500 2002)
 for i in "${!spc_pats[@]}"
 do

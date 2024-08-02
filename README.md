@@ -2,6 +2,7 @@
 Scripts to score and compare the genome assembly of *S. latissima* to related species.
 
 ## 1. Input files
+### Fetch input files from portals
 Fetch assemblies and annotations from
 [JGI PhycoCosm](https://phycocosm.jgi.doe.gov/phycocosm/home) and
 [ORCAE](https://bioinformatics.psb.ugent.be/orcae) given a list of JGI portal
@@ -15,8 +16,7 @@ names and ORCAE links.
 ```
 sbatch s-latissima-genome/fetch_assemblies.sbatch s-latissima-genome/portal_names.txt jgi_login
 ```
-Upon successful download, the output directory `assemblies/` and
-[\<assembly_file\>](species_table.txt) will be created.
+Upon successful download, the output directory `assemblies/` and [\<assembly_file\>](species_table.txt) will be created.
 
 Assembly file format:
 
@@ -24,6 +24,16 @@ Species name  | Genome FASTA | Annotation file | Protein FASTA | Gene info file 
 ------------- | ------------ | --------------- | ------------- | -------------- | ---
 Species 1     | PATH1        | PATH1           | PATH1         | PATH1          | ...
 Species 2     | PATH2        | PATH2           | PATH2         | PATH2          | ...
+
+### Split artificial chromosomes in assemblies
+Run [split.scaffolds.to.contigs](https://github.com/MadsAlbertsen/miscperlscripts/blob/master/split.scaffolds.to.contigs.pl) on artificial chromosomes in *S. japonica* and *Ectocarpus* sp. assemblies.
+##### Usage
+> sbatch split_artificial.sbatch [\<assembly_file\>](species_table.txt)
+
+##### Example
+```
+sbatch s-latissima-genome/split_artificial.sbatch s-latissima-genome/species_table.txt
+```
 
 ## 2. Genome scoring with BUSCO and QUAST
 #### Run BUSCO and QUAST on each assembly listed in `<assembly_file>`
@@ -40,8 +50,7 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 ```
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
-For each lineage, a plot of BUSCO results across all genomes will be saved to
-`busco_<lineage>.png`.
+For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
 ![alt text](busco_eukaryota_odb10.png)
 ![alt text](busco_stramenopiles_odb10.png)
 
@@ -53,10 +62,9 @@ Generates violin plots of contig size for each genome.
 >> **Note**: Ensure `<species_of_interest>` and `<outgroup_species>` are in the format "Genus_specificname" and do not contain spaces.
 ##### Example
 ```
-sbatch s-latissima-genome/scaffold_eval.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus
+sbatch s-latissima-genome/scaffold_eval.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_sp.
 ```
-Violin plot of scaffold and contig sizes per genome will be saved in
-`scaffold_sizes_violin.png`.
+Violin plot of scaffold and contig sizes per genome will be saved in `scaffold_sizes_violin.png`.
 ![alt text](scaffold_sizes_violin.png)
 
 ## 4. Multi-species whole genome alignment with [Progressive Cactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md)
