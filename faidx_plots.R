@@ -281,7 +281,7 @@ p_l <- violinPlot(idx, sum_idx, n50 = T)
 p_d <- distPlot(idx, 1e6)
 # Save plots
 print(paste("Saving violin plot to:", vio_plot))
-ggsave(vio_plot, p_l, bg = "white", width = 20, height = 6)
+ggsave(vio_plot, p_l, bg = "white", width = 10, height = 6)
 print(paste("Saving barplot plot to:", bar_plot))
 ggsave(bar_plot, p_d, bg = "white", width = 10, height = 6)
 
