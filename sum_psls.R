@@ -90,6 +90,12 @@ abbrevSpc <- function(spc) {
   spc_a <- paste(spc, collapse = " ")
   return(spc_a)
 }
+# Format species Latin name
+formatSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  spc_f <- paste(spc, collapse = " ")
+  return(spc_f)
+}
 # Fixes chromosome labels for plotting
 fixChrom <- function(contigs) {
   contigs <-
@@ -198,8 +204,9 @@ perSpecies <- function(max_matches) {
 perHomolog <- function(df) {
   # Subset species of interest
   match_lens <- df %>% filter(query == spc_int) %>%
-    # Abbreviate species names
-    rowwise() %>% mutate(Species = abbrevSpc(target))
+    rowwise()
+    # # Abbreviate species names
+    # mutate(Species = abbrevSpc(target))
     # # Filter out artificial chromosomes
     # mutate(qNum=as.character(qNum), tNum=as.character(tNum)) %>%
     # filter(tNum != "0")

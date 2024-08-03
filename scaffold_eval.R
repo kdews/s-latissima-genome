@@ -51,6 +51,7 @@ abbrevSpc <- function(spc) {
   spc_a <- paste(spc, collapse = " ")
   return(spc_a)
 }
+# Format species Latin name
 formatSpc <- function(spc) {
   spc <- unlist(strsplit(spc, "_| "))
   spc_f <- paste(spc, collapse = " ")

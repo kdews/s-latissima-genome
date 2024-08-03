@@ -219,6 +219,12 @@ abbrevSpc <- function(spc) {
   spc_a <- paste(spc, collapse = " ")
   return(spc_a)
 }
+# Format species Latin name
+formatSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  spc_f <- paste(spc, collapse = " ")
+  return(spc_f)
+}
 # Fixes chromosome labels for plotting
 fixChrom <- function(contigs) {
   contigs <-
@@ -240,6 +246,7 @@ sizeSort <- function(df, id_col, size_col) {
 cleanDf <- function(df) {
   df <- df %>%
     # Make unique column ID for each target and query scaffold
+    #!!!FIX THIS!!!#
     mutate(tID = paste(target, tNum, sep = "."),
            qID = paste(query, qNum, sep = ".")) %>%
     rowwise %>%
@@ -428,6 +435,7 @@ pivDf <- function(df) {
                  # values_to = "clust") %>%
                  values_to = "qPercent") %>%
     rowwise %>%
+    #!!!FIX THIS!!!#
     mutate(
       query = abbrevSpc(gsub("\\..*", "", qID)),
       target = abbrevSpc(gsub("\\..*", "", tID)),

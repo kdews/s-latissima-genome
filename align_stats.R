@@ -73,6 +73,12 @@ abbrevSpc <- function(spc) {
   spc_a <- paste(spc, collapse = " ")
   return(spc_a)
 }
+# Format species Latin name
+formatSpc <- function(spc) {
+  spc <- unlist(strsplit(spc, "_| "))
+  spc_f <- paste(spc, collapse = " ")
+  return(spc_f)
+}
 # Clean up data frame for plotting
 cleanDf <- function(df) {
   # Order "Species" column by decreasing relatedness
@@ -93,14 +99,14 @@ cleanDf <- function(df) {
 # Summarize alignment statistics between species of interest and all references
 homoOverlap <- function(match_sums) {
   df_filt <- match_sums %>% filter(query == spc_int) %>%
-    rowwise() %>% mutate(Species=abbrevSpc(target))
+    rowwise() %>% mutate(Species=formatSpc(target))
   df_venn <- df_filt %>% group_by(Species) %>%
     summarize(uniq_qName=list(unique(qName)), n=length(unique(qName)),
               .groups = "drop")
   un_n <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qName) %>% length
   un_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
   un_len_perc <- un_len/spc_int_len*100
-  ttl <- abbrevSpc(spc_int)
+  ttl <- formatSpc(spc_int)
   subttl <- paste0(un_n, " unique homologous scaffolds (", round(un_len*1e-6, 2), " Mb)")
   png(filename = venn_file, res = showtext_opts()$dpi,
       width = 7, height = 5, units = "in")
@@ -125,7 +131,7 @@ plotLens <- function(df) {
   # Function for individual plots
   lenPlot <- function(my_var, lab_pos) {
     y_label <- gsub("(\\(.+\\))",
-                    paste0("in \\*", abbrevSpc(spc_int), "\\* \\1"),
+                    paste0("in \\*", formatSpc(spc_int), "\\* \\1"),
                     my_var)
     p <- ggplot(data = df,
                 mapping = aes(x = `Reference chromosome length (Mb)`,
@@ -155,7 +161,7 @@ plotN <- function(df) {
   df <- cleanDf(df)
   sum_df <- df %>% group_by(Species) %>%
     summarize(med_n=median(`n homologous scaffolds`))
-  y_label <- paste0("*", abbrevSpc(spc_int), "* scaffolds aligned per chromosome")
+  y_label <- paste0("*", formatSpc(spc_int), "* scaffolds aligned per chromosome")
   p <- ggplot(data = df, mapping = aes(x = Reference, y = `n homologous scaffolds`,
                                        col = Reference, fill = Reference)) +
     geom_point(show.legend = F) +
@@ -164,6 +170,7 @@ plotN <- function(df) {
                  show.legend = F) +
     stat_summary(geom = "text", label = sum_df$med_n, fun = median,
                  position = position_nudge(x = 0.35, y = 0), show.legend = F) +
+    scale_x_discrete(labels = as_labeller(formatSpc)) +
     scale_y_continuous(breaks = breaks_width(20)) +
     ylab(y_label) +
     theme_bw() +
