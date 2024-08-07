@@ -1,7 +1,8 @@
 ## Initialization
 # Load required packages
-library(tidyverse, quietly = TRUE)
-if (require(showtext, quietly = TRUE)) {
+library(tidyverse, quietly = T)
+library(ape, quietly = T)
+if (require(showtext, quietly = T)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
 }
@@ -10,15 +11,17 @@ if (interactive()) {
   setwd("/scratch1/kdeweese/latissima/genome_stats")
   line_args <- c("busco_summaries/eukaryota_odb10",
                  "s-latissima-genome/species_table.txt",
+                 "1-s2.0-S1055790319300892-mmc1.txt",
                  "s-latissima-genome/")
-} else if (length(commandArgs(trailingOnly = TRUE)) == 3) {
-  line_args <- commandArgs(trailingOnly = TRUE)
+} else if (length(commandArgs(trailingOnly = T)) == 4) {
+  line_args <- commandArgs(trailingOnly = T)
 } else {
-  stop("3 positional arguments expected.")
+  stop("4 positional arguments expected.")
 }
 wd <- line_args[1]
 spec_file <- line_args[2]
-outdir <- line_args[3]
+tree_file <- line_args[3]
+outdir <- line_args[4]
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
 busc_plot_file <- paste0("busco_", lineage, ".png")
@@ -40,7 +43,7 @@ df$my_species <- factor(gsub(paste0("_", lineage), "", df$my_species),
 # Match FASTA file names to BUSCO species names for merge
 spec_names$my_species <- tools::file_path_sans_ext(basename(spec_names$my_species))
 spec_names$my_species <- factor(spec_names$my_species, levels = lvls)
-df <- merge(df, spec_names, sort = FALSE)
+df <- merge(df, spec_names, sort = F)
 # Labels for figure legend
 lbs <- c(" Complete (C) and single-copy (S)  ",
            " Complete (C) and duplicated (D)",
@@ -48,7 +51,7 @@ lbs <- c(" Complete (C) and single-copy (S)  ",
            " Missing (M)")
 cat_labs <- data.frame(label=factor(lbs, levels = rev(lbs)),
                        category=levels(df$category))
-df <- merge(df, cat_labs, sort = FALSE)
+df <- merge(df, cat_labs, sort = F)
 # Order species factor by highest complete (S) percentage
 ord_spc <- df[df$category == "S",]
 ord_spc <- ord_spc[order(ord_spc$my_percentage), "Species"]
@@ -90,7 +93,7 @@ busc_plot <- ggplot(data = df,
         text = element_text(size = 15),
         axis.text = element_text(color = "black"),
         axis.text.y = element_text(face = "italic")) +
-  guides(fill = guide_legend(nrow = 2, byrow = TRUE, reverse = TRUE))
+  guides(fill = guide_legend(nrow = 2, byrow = T, reverse = T))
 # Save plot with message to user
 print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
 ggsave(file = busc_plot_file, plot = busc_plot,

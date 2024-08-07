@@ -25,6 +25,7 @@ assembly_file="$1"
 if [[ -f "$assembly_file" ]]
 then
   echo "Using assembly file: $assembly_file"
+  mapfile -t spc_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $1}')
   mapfile -t assembly_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $2}')
   mapfile -t annot_list < <(grep -v "#" "$assembly_file" | awk -F '\t' '{print $3}')
   echo "Found ${#assembly_list[@]} assemblies and ${#annot_list[@]} annotations."
@@ -40,6 +41,8 @@ for i in "${!assembly_list[@]}"
 do
   assembly="${assembly_list[i]}"
   annot="${annot_list[i]}"
+  spc="${spc_list[i]}"
+  # spc="${spc// /_}"
   if [[ -f "$assembly" ]]
   then
     assembly_no_ext=$(basename "${assembly%.*}")
@@ -68,9 +71,9 @@ do
       echo "Error: script $script not found."
       exit 1
     fi
-    log="-o ${script_no_ext}_${assembly_no_ext}.log"
-    submission="sbatch $log $script $assembly $annot"
-    echo "$submission"
-    $submission
+    log="${script_no_ext}_${assembly_no_ext}.log"
+    submission=("sbatch" "-o" "$log" "$script" "$assembly" "$annot" "$spc")
+    echo "${submission[*]}"
+    "${submission[@]}"
   done
 done

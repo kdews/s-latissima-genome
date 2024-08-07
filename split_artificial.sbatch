@@ -65,7 +65,7 @@ do
     echo "Artificial chromosome ID: $chr_ID"
 
     # Temp filenames
-    assembly_no_ext="${assembly%%.*}"
+    assembly_no_ext="${assembly%.*}"
     ext="${assembly##*.}"
     temp_assembly_file="${assembly_file}.temp"
     # Assembly FASTA minus chr_ID

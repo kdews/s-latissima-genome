@@ -27,7 +27,10 @@ module load parallel
 
 # Define variables
 assembly="$1"
+gff="$2"
+spc="$3"
 assembly_no_ext="$(basename "${assembly%.*}")"
+echo "Species: $spc"
 # Shorten SLURM output variable(s)
 nthrd="$SLURM_CPUS_PER_TASK"
 # Output directory name
@@ -35,7 +38,21 @@ out="${job_name}_${assembly_no_ext}"
 
 # Run QUAST
 # quast="quast --large -k -b --report-all-metrics --threads $nthrd -o $out"
-quast="quast --large -k --threads $nthrd -o $out"
-cmd="$quast $assembly"
-echo "$cmd"
-$cmd
+cmd=(
+  "quast"
+  "--large"
+  "-k"
+  "-s"
+  "-f"
+  "--threads"
+  "$nthrd"
+  "-o"
+  "$out"
+  "-g"
+  "$gff"
+  "-l"
+  "$spc"
+  "$assembly"
+)
+echo "${cmd[*]}"
+"${cmd[@]}"

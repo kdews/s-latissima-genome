@@ -25,7 +25,8 @@ Requires: BUSCO (https://busco.ezlab.org)"
 fi
 
 # Load BUSCO env
-conda activate busco
+# conda activate busco
+conda activate busco_latest
 # Load GNU Parallel
 module load parallel
 
@@ -33,8 +34,8 @@ module load parallel
 mode=genome
 L1=eukaryota_odb10
 L2=stramenopiles_odb10
-assembly=$1
-assembly_no_ext=$(basename "${assembly%.*}")
+assembly="$1"
+assembly_no_ext="$(basename "${assembly%.*}")"
 # Shorten SLURM output variable(s)
 ntsk="$SLURM_NTASKS"
 nthrd="$SLURM_CPUS_PER_TASK"

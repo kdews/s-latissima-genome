@@ -1,13 +1,13 @@
 ## Initialization
 # Load required packages
 library(ape)
-if (require(showtext, quietly = TRUE)) {
+if (require(showtext, quietly = T)) {
   showtext_auto()
 }
 
 # Input
-if(length(commandArgs(trailingOnly = TRUE)) > 0) {
-  line_args <- commandArgs(trailingOnly = TRUE)
+if(length(commandArgs(trailingOnly = T)) > 0) {
+  line_args <- commandArgs(trailingOnly = T)
 } else {
   # Set working dir
   setwd("/scratch1/kdeweese/latissima/genome_stats")

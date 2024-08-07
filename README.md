@@ -3,10 +3,7 @@ Scripts to score and compare the genome assembly of *S. latissima* to related sp
 
 ## 1. Input files
 ### Fetch input files from portals
-Fetch assemblies and annotations from
-[JGI PhycoCosm](https://phycocosm.jgi.doe.gov/phycocosm/home) and
-[ORCAE](https://bioinformatics.psb.ugent.be/orcae) given a list of JGI portal
-names and ORCAE links.
+Fetch assemblies and annotations from [JGI PhycoCosm](https://phycocosm.jgi.doe.gov/phycocosm/home) and [ORCAE](https://bioinformatics.psb.ugent.be/orcae) given a list of JGI portal names and ORCAE links.
 ##### Usage
 ###### Option 1: Give JGI username and password
 > sbatch fetch_assemblies.sbatch [\<portal_list\>](portal_names.txt) [username] [password]
@@ -34,8 +31,9 @@ Run [split.scaffolds.to.contigs](https://github.com/MadsAlbertsen/miscperlscript
 ```
 sbatch s-latissima-genome/split_artificial.sbatch s-latissima-genome/species_table.txt
 ```
+The script will also update [\<assembly_file\>](species_table.txt) "Assembly" column with the path to the split assembly FASTA for each species.
 
-## 2. Genome scoring with BUSCO and QUAST
+## 2. Gene content and assembly statistics
 #### Run BUSCO and QUAST on each assembly listed in `<assembly_file>`
 ##### Usage
 > bash genome_stats.sh [\<assembly_file\>](species_table.txt) [[path/to/aug_busco.sbatch]](aug_busco.sbatch) [[path/to/quast.sbatch]](quast.sbatch)
@@ -54,7 +52,7 @@ For each lineage, a plot of BUSCO results across all genomes will be saved to `b
 ![alt text](busco_eukaryota_odb10.png)
 ![alt text](busco_stramenopiles_odb10.png)
 
-## 3. Evaluation of scaffoldedness
+## 3. Evaluation of genome contiguity (scaffoldedness)
 Generates violin plots of contig size for each genome.
 ##### Usage
 > sbatch scaffold_eval.sbatch [\<assembly_file\>](species_table.txt) \<species_of_interest\> \<outgroup_species\>
