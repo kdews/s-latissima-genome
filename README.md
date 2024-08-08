@@ -135,9 +135,10 @@ Alignment report: alignment_report.tsv
 ![alt text](align_length_and_n.png)
 
 #### Cluster query scaffolds by repeated alignments to same reference chromosome
+![alt text](elbow_k.png)
 ![alt text](clust_complexheatmap.png)
 
-#### Heatmap colored by degree of synteny
+#### Heatmap colored by alignment coverage
 ![alt text](align_clustered.png)
 
 ## 5. Homology-based rescaffolding
