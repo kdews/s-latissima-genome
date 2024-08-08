@@ -92,8 +92,9 @@ abbrevSpc <- function(spc) {
 }
 # Format species Latin name
 formatSpc <- function(spc) {
-  spc <- unlist(strsplit(spc, "_| "))
-  spc_f <- paste(spc, collapse = " ")
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
   return(spc_f)
 }
 # Fixes chromosome labels for plotting

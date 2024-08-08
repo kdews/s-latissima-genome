@@ -100,13 +100,13 @@ sbatch s-latissima-genome/cactus_run_prepared.sbatch s-latissima-genome/cactus_s
 ```
 sbatch s-latissima-genome/halSynteny.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
-#### Generate summary statistics, heatmaps and dotplots of pairwise halSynteny PSL files
+#### Generate report and alignment graphs of pairwise halSynteny PSL files
 Description of PSL file format taken from [Ensembl](https://useast.ensembl.org/info/website/upload/psl.html).
 ##### Usage
-> sbatch [dotplot.sbatch](dotplot.sbatch) [\<seqFile\>](s_lat_alignment.txt)
+> sbatch [align_analysis.sbatch](align_analysis.sbatch) [\<seqFile\>](s_lat_alignment.txt)
 ##### Example
 ```
-sbatch s-latissima-genome/dotplot.sbatch s-latissima-genome/s_lat_alignment.txt
+sbatch s-latissima-genome/align_analysis.sbatch s-latissima-genome/s_lat_alignment.txt
 ```
 #### Summary statistics
 Alignment report: alignment_report.tsv

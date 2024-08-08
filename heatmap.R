@@ -221,8 +221,9 @@ abbrevSpc <- function(spc) {
 }
 # Format species Latin name
 formatSpc <- function(spc) {
-  spc <- unlist(strsplit(spc, "_| "))
-  spc_f <- paste(spc, collapse = " ")
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
   return(spc_f)
 }
 # Fixes chromosome labels for plotting
@@ -247,12 +248,12 @@ cleanDf <- function(df) {
   df <- df %>%
     # Make unique column ID for each target and query scaffold
     #!!!FIX THIS!!!#
-    mutate(tID = paste(target, tNum, sep = "."),
-           qID = paste(query, qNum, sep = ".")) %>%
-    rowwise %>%
-    # Format species names
-    mutate(across(c(query, target), .fns = abbrevSpc)) %>%
-    ungroup
+    mutate(tID = paste(target, tNum, sep = "|"),
+           qID = paste(query, qNum, sep = "|"))
+    # rowwise %>%
+    # # Format species names
+    # mutate(across(c(query, target), .fns = abbrevSpc)) %>%
+    # ungroup
   # Factor species by order of decreasing relatedness to species of interest
   spc_lvls <- sapply(spc_order, grep,
                      unique(c(df$target, df$query)), value = T) %>% unname
@@ -437,8 +438,8 @@ pivDf <- function(df) {
     rowwise %>%
     #!!!FIX THIS!!!#
     mutate(
-      query = abbrevSpc(gsub("\\..*", "", qID)),
-      target = abbrevSpc(gsub("\\..*", "", tID)),
+      query = gsub("\\|.*", "", qID),
+      target = gsub("\\|..*", "", tID),
       target = factor(target, levels = levels(df$target))
     ) %>%
     ungroup %>%
@@ -500,6 +501,7 @@ alignHeat <- function(df_p, pal = "turbo") {
     facet_grid(
       rows = vars(query),
       cols = vars(target),
+      labeller = as_labeller(formatSpc),
       scales = "free",
       switch = "both"
     ) +
@@ -518,7 +520,7 @@ alignHeat <- function(df_p, pal = "turbo") {
 match_sums <- read.table(match_sums_file, header = T, sep = "\t")
 match_sums <- cleanDf(match_sums)
 # Mark maximal matches with only species of interest as query
-match_sums_ann <- markMax(match_sums, abbrevSpc(spc_int))
+match_sums_ann <- markMax(match_sums, spc_int)
 # Filter out artificial chromosomes for clustering
 # Co-occurrence matrix for query scaffolds
 co_match <- coMat(match_sums_ann %>% filter(tNum != 0))
@@ -532,35 +534,10 @@ print(paste("Optimal k chosen:", k_opt))
 hc <- heatClust(cross_mat, k_opt)
 clust <- cutree(hc, k = k_opt)
 df <- clustDf(match_sums_ann)
-# df <- df %>% filter(tNum != 0)
-# df <- df %>% filter(max_match == 1)
-test <- clustDf(match_sums_ann) %>%
-  select(query, target, tID, qID, qSize, tSize, clust, max_match) %>%
-  unique() %>%
-  filter(target == "M. pyrifera",
-         max_match == 1)
-dim(match_sums_ann)
-dim(test)
-# Need starting position from PSL
-ggplot(data = test,
-       mapping = aes(x = tSize, y = qSize,
-                     # alpha = max_match,
-                     color = clust)) +
-  geom_point() +
-  # scale_alpha(range = c(0, 1), guide = "none") +
-  scale_x_log10() +
-  scale_y_log10() +
-  scale_color_viridis_c() +
-  facet_grid(
-    rows = vars(query),
-    cols = vars(target),
-    scales = "free",
-    switch = "both"
-  )
-
 df_p <- pivDf(df)
 p_bar <- barClust(df, "LaCroixColoR::Lemon")
 p_aln <- alignHeat(df_p)
+p_aln
 ps <- ggarrange(p_bar, p_aln, nrow = 2, labels = "AUTO", align = "hv")
 
 # Save plots

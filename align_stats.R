@@ -75,8 +75,9 @@ abbrevSpc <- function(spc) {
 }
 # Format species Latin name
 formatSpc <- function(spc) {
-  spc <- unlist(strsplit(spc, "_| "))
-  spc_f <- paste(spc, collapse = " ")
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
   return(spc_f)
 }
 # Clean up data frame for plotting
@@ -143,6 +144,7 @@ plotLens <- function(df) {
                    label.x = lab_pos[["x"]], label.y = lab_pos[["y"]]) +
       scale_x_continuous(breaks = pretty_breaks()) +
       scale_y_continuous(breaks = pretty_breaks()) +
+      scale_color_discrete(labels = as_labeller(formatSpc)) +
       ylab(y_label) +
       theme_bw() +
       theme(legend.text = element_text(face = "italic"),
