@@ -466,6 +466,7 @@ barClust <- function(df, pal = "khroma::smoothrainbow") {
     facet_grid(
       rows = vars(query),
       cols = vars(target),
+      labeller = as_labeller(formatSpc),
       scales = "free",
       switch = "both"
     ) +
@@ -537,7 +538,6 @@ df <- clustDf(match_sums_ann)
 df_p <- pivDf(df)
 p_bar <- barClust(df, "LaCroixColoR::Lemon")
 p_aln <- alignHeat(df_p)
-p_aln
 ps <- ggarrange(p_bar, p_aln, nrow = 2, labels = "AUTO", align = "hv")
 
 # Save plots

@@ -55,6 +55,7 @@ abbrevSpc <- function(spc) {
 formatSpc <- function(spc) {
   spc <- unlist(strsplit(spc, "_| "))
   spc_f <- paste(spc, collapse = " ")
+  spc_f <- str_wrap(spc_f, width = 10)
   return(spc_f)
 }
 # Extract numbers from contig IDs for filtering

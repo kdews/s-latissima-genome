@@ -99,10 +99,16 @@ cleanDf <- function(df) {
 }
 # Summarize alignment statistics between species of interest and all references
 homoOverlap <- function(match_sums) {
-  df_filt <- match_sums %>% filter(query == spc_int) %>%
-    rowwise() %>% mutate(Species=formatSpc(target))
-  df_venn <- df_filt %>% group_by(Species) %>%
-    summarize(uniq_qName=list(unique(qName)), n=length(unique(qName)),
+  # Subset species of interest
+  df_filt <- match_sums %>%
+    filter(query == spc_int) %>%
+    rowwise() %>%
+    mutate(Species=formatSpc(as.character(target))) %>%
+    ungroup()
+  df_venn <- df_filt %>%
+    group_by(Species) %>%
+    summarize(uniq_qName=list(unique(qName)),
+              n=length(unique(qName)),
               .groups = "drop")
   un_n <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qName) %>% length
   un_len <- df_filt %>% select(qName, qSize) %>% unique %>% pull(qSize) %>% sum
@@ -111,17 +117,17 @@ homoOverlap <- function(match_sums) {
   subttl <- paste0(un_n, " unique homologous scaffolds (", round(un_len*1e-6, 2), " Mb)")
   png(filename = venn_file, res = showtext_opts()$dpi,
       width = 7, height = 5, units = "in")
-  venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
-               fill = rainbow(length(df_venn$Species)),
-               main = ttl, sub = subttl, print.mode = "raw",
-               main.cex = 2,
-               # Italicize species names
-               main.fontface = "italic", cat.fontface = "italic",
-               filename = NULL, disable.logging = T)
+  v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
+                     fill = rainbow(length(df_venn$Species)),
+                     main = ttl, sub = subttl, print.mode = "raw",
+                     main.cex = 2,
+                     # Italicize species names
+                     main.fontface = "italic", cat.fontface = "italic",
+                     filename = NULL, disable.logging = T)
+  grid.newpage()
+  grid.draw(v1)
   dev.off()
   print(paste("Wrote Venn diagram of scaffold alignments to:", venn_file))
-  # grid.newpage()
-  # grid.draw(v1)
 }
 # Plot length of scaffold matches vs. chromosome length
 plotLens <- function(df) {
@@ -144,7 +150,8 @@ plotLens <- function(df) {
                    label.x = lab_pos[["x"]], label.y = lab_pos[["y"]]) +
       scale_x_continuous(breaks = pretty_breaks()) +
       scale_y_continuous(breaks = pretty_breaks()) +
-      scale_color_discrete(labels = as_labeller(formatSpc)) +
+      scale_color_discrete(labels = as_labeller(formatSpc),
+                           aesthetics = c("color", "fill")) +
       ylab(y_label) +
       theme_bw() +
       theme(legend.text = element_text(face = "italic"),
@@ -172,7 +179,9 @@ plotN <- function(df) {
                  show.legend = F) +
     stat_summary(geom = "text", label = sum_df$med_n, fun = median,
                  position = position_nudge(x = 0.35, y = 0), show.legend = F) +
-    scale_x_discrete(labels = as_labeller(formatSpc)) +
+    scale_x_discrete(labels = as_labeller(
+      function(x) str_wrap(formatSpc(x), width = 15))
+    ) +
     scale_y_continuous(breaks = breaks_width(20)) +
     ylab(y_label) +
     theme_bw() +

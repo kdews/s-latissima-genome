@@ -82,21 +82,6 @@ getGen <- function(df_name, gen_type) {
   gen_name <- unlist(strsplit(df_name, "_vs_"))[[n]]
   return(gen_name)
 }
-# Abbreviate species genus name
-abbrevSpc <- function(spc) {
-  spc <- unlist(strsplit(spc, "_| "))
-  let1 <- substr(spc[1], 1, 1)
-  spc[1] <- paste0(let1, ".")
-  spc_a <- paste(spc, collapse = " ")
-  return(spc_a)
-}
-# Format species Latin name
-formatSpc <- function(spc) {
-  spc_f <- gsub("_", " ", spc)
-  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
-  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
-  return(spc_f)
-}
 # Fixes chromosome labels for plotting
 fixChrom <- function(contigs) {
   contigs <-
@@ -205,9 +190,8 @@ perSpecies <- function(max_matches) {
 perHomolog <- function(df) {
   # Subset species of interest
   match_lens <- df %>% filter(query == spc_int) %>%
-    rowwise()
-    # # Abbreviate species names
-    # mutate(Species = abbrevSpc(target))
+    rowwise() %>%
+    mutate(Species = target)
     # # Filter out artificial chromosomes
     # mutate(qNum=as.character(qNum), tNum=as.character(tNum)) %>%
     # filter(tNum != "0")
