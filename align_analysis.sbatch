@@ -12,6 +12,7 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 # Script variables / defaults
 # Rscript files
 r_scripts=(
+  "quast.R"
   "sum_psls.R"
   "align_stats.R"
   "heatmap.R"

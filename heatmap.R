@@ -435,14 +435,14 @@ pivDf <- function(df) {
                  names_to = "tID",
                  # values_to = "clust") %>%
                  values_to = "qPercent") %>%
-    rowwise %>%
+    rowwise() %>%
     #!!!FIX THIS!!!#
     mutate(
       query = gsub("\\|.*", "", qID),
       target = gsub("\\|..*", "", tID),
       target = factor(target, levels = levels(df$target))
     ) %>%
-    ungroup %>%
+    ungroup() %>%
     # Preserve factor ordering
     mutate(tID = factor(tID, levels = levels(df$tID)),
            qID = factor(qID, levels = rev(levels(df$qID))))
@@ -483,12 +483,14 @@ barClust <- function(df, pal = "khroma::smoothrainbow") {
 # Heatmap of target vs. query alignments
 alignHeat <- function(df_p, pal = "turbo") {
   leg_name <- paste("Synteny", "coverage", sep = "\n")
+  n_scaf <- length(unique(df_p$qID))
   # pal <- colorRampPalette(paletteer_d(pal))
   p <- ggplot(data = df_p,
               mapping = aes(x = tID, y = qID,
                             fill = qPercent)) +
     # fill = clust)) +
     geom_tile() +
+    ylab(paste0("n = ", n_scaf)) +
     scale_x_discrete(labels = as_labeller(fixChrom)) +
     scale_y_discrete(labels = as_labeller(fixChrom)) +
     # scale_fill_paletteer_c(name = leg_name, palette = pal) +
@@ -511,7 +513,7 @@ alignHeat <- function(df_p, pal = "turbo") {
       strip.text = element_text(face = "italic"),
       strip.placement = "outside",
       axis.text.y = element_blank(),
-      axis.title = element_blank(),
+      axis.title.x = element_blank(),
       axis.text.x = element_text(angle = 90)
     )
   return(p)
@@ -538,12 +540,12 @@ df <- clustDf(match_sums_ann)
 df_p <- pivDf(df)
 p_bar <- barClust(df, "LaCroixColoR::Lemon")
 p_aln <- alignHeat(df_p)
-ps <- ggarrange(p_bar, p_aln, nrow = 2, labels = "AUTO", align = "hv")
+# ps <- ggarrange(p_bar, p_aln, nrow = 2, labels = "AUTO", align = "hv")
 
 # Save plots
 ggsave(p_elb, filename = elbow_k_file, bg = "white")
 print(paste("Wrote elbow plot of k to:", elbow_k_file))
-ggsave(ps, filename = clust_align_file, bg = "white",
-       height = 10, width = 14, units = "in")
+ggsave(p_aln, filename = clust_align_file, bg = "white",
+       height = 7, width = 16, units = "in")
 print(paste("Wrote clustered alignment plots to:", clust_align_file))
 

@@ -138,7 +138,7 @@ plotLens <- function(df) {
   # Function for individual plots
   lenPlot <- function(my_var, lab_pos) {
     y_label <- gsub("(\\(.+\\))",
-                    paste0("in \\*", formatSpc(spc_int), "\\* \\1"),
+                    paste0("in <br>\\*", formatSpc(spc_int), "\\* \\1"),
                     my_var)
     p <- ggplot(data = df,
                 mapping = aes(x = `Reference chromosome length (Mb)`,
@@ -221,4 +221,4 @@ fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
 # Save plots
 ggsave(filename = align_plot_file, plot = fig, bg = "white",
        width = 10, height = 8, units = "in")
-print(paste("Wrote linear regressions of alignments to:", venn_file))
+print(paste("Wrote linear regressions of alignments to:", align_plot_file))

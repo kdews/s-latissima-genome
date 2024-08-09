@@ -133,6 +133,7 @@ Alignment report: alignment_report.tsv
 <!-- align_table_end -->
 
 ![alt text](align_length_and_n.png)
+![alt text](N_content_per_100_kb.png)
 
 #### Cluster query scaffolds by repeated alignments to same reference chromosome
 ![alt text](elbow_k.png)
@@ -169,6 +170,13 @@ sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt c
 ```
 sbatch s-latissima-genome/orthofinder.sbatch s-latissima-genome/species_table.txt
 ```
+
+
+
+
+
+
+
 
 
 

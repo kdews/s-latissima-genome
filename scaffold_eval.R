@@ -53,9 +53,10 @@ abbrevSpc <- function(spc) {
 }
 # Format species Latin name
 formatSpc <- function(spc) {
-  spc <- unlist(strsplit(spc, "_| "))
-  spc_f <- paste(spc, collapse = " ")
-  spc_f <- str_wrap(spc_f, width = 10)
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
+  spc_f <- str_wrap(spc_f, width = 15)
   return(spc_f)
 }
 # Extract numbers from contig IDs for filtering
@@ -244,8 +245,6 @@ species_tab <- species_tab[,na.omit(colnames(species_tab))]
 spc_int <- formatSpc(spc_int)
 out_spc <- formatSpc(out_spc)
 species <- species_tab$Species
-# Keep only Latin species names and abbreviate
-species <- word(species, start = 1, end = 2, sep = " ")
 species <- sapply(species, formatSpc, USE.NAMES = F)
 fns <- paste0(species_tab$Assembly, ".fai")
 for (i in 1:length(fns)) {
@@ -281,7 +280,7 @@ p_l <- violinPlot(idx, sum_idx, n50 = T)
 p_d <- distPlot(idx, 1e6)
 # Save plots
 print(paste("Saving violin plot to:", vio_plot))
-ggsave(vio_plot, p_l, bg = "white", width = 10, height = 6)
+ggsave(vio_plot, p_l, bg = "white", width = 8, height = 7)
 print(paste("Saving barplot plot to:", bar_plot))
 ggsave(bar_plot, p_d, bg = "white", width = 10, height = 6)
 
