@@ -133,7 +133,12 @@ Alignment report: alignment_report.tsv
 <!-- align_table_end -->
 
 ![alt text](align_length_and_n.png)
+
+#### N (unknown base) content in each genome
 ![alt text](N_content_per_100_kb.png)
+
+#### Unique scaffold alignment by species
+![alt text](align_venn_diagram.png)
 
 #### Cluster query scaffolds by repeated alignments to same reference chromosome
 ![alt text](elbow_k.png)
