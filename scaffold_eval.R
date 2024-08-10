@@ -56,7 +56,7 @@ formatSpc <- function(spc) {
   spc_f <- gsub("_", " ", spc)
   # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
   spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
-  spc_f <- str_wrap(spc_f, width = 15)
+  spc_f <- str_wrap(spc_f, width = 20)
   return(spc_f)
 }
 # Extract numbers from contig IDs for filtering
