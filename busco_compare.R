@@ -1,32 +1,49 @@
 ## Initialization
 # Load required packages
 library(tidyverse, quietly = T)
-library(ape, quietly = T)
+library(ggtree)
 if (require(showtext, quietly = T)) {
   showtext_auto()
   if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
 }
+
+# Set output directory for sourcing scripts
+if (interactive()) {
+  outdir <- "s-latissima-genome/"
+} else {
+  outdir <- commandArgs(trailingOnly = T)[3]
+}
+# Source phylogenetic tree-pruning R script
+source(paste(outdir, "prune_tree.R", sep = "/"))
 # Input
 if (interactive()) {
-  setwd("/scratch1/kdeweese/latissima/genome_stats")
+  setwd("/project/noujdine_61/kdeweese/latissima/genome_stats")
   line_args <- c("busco_summaries/eukaryota_odb10",
                  "s-latissima-genome/species_table.txt",
-                 "1-s2.0-S1055790319300892-mmc1.txt",
                  "s-latissima-genome/")
-} else if (length(commandArgs(trailingOnly = T)) == 4) {
+} else if (length(commandArgs(trailingOnly = T)) == 3) {
   line_args <- commandArgs(trailingOnly = T)
 } else {
-  stop("4 positional arguments expected.")
+  stop("3 positional arguments expected.")
 }
 wd <- line_args[1]
 spec_file <- line_args[2]
-tree_file <- line_args[3]
-outdir <- line_args[4]
+outdir <- line_args[3]
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
 busc_plot_file <- paste0("busco_", lineage, ".png")
 # Append output directory to plot name (if it exists)
 if (dir.exists(outdir)) busc_plot_file <- paste0(outdir, busc_plot_file)
+
+## Functions
+# Format species Latin name
+formatSpc <- function(spc) {
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
+  spc_f <- str_wrap(spc_f, width = 20)
+  return(spc_f)
+}
 
 ## Data wrangling
 # Source BUSCO-generated R script
@@ -94,6 +111,19 @@ busc_plot <- ggplot(data = df,
         axis.text = element_text(color = "black"),
         axis.text.y = element_text(face = "italic")) +
   guides(fill = guide_legend(nrow = 2, byrow = T, reverse = T))
+
+tree_plot <- ggtree(tp, branch.length = "none") +
+  geom_tiplab(as_ylab = T) +
+  theme(axis.text.y = element_text(face = "italic"))
+
+df2 <- df %>%
+  pivot_wider(id_cols = !my_percentage,
+              names_from = category,
+              values_from = my_values)
+df_mat <- as_tibble(t(df2)[-1,])
+colnames(df_mat) <- t(df2)[1,]
+gheatmap(tree_plot, )
+
 # Save plot with message to user
 print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
 ggsave(file = busc_plot_file, plot = busc_plot,

@@ -6,17 +6,19 @@ if (require(showtext, quietly = T)) {
 }
 
 # Input
-if(length(commandArgs(trailingOnly = T)) > 0) {
-  line_args <- commandArgs(trailingOnly = T)
-} else {
+if(interactive()) {
   # Set working dir
-  setwd("/scratch1/kdeweese/latissima/genome_stats")
+  setwd("/project/noujdine_61/kdeweese/latissima/genome_stats")
   line_args <- c(
-    "s-latissima-genome/filt_species_table.txt",
+    "s-latissima-genome/species_table.txt",
     "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt",
     "s-latissima-genome/s_lat_alignment.txt",
     "s-latissima-genome/"
-    )
+  )
+} else if(length(commandArgs(trailingOnly = T)) > 0) {
+  line_args <- commandArgs(trailingOnly = T)
+} else {
+  stop("4 positional arguments expected.")
 }
 species_file <- line_args[1]
 tree_file <- line_args[2]
@@ -34,28 +36,48 @@ if (dir.exists(outdir)) {
   out_tree <- paste0(outdir, out_tree)
 }
 
+# Format species to match tree names
+unformatSpc <- function(spc) {
+  spc <- gsub(" ", "_", spc)
+  return(spc)
+}
+# Format species Latin name
+formatSpc <- function(spc) {
+  spc_f <- gsub("_", " ", spc)
+  # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
+  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
+  # spc_f <- str_wrap(spc_f, width = 20)
+  return(spc_f)
+}
+
 ## Data
 # Import species list
 spc_tab <- read.table(species_file, sep = "\t", fill = NA, header = F)
-species <- spc_tab[,1]
-assembs <- spc_tab[,2]
-# Format species to match tree names
-spcFmt <- function(spc) {
-  spc <- unlist(strsplit(spc, " "))[1:2]
-  spc <- paste(spc, collapse = "_")
-  return(spc)
-}
-species <- sapply(species, spcFmt)
-# Output species table (names matched to tree labels)
-spc_tab2 <- data.frame(Species=species, Genome=assembs)
+colnames(spc_tab) <- c("Species", "Assembly")
+spc_tab <- spc_tab %>% select(Species, Assembly)
 # Import tree
 t <- read.tree(tree_file)
+# Reformat tip labels and save original tree labels to dictionary
+f_labs <- formatSpc(t$tip.label)
+# Use reformatted labels to match to species
+spc_match <- unlist(sapply(f_labs, grep, spc_tab$Species, value = T))
 # Error if not all species in tree
-if (!(any(species %in% t$tip.label))) {
+if (!(any(spc_tab$Species %in% spc_match))) {
   stop("Error: not all species found in tree.")
 }
+labs_df <- tibble(labs=t$tip.label, f_labs=f_labs) %>%
+  mutate(new_labs=unformatSpc(f_labs),
+         spc=spc_match[f_labs])
+# Create output species table (original species matched to tree labels)
+spc_dict <- labs_df %>%
+  filter(!if_any(everything(), .fns = is.na)) %>%
+  pull(new_labs, spc)
+spc_tab2 <- spc_tab %>% mutate(Species=spc_dict[Species])
+# Relabel tree
+tip_dict <- labs_df %>% pull(new_labs, labs)
+t$tip.label <- tip_dict[t$tip.label]
 # Prune tree
-tp <- keep.tip(t, species)
+tp <- keep.tip(t, unname(spc_dict))
 write.tree(tp, out_tree)
 print(paste("Pruned tree written to:", out_tree))
 # Generate formatted seqFile for Cactus, i.e.,
@@ -93,7 +115,7 @@ for (i in 1:length(trees)) {
   xlim[2] <- xlim[2]*0.8
   ylim <- ylims[[i]]
   # Label only species of interest in full phylo
-  idx <- grep(paste(species, collapse = "|"), tree$tip.label, invert = T)
+  idx <- grep(spc_dict, tree$tip.label, invert = T)
   tree$tip.label[idx] <- ""
   # Shorten species names for labels
   tree$tip.label <- gsub("[a-z]+_", "._", tree$tip.label)
