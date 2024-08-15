@@ -20,7 +20,6 @@ fi
 
 # Define variables
 r_script="${scripts_dir}${job_name}.R"
-R_mod_file="${scripts_dir}modules_for_Rscript.txt"
 sum_dir="busco_summaries"
 lineages=("eukaryota_odb10" "stramenopiles_odb10")
 if [[ -z "$1" ]]
@@ -67,18 +66,17 @@ do
   # Run BUSCO's generate_plot.py on each lineage
   # Activate BUSCO conda env
   conda activate busco
-  cmd="generate_plot.py -wd $wd --no_r"
+  cmd="generate_plot.py -q -wd $wd --no_r"
   echo "$cmd"
   $cmd
   # Deactivate env
-  conda activate
+  conda deactivate
   # Clean up BUSCO graphs
   # Load modules for Rscript
-  IFS=" " read -r -a R_mods <<< "$(cat "$R_mod_file")"
-  module load "${R_mods[@]}"
-  cmd="Rscript $r_script $wd $assembly_file $scripts_dir"
-  echo "$cmd"
-  $cmd
+  $load_R_mods
+  cmd=("Rscript" "$r_script" "$wd" "$assembly_file" "$scripts_dir")
+  echo "${cmd[*]}"
+  "${cmd[@]}"
   # Unload modules
   module purge
 done
