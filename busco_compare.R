@@ -165,9 +165,5 @@ p <- ggarrange(tree_plot, pp, widths = c(1, 2), nrow = 1, align = "h")
 cat(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
 h <- 5
 w <- h*2.5
-showtext_opts(dpi = 300)
 ggsave(file = busc_plot_file, plot = p, bg = "white",
-       width = w, height = h, units = "in", dpi = showtext_opts()$dpi
-       # width = my_width, height = my_height, units = my_unit
-       )
-showtext_opts(dpi = 100)
+       width = w, height = h, units = "in")
