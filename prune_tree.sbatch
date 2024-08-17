@@ -9,11 +9,7 @@
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
 if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
-# Load R module
-module purge
-module load gcc/11.3.0 openblas/0.3.20 r
-
-# Kelp Newick tree from https://doi.org/10.1016/j.ympev.2019.04.012
+# Default kelp Newick tree from https://doi.org/10.1016/j.ympev.2019.04.012
 tree="https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
 
 # Help message
@@ -53,6 +49,9 @@ echo "Input Newick tree: $tree"
 [[ -f "$tree" ]] || { echo "Error: Tree not found."; exit 1; }
 
 # Run tree pruning R script
+# Load R modules
+module purge
+$load_R_mods
 # Generates formatted seqFile, i.e.,
 # NEWICK tree
 # name1 path1
