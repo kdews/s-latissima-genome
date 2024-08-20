@@ -17,8 +17,7 @@ if (require(showtext, quietly = T, warn.conflicts = F)) {
 
 # Input
 if (interactive()) {
-  wd <- "/scratch1/kdeweese/latissima/genome_stats"
-  setwd(wd)
+  setwd("/project/noujdine_61/kdeweese/latissima/genome_stats")
   # Table of species in analysis
   seqFile <- "s-latissima-genome/s_lat_alignment.txt"
   # Ragout output directory
@@ -102,20 +101,39 @@ readSpecies <- function(seqFile) {
 }
 # Find 10-kb N gaps from FASTA file using Biostrings
 findGaps <- function(fasta_file) {
+  # gap_len <- 1e4
   fasta <- readDNAStringSet(fasta_file)
-  gap_ptn <- paste(rep("N", 10000), collapse = "")
+  Nfreq <- as_tibble(alphabetFrequency(fasta)) %>%
+    mutate(seqid_comp=names(fasta)) %>%
+    filter(!grepl("chr0\\.|chr_00\\.", seqid_comp)) %>%
+    pull(N, seqid_comp)
+  gap_len <- min(Nfreq[Nfreq > 0])
+  if (gap_len > 2e4) gap_len <- 200
+  print(paste("Gap size:", gap_len, "bp"))
+  gap_ptn <- paste(rep("N", gap_len), collapse = "")
   gap_matches <- vmatchPattern(gap_ptn, fasta)
   start_comp <- startIndex(gap_matches)
   fasta_gaps <- tibble(start_comp) %>%
-    mutate(seqid_comp = names(fasta)) %>%
+    mutate(seqid_comp=names(fasta)) %>%
+    filter(!grepl("chr0\\.|chr_00\\.", seqid_comp)) %>%
     unnest_longer(start_comp) %>%
-    mutate(start_comp = as.numeric(start_comp),
-           end_comp = start_comp + 10000,
-           gap_length = 10000,
-           label = factor("gap", levels = label_names, ordered = T)) %>%
-    # Convert genomic position columns from bp to Mb
-    mutate_at(.vars = vars(grep("start|end|length", colnames(.), value = T)),
-              .funs = ~ .x*1e-6)
+    group_by(seqid_comp) %>%
+    arrange(seqid_comp, start_comp) %>%
+    mutate(Contig_Size=lead(start_comp)-start_comp)
+  # %>%
+  #   filter(Contig_Size >= gap_len | is.na(Contig_Size)) %>%
+  #   summarize(Number_of_Gaps=n(), .groups = "drop") %>%
+  #   mutate(Length=gap_len,
+  #          Gap_Pattern=Number_of_Gaps*Length,
+  #          N_Frequency=Nfreq[seqid_comp])
+  # %>%
+  #   mutate(start_comp = as.numeric(start_comp),
+  #          end_comp = start_comp + gap_len,
+  #          gap_length = gap_len,
+  #          label = factor("gap", levels = label_names, ordered = T)) %>%
+  #   # Convert genomic position columns from bp to Mb
+  #   mutate_at(.vars = vars(grep("start|end|length", colnames(.), value = T)),
+  #             .funs = ~ .x*1e-6)
   return(fasta_gaps)
 }
 # Import NCBI AGP file (v2.0)
@@ -540,9 +558,28 @@ runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
 # Analysis
 # Import data
 seqs <- readSpecies(seqFile)
+named_fas <- pull(seqs, Assembly, Species)
+all_gaps <- sapply(named_fas, findGaps, simplify = F)
+ggplot(data = all_gaps$Saccharina_japonica,
+       mapping = aes(x = start_comp, y = Contig_Size, group = seqid_comp, color = seqid_comp)) +
+  geom_point(show.legend = F) +
+  facet_wrap(~seqid_comp, scales = "free") +
+  scale_x_continuous(labels = scales::label_number(scale = 1e-4)) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-4)) +
+  theme_bw()
+all_gaps <- all_gaps %>%
+  bind_rows(.id = "Species") %>%
+  pivot_longer(!c(Species, seqid_comp, Number_of_Gaps, Length),
+               names_to = "Method", values_to = "Ns")
+
+ggplot(data = all_gaps,
+       mapping = aes(x = seqid_comp, y = Ns, fill = Method, group = Method)) +
+  geom_boxplot() +
+  facet_wrap(~Species, scales = "free") +
+  theme(axis.text.x = element_blank())
 # Tabulate original genome scaffold gaps
 pre_genome_file <- pull(filter(seqs, grepl(spc_int, Species)), Assembly)
-pre_gaps <- findGaps(pre_genome_file)
+pre_gaps <- findGaps(pre_genome_file, 1e4)
 ragout_dirs <- list.files(pattern = "ragout-out-")
 # ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
 ragout_dirs <- grep("solid.*refine", ragout_dirs, value = T)
@@ -552,3 +589,4 @@ result_list1 <- runAnalysis(ragout_dir, seqs, pre_gaps, outfiles$len_plot,
 #                             outfiles$comp_map_plot)
 
 sumAgp(result_list1$idx_agp_list$`ragout-out-all-solid-refine-update`)
+
