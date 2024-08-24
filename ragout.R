@@ -9,6 +9,7 @@ library(viridisLite, quietly = T, warn.conflicts = F)
 library(RColorBrewer, quietly = T, warn.conflicts = F)
 library(gridExtra, quietly = T, warn.conflicts = F)
 library(ggpubr, quietly = T, warn.conflicts = F)
+library(ggpmisc, quietly = T, warn.conflicts = F)
 suppressPackageStartupMessages(library(Biostrings, quietly = T, warn.conflicts = F))
 if (require(showtext, quietly = T, warn.conflicts = F)) {
   showtext_auto()
@@ -121,16 +122,16 @@ readSpecies <- function(seqFile) {
   return(seqs)
 }
 # Find 10-kb N gaps from FASTA file using Biostrings
-findGaps <- function(fasta_file) {
+findGaps <- function(fasta_file, def_len) {
   # gap_len <- 1e4
   fasta <- readDNAStringSet(fasta_file)
   Nfreq <- as_tibble(alphabetFrequency(fasta)) %>%
     mutate(seqid_comp = names(fasta)) %>%
     filter(!grepl("^chr0\\.|^chr_00\\.", seqid_comp)) %>%
     pull(N, seqid_comp)
-  gap_len <- min(Nfreq[Nfreq >= 200])
+  gap_len <- min(Nfreq[Nfreq > 1])
   if (gap_len > 2e4){
-    gap_len <- 200
+    gap_len <- def_len
     }
   print(paste("Gap size:", gap_len, "bp"))
   gap_ptn <- paste(rep("N", gap_len), collapse = "")
@@ -755,47 +756,77 @@ runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
   ))
 }
 
+findGapSize <- function(def_len, named_fas) {
+  all_gaps <- sapply(named_fas, findGaps, def_len, simplify = F)
+  df_gaps <- all_gaps %>%
+    bind_rows(.id = "Species")
+  p <- ggplot(data = df_gaps,
+              mapping = aes(x = N_Frequency, y = Gap_Pattern,
+                            color = Species, group = Species)) +
+    geom_point() +
+    stat_poly_eq(mapping = use_label("eq"),
+                 formula = y ~ x + 0) +
+    stat_poly_line(fullrange = T, se = T, formula = y ~ x + 0) +
+    labs(title = def_len) + 
+    theme_bw()
+  return(p)
+}
+
 
 # Analysis
 # Import data
 seqs <- readSpecies(seqFile)
 named_fas <- pull(seqs, Assembly, Species)
-all_gaps <- sapply(named_fas, findGaps, simplify = F)
-ggplot(data = all_gaps$Saccharina_japonica,
-       aes(
-         x = end_comp,
-         xend = end_comp + Contig_Size,
-         y = seqid_comp,
-         color = seqid_comp,
-       )) +
-  geom_segment(
-    # linewidth = 0.1,
-    # color = "red",
-    position = position_jitter(width = 0),
-    show.legend = F
-  ) +
-  geom_point(aes(x = start_comp, y = seqid_comp),
-             size = 0.5,
-             color = "grey",
-             show.legend = F) +
-  # geom_point(aes(x = Length, y = seqid_comp), color = "yellow") +
-  # facet_wrap( ~ seqid_comp, scales = "free") +
-  # scale_x_continuous(labels = scales::label_number(scale = 1e-4)) +
-  # scale_y_continuous(labels = scales::label_number(scale = 1e-4)) +
-  theme_classic()
-  # theme(
-  #   axis.text = element_blank(),
-  #   axis.title = element_blank()
-  # )
-all_gaps <- all_gaps %>%
-  bind_rows(.id = "Species") %>%
+ps <- sapply(c(1000, 900, 800, 700, 600, 500, 400, 300, 200, 100, 50),
+             findGapSize,
+             named_fas[c("Saccharina_japonica", "Ectocarpus_sp._Ec32")],
+             simplify = F)
+ggarrange(plotlist = ps, common.legend = T)
+
+all_gaps <- sapply(named_fas, findGaps, 1, simplify = F)
+# ggplot(data = all_gaps$Saccharina_japonica,
+#        aes(
+#          x = end_comp,
+#          xend = end_comp + Contig_Size,
+#          y = seqid_comp,
+#          color = seqid_comp,
+#        )) +
+#   geom_segment(
+#     # linewidth = 0.1,
+#     # color = "red",
+#     position = position_jitter(width = 0),
+#     show.legend = F
+#   ) +
+#   geom_point(aes(x = start_comp, y = seqid_comp),
+#              size = 0.5,
+#              color = "grey",
+#              show.legend = F) +
+#   # geom_point(aes(x = Length, y = seqid_comp), color = "yellow") +
+#   # facet_wrap( ~ seqid_comp, scales = "free") +
+#   # scale_x_continuous(labels = scales::label_number(scale = 1e-4)) +
+#   # scale_y_continuous(labels = scales::label_number(scale = 1e-4)) +
+#   theme_classic()
+#   # theme(
+#   #   axis.text = element_blank(),
+#   #   axis.title = element_blank()
+#   # )
+df_gaps <- all_gaps %>%
+  bind_rows(.id = "Species")
+ggplot(data = df_gaps,
+       mapping = aes(x = N_Frequency, y = Gap_Pattern,
+                     color = Species, group = Species)) +
+  geom_point() +
+  stat_poly_eq(mapping = use_label("eq"),
+               formula = y ~ x + 0) +
+  stat_poly_line(fullrange = T, se = T, formula = y ~ x + 0)
+
+df_gaps_piv <- df_gaps %>%
   pivot_longer(
     c(Gap_Pattern, N_Frequency),
     names_to = "Method",
     values_to = "Ns"
   )
-
-ggplot(data = all_gaps,
+ggplot(data = df_gaps_piv,
        mapping = aes(
          x = seqid_comp,
          y = Ns,
