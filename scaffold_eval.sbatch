@@ -13,8 +13,8 @@ if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]
 then
   echo "\
-Extracts longest representative scaffolds of each genome, given a species of
-interest and an outgroup species.
+Given a species of interest and an outgroup species, generates plots comparing 
+assemblies on basis of scaffolding.
 Usage: sbatch ${job_name}.sbatch <assembly_file> <spc_int> <out_spc>
 
 Required input:
