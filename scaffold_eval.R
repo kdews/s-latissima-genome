@@ -35,7 +35,9 @@ if (interactive()) {
 # Order for species factor
 spc_order <- c("Ectocarpus", "pinnatifida", "pyrifera", "japonica", "latissima")
 # Output plot filenames
-vio_plot <- "scaffold_sizes_violin.png"
+extens <- c("png", "tiff")
+vio_plot <- "F1_scaffold_sizes_violin_log"
+vio_plot <- paste(vio_plot, extens, sep = ".")
 bar_plot <- "scaffold_sizes_bar.png"
 # Prepend output directory to plot name (if it exists)
 if (dir.exists(outdir)) {
@@ -280,32 +282,34 @@ p_l <- violinPlot(idx, sum_idx, n50 = T)
 p_d <- distPlot(idx, 1e6)
 # Save plots
 print(paste("Saving violin plot to:", vio_plot))
-ggsave(vio_plot, p_l, bg = "white", width = 8, height = 7)
+sapply(vio_plot, ggsave,
+       plot = p_l, bg = "white", width = 8, height = 7,
+       simplify = F)
 print(paste("Saving barplot plot to:", bar_plot))
 ggsave(bar_plot, p_d, bg = "white", width = 10, height = 6)
 
-
-compVersions <- function(version_list) {
-  df <- sapply(version_list, read.table, simplify = F) %>%
-    bind_rows(.id = "Species") %>%
-    mutate(Species=factor(Species, levels = names(version_list))) %>%
-    rename(ID=V1, Length=V2) %>%
-    select(Species, ID, Length)
-  sum_df <- sumDf(df)
-  p <- violinPlot(df, sum_df, n50 = T)
-  return(p)
-}
-ec <- list(
-  less_2kb="assemblies/old_genomes/Ectsi_genome_InfEg2kb.fasta.fai",
-  JGI="assemblies/old_genomes/Ectsil1_AssemblyScaffolds_Repeatmasked.fasta.fai",
-  ORCAE_V1="assemblies/old_genomes/Ectsi_genome_V2_cleaned.tfa.fai",
-  ORCAE_V2="assemblies/EctsiV2_genome.fasta.fai",
-  split_V2="assemblies/EctsiV2_genome_split_artificial.fasta.fai"
-)
-sj <- list(
-  JGI="assemblies/old_genomes/Sacja1_AssemblyScaffolds_Repeatmasked.fasta.fai",
-  ORCAE="assemblies/SJ_v6_2_chromosome.fa.fai",
-  ORCAE_split="assemblies/SJ_v6_2_chromosome_split_artificial.fa.fai"
-)
-p_ec <- compVersions(ec)
-p_sj <- compVersions(sj)
+# 
+# compVersions <- function(version_list) {
+#   df <- sapply(version_list, read.table, simplify = F) %>%
+#     bind_rows(.id = "Species") %>%
+#     mutate(Species=factor(Species, levels = names(version_list))) %>%
+#     rename(ID=V1, Length=V2) %>%
+#     select(Species, ID, Length)
+#   sum_df <- sumDf(df)
+#   p <- violinPlot(df, sum_df, n50 = T)
+#   return(p)
+# }
+# ec <- list(
+#   less_2kb="assemblies/old_genomes/Ectsi_genome_InfEg2kb.fasta.fai",
+#   JGI="assemblies/old_genomes/Ectsil1_AssemblyScaffolds_Repeatmasked.fasta.fai",
+#   ORCAE_V1="assemblies/old_genomes/Ectsi_genome_V2_cleaned.tfa.fai",
+#   ORCAE_V2="assemblies/EctsiV2_genome.fasta.fai",
+#   split_V2="assemblies/EctsiV2_genome_split_artificial.fasta.fai"
+# )
+# sj <- list(
+#   JGI="assemblies/old_genomes/Sacja1_AssemblyScaffolds_Repeatmasked.fasta.fai",
+#   ORCAE="assemblies/SJ_v6_2_chromosome.fa.fai",
+#   ORCAE_split="assemblies/SJ_v6_2_chromosome_split_artificial.fa.fai"
+# )
+# p_ec <- compVersions(ec)
+# p_sj <- compVersions(sj)

@@ -31,7 +31,8 @@ quast_script <- "quast.R"
 # Output
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
-busc_plot_file <- paste0("busco_", lineage, ".png")
+extens <- c("png", "tiff")
+busc_plot_file <- paste0("F2_busco_", lineage, ".", extens)
 
 # Prepend working directory to BUSCO script (if exists)
 if (dir.exists(wd)) {
@@ -165,5 +166,6 @@ p <- ggarrange(tree_plot, pp, widths = c(1, 2), nrow = 1, align = "h")
 cat(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
 h <- 5
 w <- h*2.5
-ggsave(file = busc_plot_file, plot = p, bg = "white",
-       width = w, height = h, units = "in")
+sapply(busc_plot_file, ggsave,
+       plot = p, bg = "white", width = w, height = h,
+       simplify = F)

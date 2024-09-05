@@ -41,7 +41,9 @@ match_sums_file <- "align_sums.tsv"
 # Output files
 comp_heatmap_file <- "clust_complexheatmap.png"
 elbow_k_file <- "elbow_k.png"
-clust_align_file <- "align_clustered.png"
+extens <- c("png", "tiff")
+clust_align_file <- "F3B_heatmaps"
+clust_align_file <- paste(clust_align_file, extens, sep = ".")
 # Prepend output directory to file name (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
@@ -510,11 +512,13 @@ alignHeat <- function(df_p, pal = "turbo") {
     ) +
     theme_minimal() +
     theme(
-      strip.text = element_text(face = "italic"),
+      strip.text = element_text(face = "italic", size = rel(1.2)),
       strip.placement = "outside",
       axis.text.y = element_blank(),
       axis.title.x = element_blank(),
-      axis.text.x = element_text(angle = 90)
+      axis.text.x = element_text(angle = 90),
+      legend.title = element_text(size = rel(1.1)),
+      legend.text = element_text(size = rel(1))
     )
   return(p)
 }
@@ -545,7 +549,8 @@ p_aln <- alignHeat(df_p)
 # Save plots
 ggsave(p_elb, filename = elbow_k_file, bg = "white")
 print(paste("Wrote elbow plot of k to:", elbow_k_file))
-ggsave(p_aln, filename = clust_align_file, bg = "white",
-       height = 7, width = 16, units = "in")
+sapply(clust_align_file, ggsave,
+       plot = p_aln, bg = "white", height = 7, width = 16,
+       simplify = F)
 print(paste("Wrote clustered alignment plots to:", clust_align_file))
 

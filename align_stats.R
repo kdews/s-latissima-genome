@@ -41,8 +41,11 @@ max_match_file <- "max_matches.tsv"
 lens_file <- "lens_by_chrom.tsv"
 align_report_file <- "alignment_report.tsv"
 # Output
-venn_file <- "align_venn_diagram.png"
-align_plot_file <- "align_length_and_n.png"
+extens <- c("png", "tiff")
+venn_file <- "F3A_venn"
+venn_file <- paste(venn_file, extens, sep = ".")
+align_plot_file <- "FS2_align_length_and_n"
+align_plot_file <- paste(align_plot_file, extens, sep = ".")
 # Prepend output directory to file names (if it exists)
 if (dir.exists(outdir)) {
   match_sums_file <- paste0(outdir, match_sums_file)
@@ -115,7 +118,21 @@ homoOverlap <- function(match_sums) {
   un_len_perc <- un_len/spc_int_len*100
   ttl <- formatSpc(spc_int)
   subttl <- paste0(un_n, " unique homologous scaffolds (", round(un_len*1e-6, 2), " Mb)")
-  png(filename = venn_file, res = showtext_opts()$dpi,
+  venn_png <- grep("png", venn_file, value = T)
+  venn_tiff <- grep("tiff", venn_file, value = T)
+  png(filename = venn_png, res = showtext_opts()$dpi,
+      width = 7, height = 5, units = "in")
+  v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
+                     fill = rainbow(length(df_venn$Species)),
+                     main = ttl, sub = subttl, print.mode = "raw",
+                     main.cex = 2,
+                     # Italicize species names
+                     main.fontface = "italic", cat.fontface = "italic",
+                     filename = NULL, disable.logging = T)
+  grid.newpage()
+  grid.draw(v1)
+  dev.off()
+  tiff(filename = venn_tiff, res = showtext_opts()$dpi,
       width = 7, height = 5, units = "in")
   v1 <- venn.diagram(df_venn$uniq_qName, category.names = df_venn$Species,
                      fill = rainbow(length(df_venn$Species)),
@@ -219,6 +236,7 @@ n_box <- plotN(max_match_lens_sum)
 fig <- ggarrange(lens_plot, n_box, ncol = 2, labels = c("", "C"),
                  widths = c(1, 0.8))
 # Save plots
-ggsave(filename = align_plot_file, plot = fig, bg = "white",
-       width = 10, height = 8, units = "in")
+sapply(align_plot_file, ggsave,
+       plot = fig, bg = "white", width = 10, height = 8, units = "in",
+       simplify = F)
 print(paste("Wrote linear regressions of alignments to:", align_plot_file))

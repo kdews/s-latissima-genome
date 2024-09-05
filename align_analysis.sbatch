@@ -39,6 +39,7 @@ seqFile="${scripts_dir}${seqFile}"
 
 # Load R module
 module purge
+echo "$load_R_mods"
 $load_R_mods
 
 # Input

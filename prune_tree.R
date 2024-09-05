@@ -18,7 +18,7 @@ if(interactive()) {
   tree_file <- "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
   seq_file <- "s-latissima-genome/s_lat_alignment.txt"
   outdir <- "s-latissima-genome/"
-} else if(sourced == T) {
+} else if(sourced && sourced == T) {
   tree_file <- "https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
   seq_file <- "s_lat_alignment.txt"
   if (dir.exists(outdir)) seq_file <- paste0(outdir, seq_file)
@@ -33,14 +33,16 @@ if(interactive()) {
 }
 
 # Set filename(s)
-png_file <- "phylo_prune.png"
+extens <- c("png", "tiff")
+plot_file <- "FS1_phylo_prune"
+plot_file <- paste(plot_file, extens, sep = ".")
 # Split filename for output naming
 tree_name <- tools::file_path_sans_ext(basename(tree_file))
 tree_ext <- tools::file_ext(tree_file)
 out_tree <- paste0(tree_name, "_pruned.", tree_ext)
 # Append output directory to output filenames (if it exists)
 if (dir.exists(outdir)) {
-  png_file <- paste0(outdir, png_file)
+  plot_file <- paste0(outdir, plot_file)
   out_tree <- paste0(outdir, out_tree)
 }
 
@@ -107,16 +109,18 @@ print(paste("Cactus-formated seqFile written to:", seq_file))
 
 ## Plot phylogenetic trees
 t1 <- ggtree(t) +
-  hexpand(0.2) +
+  hexpand(0.5) +
   geom_tiplab(aes(label = f_labs, color = factor(highlight)),
               fontface = "italic",
               show.legend = F) +
   scale_color_manual(values = "red", na.value = "black") +
   theme_tree2()
 t2 <- ggtree(tp) +
-  hexpand(0.2) +
+  hexpand(0.5) +
   geom_tiplab(aes(label = f_labs), fontface = "italic") +
   theme_tree2()
 p <- ggarrange(t1, t2, labels = "AUTO")
-ggsave(filename = png_file, plot = p)
-print(paste("Full and pruned phylogenetic trees plotted in:", png_file))
+sapply(plot_file, ggsave,
+       plot = p, height = 5, width = 10,
+       simplify = F)
+print(paste("Full and pruned phylogenetic trees plotted in:", plot_file))

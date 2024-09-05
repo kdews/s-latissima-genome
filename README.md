@@ -49,8 +49,8 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
 For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
-![alt text](busco_eukaryota_odb10.png)
-![alt text](busco_stramenopiles_odb10.png)
+![alt text](F2_busco_eukaryota_odb10.png)
+![alt text](F2_busco_stramenopiles_odb10.png)
 
 ## 3. Evaluation of genome contiguity (scaffoldedness)
 Generates violin plots of contig size for each genome.
@@ -62,8 +62,7 @@ Generates violin plots of contig size for each genome.
 ```
 sbatch s-latissima-genome/scaffold_eval.sbatch s-latissima-genome/species_table.txt Saccharina_latissima Ectocarpus_sp.
 ```
-Violin plot of scaffold and contig sizes per genome will be saved in `scaffold_sizes_violin.png`.
-![alt text](scaffold_sizes_violin.png)
+![alt text](F1_scaffold_sizes_violin_log.png)
 
 ## 4. Multi-species whole genome alignment with [Progressive Cactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md)
 ### Prune brown macroalgae phylogeny to include only species in analysis
@@ -76,7 +75,7 @@ sbatch s-latissima-genome/prune_tree.sbatch s-latissima-genome/species_table.txt
 ```
 Output `<seqFile>` formatted for Cactus: `s_lat_alignment.txt`.
 Phylogeny before and after pruning will be plotted in `phylo_prune.png`.
-![Phylogenetic graphs showing pruning](phylo_prune.png)
+![Phylogenetic graphs showing pruning](FS1_phylo_prune.png)
 
 ### Run Progressive Cactus alignment
 #### Prepare scripts for stepwise pipeline
@@ -132,20 +131,20 @@ Alignment report: alignment_report.tsv
 
 <!-- align_table_end -->
 
-![alt text](align_length_and_n.png)
+![alt text](FS2_align_length_and_n.png)
 
 #### N (unknown base) content in each genome
 ![alt text](N_content_per_100_kb.png)
 
 #### Unique scaffold alignment by species
-![alt text](align_venn_diagram.png)
+![alt text](F3A_venn.png)
 
 #### Cluster query scaffolds by repeated alignments to same reference chromosome
 ![alt text](elbow_k.png)
 ![alt text](clust_complexheatmap.png)
 
 #### Heatmap colored by alignment coverage
-![alt text](align_clustered.png)
+![alt text](F3B_heatmaps.png)
 
 ## 5. Homology-based rescaffolding
 ### Extract MAF from Cactus alignment using [HAL tools](https://github.com/ComparativeGenomicsToolkit/hal)
@@ -175,6 +174,10 @@ sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt c
 ```
 sbatch s-latissima-genome/orthofinder.sbatch s-latissima-genome/species_table.txt
 ```
+
+
+
+
 
 
 
