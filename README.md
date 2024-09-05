@@ -161,7 +161,7 @@ sbatch s-latissima-genome/hal2maf.sbatch cactus-steps-output/s_lat_alignment.hal
 ```
 sbatch s-latissima-genome/ragout.sbatch s-latissima-genome/s_lat_alignment.txt cactus-steps-output ragout-out
 ```
-![alt text](ragout_length_dist.png)
+![alt text](F4A_ragout_length_dist.png)
 ![alt text](ragout_pseudo_mapping.png)
 ![alt text](ragout_comp_length_dist.png)
 ![alt text](ragout_comp_pseudo_mapping.png)
