@@ -43,12 +43,15 @@ if (interactive()) {
 }
 
 # Output plot file names
+extens <- c("png", "tiff")
 outfiles <- list(
-  len_plot = "ragout_length_dist.png",
-  map_plot = "ragout_pseudo_mapping.png",
-  comp_len_plot = "ragout_comp_length_dist.png",
-  comp_map_plot = "ragout_comp_pseudo_mapping.png"
+  len_plot = "F4A_ragout_length_dist",
+  map_plot = "ragout_pseudo_mapping",
+  comp_len_plot = "ragout_comp_length_dist",
+  comp_map_plot = "ragout_comp_pseudo_mapping"
 )
+outfiles <- sapply(outfiles, paste, extens, sep = ".", simplify = F)
+
 # If exists, prepend output directory to output file names
 redirect <- function(filename, outdir) {
   if (dir.exists(outdir))
@@ -130,16 +133,16 @@ findGaps <- function(fasta_file, def_len) {
     filter(!grepl("^chr0\\.|^chr_00\\.", seqid_comp)) %>%
     pull(N, seqid_comp)
   gap_len <- min(Nfreq[Nfreq > 1])
-  if (gap_len > 2e4){
+  if (gap_len > 2e4) {
     gap_len <- def_len
-    }
+  }
   print(paste("Gap size:", gap_len, "bp"))
   gap_ptn <- paste(rep("N", gap_len), collapse = "")
   gap_matches <- vmatchPattern(gap_ptn, fasta)
   start_comp <- startIndex(gap_matches)
   fasta_gaps <- tibble(start_comp) %>%
     mutate(seqid_comp = names(fasta),
-           Length = width(fasta),) %>%
+           Length = width(fasta), ) %>%
     unnest_longer(start_comp) %>%
     mutate(
       start_comp = as.numeric(start_comp),
@@ -148,7 +151,7 @@ findGaps <- function(fasta_file, def_len) {
     ) %>%
     filter(!grepl("^chr0\\.|^chr_00\\.", seqid_comp)) %>%
     group_by(seqid_comp, Length) %>%
-    group_modify( ~ add_row(
+    group_modify(~ add_row(
       .x,
       start_comp = 0,
       end_comp = 0,
@@ -263,20 +266,20 @@ readAgp <- function(ragout_dir, pre_gaps) {
   agp_gaps <-
     agp_combo %>% filter(label == "gap" & !is.na(seqid_comp))
   for (i in 1:dim(agp_gaps)[1]) {
-    agp_gaps_row <- agp_gaps[i,]
+    agp_gaps_row <- agp_gaps[i, ]
     row_id <- which(
       agp_combo$label == "input" &
         agp_combo$seqid_comp == agp_gaps_row$seqid_comp &
         agp_combo$start_scaf <= agp_gaps_row$start_scaf &
         agp_combo$end_scaf >= agp_gaps_row$end_scaf
     )
-    agp_row1 <- agp_combo[row_id,] %>%
+    agp_row1 <- agp_combo[row_id, ] %>%
       mutate(end_scaf = agp_gaps_row$start_scaf)
-    agp_row2 <- agp_combo[row_id,] %>%
+    agp_row2 <- agp_combo[row_id, ] %>%
       mutate(start_scaf = agp_gaps_row$end_scaf)
     agp_combo <- agp_combo %>%
       add_row(agp_row2)
-    agp_combo[row_id,] <- agp_row1
+    agp_combo[row_id, ] <- agp_row1
   }
   agp_combo <- agp_combo %>%
     group_by(seqid_scaf) %>%
@@ -669,6 +672,8 @@ ragoutPlot <-
   }
 # Run all functions on data
 runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
+  print(plot1)
+  print(plot2)
   # Extract titles for plots
   ttls <- sapply(ragout_dirs, extTtl)
   # Wrangle data
@@ -703,8 +708,16 @@ runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
   wd <- 7
   if (length(p_list) > 1)
     wd <- 7 * length(p_list) * 0.6
-  # ggsave(plot1, all_bar, height = ht, width = wd, bg = "white")
-  print(all_bar)
+  sapply(
+    plot1,
+    ggsave,
+    plot = all_bar,
+    height = ht,
+    width = wd,
+    bg = "white",
+    simplify = F
+  )
+  # print(all_bar)
   print(paste("Saved plot:", plot1))
   # Line graph mapping of original scaffolds onto pseudochromosomes
   dot_list <-
@@ -740,8 +753,16 @@ runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
   wd <- 7
   if (length(dot_list) > 1)
     wd <- 7 * length(dot_list) * 0.6
-  # ggsave(plot2, all_dot, height = ht, width = wd, bg = "white")
-  print(all_dot)
+  sapply(
+    plot1,
+    ggsave,
+    plot = all_bar,
+    height = ht,
+    width = wd,
+    bg = "white",
+    simplify = F
+  )
+  # print(all_dot)
   print(paste("Saved plot:", plot2))
   # # Combine all plots into figure
   # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
@@ -755,19 +776,27 @@ runAnalysis <- function(ragout_dirs, seqs, pre_gaps, plot1, plot2) {
     idx_agp_list = idx_agp_list
   ))
 }
-
+# Find gap size of each reference
 findGapSize <- function(def_len, named_fas) {
   all_gaps <- sapply(named_fas, findGaps, def_len, simplify = F)
   df_gaps <- all_gaps %>%
     bind_rows(.id = "Species")
-  p <- ggplot(data = df_gaps,
-              mapping = aes(x = N_Frequency, y = Gap_Pattern,
-                            color = Species, group = Species)) +
+  p <- ggplot(
+    data = df_gaps,
+    mapping = aes(
+      x = N_Frequency,
+      y = Gap_Pattern,
+      color = Species,
+      group = Species
+    )
+  ) +
     geom_point() +
     stat_poly_eq(mapping = use_label("eq"),
                  formula = y ~ x + 0) +
-    stat_poly_line(fullrange = T, se = T, formula = y ~ x + 0) +
-    labs(title = def_len) + 
+    stat_poly_line(fullrange = T,
+                   se = T,
+                   formula = y ~ x + 0) +
+    labs(title = def_len) +
     theme_bw()
   return(p)
 }
@@ -776,66 +805,6 @@ findGapSize <- function(def_len, named_fas) {
 # Analysis
 # Import data
 seqs <- readSpecies(seqFile)
-named_fas <- pull(seqs, Assembly, Species)
-ps <- sapply(c(1000, 900, 800, 700, 600, 500, 400, 300, 200, 100, 50),
-             findGapSize,
-             named_fas[c("Saccharina_japonica", "Ectocarpus_sp._Ec32")],
-             simplify = F)
-ggarrange(plotlist = ps, common.legend = T)
-
-all_gaps <- sapply(named_fas, findGaps, 1, simplify = F)
-# ggplot(data = all_gaps$Saccharina_japonica,
-#        aes(
-#          x = end_comp,
-#          xend = end_comp + Contig_Size,
-#          y = seqid_comp,
-#          color = seqid_comp,
-#        )) +
-#   geom_segment(
-#     # linewidth = 0.1,
-#     # color = "red",
-#     position = position_jitter(width = 0),
-#     show.legend = F
-#   ) +
-#   geom_point(aes(x = start_comp, y = seqid_comp),
-#              size = 0.5,
-#              color = "grey",
-#              show.legend = F) +
-#   # geom_point(aes(x = Length, y = seqid_comp), color = "yellow") +
-#   # facet_wrap( ~ seqid_comp, scales = "free") +
-#   # scale_x_continuous(labels = scales::label_number(scale = 1e-4)) +
-#   # scale_y_continuous(labels = scales::label_number(scale = 1e-4)) +
-#   theme_classic()
-#   # theme(
-#   #   axis.text = element_blank(),
-#   #   axis.title = element_blank()
-#   # )
-df_gaps <- all_gaps %>%
-  bind_rows(.id = "Species")
-ggplot(data = df_gaps,
-       mapping = aes(x = N_Frequency, y = Gap_Pattern,
-                     color = Species, group = Species)) +
-  geom_point() +
-  stat_poly_eq(mapping = use_label("eq"),
-               formula = y ~ x + 0) +
-  stat_poly_line(fullrange = T, se = T, formula = y ~ x + 0)
-
-df_gaps_piv <- df_gaps %>%
-  pivot_longer(
-    c(Gap_Pattern, N_Frequency),
-    names_to = "Method",
-    values_to = "Ns"
-  )
-ggplot(data = df_gaps_piv,
-       mapping = aes(
-         x = seqid_comp,
-         y = Ns,
-         fill = Method,
-         group = Method
-       )) +
-  geom_boxplot() +
-  facet_wrap(~ Species, scales = "free") +
-  theme(axis.text.x = element_blank())
 # Tabulate original genome scaffold gaps
 pre_genome_file <-
   pull(filter(seqs, grepl(spc_int, Species)), Assembly)
@@ -849,7 +818,20 @@ result_list1 <-
               pre_gaps,
               outfiles$len_plot,
               outfiles$map_plot)
-# result_list2 <- runAnalysis(ragout_dirs, seqs, pre_gaps, outfiles$comp_len_plot,
-#                             outfiles$comp_map_plot)
+result_list2 <-
+  runAnalysis(ragout_dirs,
+              seqs,
+              pre_gaps,
+              outfiles$comp_len_plot,
+              outfiles$comp_map_plot)
 
-sumAgp(result_list1$idx_agp_list$`ragout-out-all-solid-refine-update`)
+# # All species
+# named_fas <- pull(seqs, Assembly, Species)
+# ps <-
+#   sapply(
+#     c(1000, 900, 800, 700, 600, 500, 400, 300, 200, 100, 50),
+#     findGapSize,
+#     named_fas[c("Saccharina_japonica", "Ectocarpus_sp._Ec32")],
+#     simplify = F
+#   )
+# ps <- ggarrange(plotlist = ps, common.legend = T)
