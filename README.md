@@ -49,7 +49,7 @@ bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-l
 bash s-latissima-genome/genome_stats.sh s-latissima-genome/species_table.txt s-latissima-genome/busco_compare.sbatch
 ```
 For each lineage, a plot of BUSCO results across all genomes will be saved to `busco_<lineage>.png`.
-![alt text](F2_busco_eukaryota_odb10.png)
+![alt text](FS1_busco_eukaryota_odb10.png)
 ![alt text](F2_busco_stramenopiles_odb10.png)
 
 ## 3. Evaluation of genome contiguity (scaffoldedness)

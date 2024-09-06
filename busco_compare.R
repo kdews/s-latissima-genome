@@ -32,7 +32,14 @@ quast_script <- "quast.R"
 # Split lineage from working directory
 lineage <- unlist(strsplit(wd, "/"))[2]
 extens <- c("png", "tiff")
-busc_plot_file <- paste0("F2_busco_", lineage, ".", extens)
+if (grepl("euk", lineage)) {
+  fig_lab <- "FS1_"
+} else if (grepl("strame", lineage)) {
+  fig_lab <- "F2_"
+} else {
+  fig_lab <- ""
+}
+busc_plot_file <- paste0(fig_lab, "busco_", lineage, ".", extens)
 
 # Prepend working directory to BUSCO script (if exists)
 if (dir.exists(wd)) {
