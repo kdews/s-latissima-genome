@@ -142,7 +142,7 @@ findGaps <- function(fasta_file, def_len) {
   start_comp <- startIndex(gap_matches)
   fasta_gaps <- tibble(start_comp) %>%
     mutate(seqid_comp = names(fasta),
-           Length = width(fasta), ) %>%
+           Length = width(fasta),) %>%
     unnest_longer(start_comp) %>%
     mutate(
       start_comp = as.numeric(start_comp),
@@ -151,7 +151,7 @@ findGaps <- function(fasta_file, def_len) {
     ) %>%
     filter(!grepl("^chr0\\.|^chr_00\\.", seqid_comp)) %>%
     group_by(seqid_comp, Length) %>%
-    group_modify(~ add_row(
+    group_modify( ~ add_row(
       .x,
       start_comp = 0,
       end_comp = 0,
@@ -290,20 +290,20 @@ readAgp <- function(ragout_dir, pre_gaps) {
   agp_gaps <-
     agp_combo %>% filter(label == "gap" & !is.na(seqid_comp))
   for (i in 1:dim(agp_gaps)[1]) {
-    agp_gaps_row <- agp_gaps[i, ]
+    agp_gaps_row <- agp_gaps[i,]
     row_id <- which(
       agp_combo$label == "input" &
         agp_combo$seqid_comp == agp_gaps_row$seqid_comp &
         agp_combo$start_scaf <= agp_gaps_row$start_scaf &
         agp_combo$end_scaf >= agp_gaps_row$end_scaf
     )
-    agp_row1 <- agp_combo[row_id, ] %>%
+    agp_row1 <- agp_combo[row_id,] %>%
       mutate(end_scaf = agp_gaps_row$start_scaf)
-    agp_row2 <- agp_combo[row_id, ] %>%
+    agp_row2 <- agp_combo[row_id,] %>%
       mutate(start_scaf = agp_gaps_row$end_scaf)
     agp_combo <- agp_combo %>%
       add_row(agp_row2)
-    agp_combo[row_id, ] <- agp_row1
+    agp_combo[row_id,] <- agp_row1
   }
   agp_combo <- agp_combo %>%
     group_by(seqid_scaf) %>%
@@ -499,9 +499,11 @@ idxPlot <-
                                simplify = F)), na.rm = T)
     y_max <-
       max(unlist(sapply(idx_list, pull, length, simplify = F)), na.rm = T)
-    common_lims <- coord_cartesian(xlim = c(0, x_max + 1),
-                                   ylim = c(0, y_max + 1),
-                                   expand = F)
+    common_lims <- coord_cartesian(
+      xlim = c(0, x_max + 1),
+      ylim = c(0, y_max + 1),
+      expand = F
+    )
     idx <- idx_list[[ragout_dir]]
     if (!missing(exclude))
       idx <- idx %>% filter(!type %in% exclude)
@@ -559,18 +561,18 @@ idxPlot <-
                width = 1) +
       common_lims +
       scale_fill_manual(values = vec_colors) +
-      labs(
-        x = "Scaffold index",
-        y = "Scaffold length (log10 bp)",
-      ) +
+      labs(x = "Scaffold index",
+           y = "Scaffold length (log10 bp)",) +
       theme_bw() +
       # theme_minimal() +
       annot +
-      theme(legend.position = leg_pos,
-            legend.title = element_blank(),
-            panel.background = element_blank(),
-            plot.background = element_blank(),
-            legend.background = element_blank())
+      theme(
+        legend.position = leg_pos,
+        legend.title = element_blank(),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        legend.background = element_blank()
+      )
     return(p)
   }
 # Combine pre- and post-Ragout index plots
@@ -588,24 +590,23 @@ combPlot <-
       pal = pal,
       exclude = c("pseudochromosomes")
     ) +
-      labs(
-        subtitle = "Before",
-        x = NULL,
-        y = NULL
-      )
-    p2 <- idxPlot(ragout_dir,
-                  idx_list = idx_list,
-                  leg_pos = leg_pos,
-                  pal = pal,
-                  exclude = c("input")) +
-      labs(
-        subtitle = "After",
-        x = NULL,
-        y = NULL
-      )
+      labs(subtitle = "Before",
+           x = NULL,
+           y = NULL)
+    p2 <- idxPlot(
+      ragout_dir,
+      idx_list = idx_list,
+      leg_pos = leg_pos,
+      pal = pal,
+      exclude = c("input")
+    ) +
+      labs(subtitle = "After",
+           x = NULL,
+           y = NULL)
     p_list <- list(p1, p2)
     if (legend) {
-      common_legend <- getCommon(idxPlot, "type", idx_list, leg_pos = leg_pos)
+      common_legend <-
+        getCommon(idxPlot, "type", idx_list, leg_pos = leg_pos)
       p <- ggarrange(
         plotlist = p_list,
         nrow = length(p_list),
@@ -626,12 +627,15 @@ combPlot <-
     }
     if (!is.null(ttls)) {
       ttl <- ttls[[ragout_dir]]
-      p <- annotate_figure(p, top = text_grob(str_wrap(ttl, width = 35))) 
+      p <-
+        annotate_figure(p, top = text_grob(str_wrap(ttl, width = 35)))
     }
     mar_cm <- 0.5
-    p <- annotate_figure(p,
-                         bottom = "Scaffold index",
-                         left = "Scaffold length (log10 bp)") +
+    p <- annotate_figure(
+      p,
+      bottom = text_grob("Scaffold index", size = 12),
+      left = text_grob("Scaffold length (log10 bp)", size = 12, rot = 90)
+    ) +
       theme(plot.margin = margin(mar_cm, mar_cm, mar_cm, mar_cm, "cm"))
     return(p)
   }
@@ -702,9 +706,13 @@ ragoutPlot <-
         geom = "text",
         x = xpos,
         y = levels(idx_agp$seqid_scaf_num)[ypos - 2],
-        label = paste(paste(round(sum_list$tot_len, digits = 2), "Mb"),
-                      paste0(round(sum_list$tot_perc_N, digits = 2), "% N's"),
-                      sep = "\n")
+        label = paste(paste(
+          round(sum_list$tot_len, digits = 2), "Mb"
+        ),
+        paste0(
+          round(sum_list$tot_perc_N, digits = 2), "% N's"
+        ),
+        sep = "\n")
       ) +
       # annotate(
       #   geom = "text",
@@ -712,19 +720,20 @@ ragoutPlot <-
       #   y = levels(idx_agp$seqid_scaf_num)[ypos - 1],
       #   label = paste0(round(sum_list$tot_perc_N, digits = 2), "% N's")
       # ) +
-      labs(
-        # title = str_wrap(ttl, width = 35),
+      labs(# title = str_wrap(ttl, width = 35),
         # subtitle = "Scaffold mapping onto pseudochromosomes",
         x = "Scaffold length (Mb)",
-        y = "Pseudochromosome index"
-      ) +
+        y = "Pseudochromosome index") +
       theme_classic() +
       scale_color_manual(values = myColors) +
       scale_linewidth_manual(values = c(3, 1)) +
-      theme(legend.position = leg_pos,
-            legend.text = element_text(size = rel(1.3)),
-            legend.title = element_blank(),
-            plot.margin = margin(mar_cm, mar_cm, mar_cm, mar_cm, "cm")) +
+      theme(
+        legend.position = leg_pos,
+        legend.text = element_text(size = rel(1.3)),
+        legend.title = element_blank(),
+        plot.margin = margin(mar_cm, mar_cm, mar_cm, mar_cm, "cm"),
+        axis.title = element_text(size = rel(1.2))
+      ) +
       common_x_lims
     # Remove labels from graph if not desired (labels = F)
     if (!labels)
@@ -732,113 +741,116 @@ ragoutPlot <-
     return(p)
   }
 # Run all functions on data
-runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "right") {
-  # Extract titles for plots
-  ttls <- sapply(in_dirs, extTtl)
-  # Wrangle data
-  # Import AGP
-  agp_list <- sapply(in_dirs, readAgp, pre_gaps, simplify = F)
-  # Import FASTA indices
-  idx_list <-
-    sapply(in_dirs, genIdx, agp_list, seqs, simplify = F)
-  # Index AGP
-  idx_agp_list <-
-    sapply(in_dirs, idxAgp, agp_list, idx_list, simplify = F)
-  # Plots
-  # Bar plot length distribution before and after rescaffolding
-  p_list <- sapply(in_dirs,
-                   combPlot,
-                   idx_list = idx_list,
-                   leg_pos = leg_pos,
-                   simplify = F)
-  # # Add borders if more than one plot
-  # if (length(names(p_list)) > 1) {
-  #   p_list <- sapply(p_list, addBorder, simplify = F)
-  # }
-  common_legend <- getCommon(idxPlot, "type", idx_list, leg_pos = leg_pos)
-  all_bar <- ggarrange(plotlist = p_list, align = "hv", labels = "AUTO")
-  # Save plot
-  ht <- 7
-  wd <- 7
-  if (length(p_list) > 1) {
-    wd <- wd * length(p_list) * 0.3
-    ht <- ht * length(p_list) * 0.25
-  }
-  sapply(
-    plot1,
-    ggsave,
-    plot = all_bar,
-    height = ht,
-    width = wd,
-    bg = "white",
-    simplify = F
-  )
-  print(paste("Saved plot:", plot1))
-  
-  # Line graph mapping of original scaffolds onto pseudochromosomes
-  dot_list <-
-    sapply(
+runAnalysis <-
+  function(in_dirs,
+           seqs,
+           pre_gaps,
+           plot1,
+           plot2,
+           leg_pos = "right") {
+    # Extract titles for plots
+    ttls <- sapply(in_dirs, extTtl)
+    lab_lets <- LETTERS[1:length(ttls)]
+    print(paste(lab_lets, ttls, sep = ": "))
+    # Wrangle data
+    # Import AGP
+    agp_list <- sapply(in_dirs, readAgp, pre_gaps, simplify = F)
+    # Import FASTA indices
+    idx_list <-
+      sapply(in_dirs, genIdx, agp_list, seqs, simplify = F)
+    # Index AGP
+    idx_agp_list <-
+      sapply(in_dirs, idxAgp, agp_list, idx_list, simplify = F)
+    # Plots
+    # Bar plot length distribution before and after rescaffolding
+    p_list <- sapply(
       in_dirs,
-      ragoutPlot,
-      idx_agp_list = idx_agp_list,
+      combPlot,
+      idx_list = idx_list,
       leg_pos = leg_pos,
-      # labels = F,
-      ttls = ttls,
       simplify = F
     )
-  common_legend <- getCommon(ragoutPlot, "label", idx_agp_list, leg_pos = leg_pos)
-  if (length(dot_list) > 1) {
-    all_dot <- ggarrange(
-      plotlist = dot_list,
-      legend.grob = common_legend,
-      legend = leg_pos,
-      align = "hv",
-      labels = "AUTO"
+    # # Add borders if more than one plot
+    # if (length(names(p_list)) > 1) {
+    #   p_list <- sapply(p_list, addBorder, simplify = F)
+    # }
+    common_legend <-
+      getCommon(idxPlot, "type", idx_list, leg_pos = leg_pos)
+    all_bar <-
+      ggarrange(plotlist = p_list,
+                align = "hv",
+                labels = "AUTO")
+    # Save plot
+    ht <- 7
+    wd <- 7
+    if (length(p_list) > 1) {
+      wd <- wd * length(p_list) * 0.3
+      ht <- ht * length(p_list) * 0.25
+    }
+    sapply(
+      plot1,
+      ggsave,
+      plot = all_bar,
+      height = ht,
+      width = wd,
+      bg = "white",
+      simplify = F
+    )
+    print(paste("Saved plot:", plot1))
+    
+    # Line graph mapping of original scaffolds onto pseudochromosomes
+    dot_list <-
+      sapply(
+        in_dirs,
+        ragoutPlot,
+        idx_agp_list = idx_agp_list,
+        leg_pos = leg_pos,
+        # labels = F,
+        ttls = ttls,
+        simplify = F
       )
-  } else {
-    all_dot = dot_list[[1]]
+    common_legend <-
+      getCommon(ragoutPlot, "label", idx_agp_list, leg_pos = leg_pos)
+    if (length(dot_list) > 1) {
+      all_dot <- ggarrange(
+        plotlist = dot_list,
+        legend.grob = common_legend,
+        legend = leg_pos,
+        align = "hv",
+        labels = "AUTO"
+      )
+    } else {
+      all_dot = dot_list[[1]]
+    }
+    # Save plot2
+    ht <- 6
+    wd <- 7
+    if (length(dot_list) > 1) {
+      wd <- wd * length(dot_list) * 0.3
+      ht <- ht * length(dot_list) * 0.3
+    }
+    sapply(
+      plot2,
+      ggsave,
+      plot = all_dot,
+      height = ht,
+      width = wd,
+      bg = "white",
+      simplify = F
+    )
+    print(paste("Saved plot:", plot2))
+    # # Combine all plots into figure
+    # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
+    # comp_rag <- annotate_figure(comp_rag,
+    #                             top =
+    #                               text_grob("Reference-based scaffold ordering",
+    #                                         face = "bold", size = 14))
+    return(list(
+      idx_list = idx_list,
+      agp_list = agp_list,
+      idx_agp_list = idx_agp_list
+    ))
   }
-  # all_dot <- annotate_figure(
-  #   all_dot,
-  #   top =
-  #     text_grob(
-  #       "Reference-based scaffold ordering",
-  #       face = "bold",
-  #       size = 14
-  #     ),
-  #   bottom = "Scaffold length (Mb)",
-  #   left = "Scaffold index"
-  # )
-  # Save plot2
-  ht <- 6
-  wd <- 7
-  if (length(dot_list) > 1) {
-    wd <- wd * length(dot_list) * 0.3
-    ht <- ht * length(dot_list) * 0.3
-  }
-  sapply(
-    plot2,
-    ggsave,
-    plot = all_dot,
-    height = ht,
-    width = wd,
-    bg = "white",
-    simplify = F
-  )
-  # print(all_dot)
-  print(paste("Saved plot:", plot2))
-  # # Combine all plots into figure
-  # comp_rag <- ggarrange(all_bar, all_dot, align = "hv", nrow = 2)
-  # comp_rag <- annotate_figure(comp_rag,
-  #                             top =
-  #                               text_grob("Reference-based scaffold ordering",
-  #                                         face = "bold", size = 14))
-  return(list(
-    idx_list = idx_list,
-    agp_list = agp_list,
-    idx_agp_list = idx_agp_list
-  ))
-}
 
 # Analysis
 # Import data
@@ -858,12 +870,14 @@ result_list1 <-
               outfiles$map_plot,
               leg_pos = "right")
 result_list2 <-
-  runAnalysis(ragout_dirs,
-              seqs,
-              pre_gaps,
-              outfiles$comp_len_plot,
-              outfiles$comp_map_plot,
-              leg_pos = "right")
+  runAnalysis(
+    ragout_dirs,
+    seqs,
+    pre_gaps,
+    outfiles$comp_len_plot,
+    outfiles$comp_map_plot,
+    leg_pos = "right"
+  )
 # # All species
 # named_fas <- pull(seqs, Assembly, Species)
 # ps <-
