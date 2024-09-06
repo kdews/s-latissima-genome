@@ -490,7 +490,7 @@ getCommon <- function(plotFun, var_name, df_list, ...) {
 idxPlot <-
   function(ragout_dir,
            idx_list,
-           leg_pos = "top",
+           leg_pos = "right",
            pal = "Paired",
            exclude = NULL) {
     x_max <- max(unlist(sapply(idx_list,
@@ -577,7 +577,7 @@ idxPlot <-
 combPlot <-
   function(ragout_dir,
            idx_list,
-           leg_pos = "top",
+           leg_pos = "right",
            ttls = NULL,
            pal = "Paired",
            legend = F) {
@@ -628,9 +628,11 @@ combPlot <-
       ttl <- ttls[[ragout_dir]]
       p <- annotate_figure(p, top = text_grob(str_wrap(ttl, width = 35))) 
     }
+    mar_cm <- 0.5
     p <- annotate_figure(p,
                          bottom = "Scaffold index",
-                         left = "Scaffold length (log10 bp)")
+                         left = "Scaffold length (log10 bp)") +
+      theme(plot.margin = margin(mar_cm, mar_cm, mar_cm, mar_cm, "cm"))
     return(p)
   }
 # Add ggpubr border to plot
@@ -658,6 +660,7 @@ sumAgp <- function(idx_agp) {
 ragoutPlot <-
   function(ragout_dir,
            idx_agp_list,
+           leg_pos = "right",
            ttls = NULL,
            pal = "Paired",
            labels = T) {
@@ -675,6 +678,7 @@ ragoutPlot <-
     sum_df <- sum_list$sum_df
     # Color by labels with consistent colors in all graphs
     myColors <- getColors(idx_agp$label, brewer.pal, pal)
+    mar_cm <- 0.5
     p <- ggplot(data = idx_agp) +
       geom_segment(
         mapping = aes(
@@ -697,25 +701,30 @@ ragoutPlot <-
       annotate(
         geom = "text",
         x = xpos,
-        y = levels(idx_agp$seqid_scaf_num)[ypos],
-        label = paste(round(sum_list$tot_len, digits = 2), "Mb")
+        y = levels(idx_agp$seqid_scaf_num)[ypos - 2],
+        label = paste(paste(round(sum_list$tot_len, digits = 2), "Mb"),
+                      paste0(round(sum_list$tot_perc_N, digits = 2), "% N's"),
+                      sep = "\n")
       ) +
-      annotate(
-        geom = "text",
-        x = xpos,
-        y = levels(idx_agp$seqid_scaf_num)[ypos - 1],
-        label = paste0(round(sum_list$tot_perc_N, digits = 2), "% N's")
-      ) +
+      # annotate(
+      #   geom = "text",
+      #   x = xpos,
+      #   y = levels(idx_agp$seqid_scaf_num)[ypos - 1],
+      #   label = paste0(round(sum_list$tot_perc_N, digits = 2), "% N's")
+      # ) +
       labs(
-        title = str_wrap(ttl, width = 35),
-        subtitle = "Scaffold mapping onto pseudochromosomes",
+        # title = str_wrap(ttl, width = 35),
+        # subtitle = "Scaffold mapping onto pseudochromosomes",
         x = "Scaffold length (Mb)",
         y = "Pseudochromosome index"
       ) +
       theme_classic() +
       scale_color_manual(values = myColors) +
       scale_linewidth_manual(values = c(3, 1)) +
-      theme(legend.position = "top") +
+      theme(legend.position = leg_pos,
+            legend.text = element_text(size = rel(1.3)),
+            legend.title = element_blank(),
+            plot.margin = margin(mar_cm, mar_cm, mar_cm, mar_cm, "cm")) +
       common_x_lims
     # Remove labels from graph if not desired (labels = F)
     if (!labels)
@@ -723,7 +732,7 @@ ragoutPlot <-
     return(p)
   }
 # Run all functions on data
-runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") {
+runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "right") {
   # Extract titles for plots
   ttls <- sapply(in_dirs, extTtl)
   # Wrangle data
@@ -742,20 +751,12 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
                    idx_list = idx_list,
                    leg_pos = leg_pos,
                    simplify = F)
-  # Add borders if more than one plot
-  if (length(names(p_list)) > 1) {
-    p_list <- sapply(p_list, addBorder, simplify = F)
-  }
+  # # Add borders if more than one plot
+  # if (length(names(p_list)) > 1) {
+  #   p_list <- sapply(p_list, addBorder, simplify = F)
+  # }
   common_legend <- getCommon(idxPlot, "type", idx_list, leg_pos = leg_pos)
-  all_bar <- ggarrange(
-    plotlist = p_list,
-    # legend.grob = common_legend,
-    # legend = leg_pos,
-    align = "hv",
-    # ncol = length(p_list),
-    labels = "AUTO"
-  )
-  # return(all_bar)
+  all_bar <- ggarrange(plotlist = p_list, align = "hv", labels = "AUTO")
   # Save plot
   ht <- 7
   wd <- 7
@@ -779,35 +780,42 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
     sapply(
       in_dirs,
       ragoutPlot,
-      idx_agp_list,
-      labels = F,
+      idx_agp_list = idx_agp_list,
+      leg_pos = leg_pos,
+      # labels = F,
       ttls = ttls,
       simplify = F
     )
-  common_legend <- getCommon(ragoutPlot, "label", idx_agp_list)
-  all_dot <- ggarrange(
-    plotlist = dot_list,
-    legend.grob = common_legend,
-    legend = "top",
-    align = "hv",
-    ncol = length(dot_list)
-  )
-  all_dot <- annotate_figure(
-    all_dot,
-    top =
-      text_grob(
-        "Reference-based scaffold ordering",
-        face = "bold",
-        size = 14
-      ),
-    bottom = "Scaffold length (Mb)",
-    left = "Scaffold index"
-  )
+  common_legend <- getCommon(ragoutPlot, "label", idx_agp_list, leg_pos = leg_pos)
+  if (length(dot_list) > 1) {
+    all_dot <- ggarrange(
+      plotlist = dot_list,
+      legend.grob = common_legend,
+      legend = leg_pos,
+      align = "hv",
+      labels = "AUTO"
+      )
+  } else {
+    all_dot = dot_list[[1]]
+  }
+  # all_dot <- annotate_figure(
+  #   all_dot,
+  #   top =
+  #     text_grob(
+  #       "Reference-based scaffold ordering",
+  #       face = "bold",
+  #       size = 14
+  #     ),
+  #   bottom = "Scaffold length (Mb)",
+  #   left = "Scaffold index"
+  # )
   # Save plot2
-  ht <- 7
+  ht <- 6
   wd <- 7
-  if (length(dot_list) > 1)
-    wd <- 7 * length(dot_list) * 0.6
+  if (length(dot_list) > 1) {
+    wd <- wd * length(dot_list) * 0.3
+    ht <- ht * length(dot_list) * 0.3
+  }
   sapply(
     plot2,
     ggsave,
