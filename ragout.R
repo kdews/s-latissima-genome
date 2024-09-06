@@ -547,7 +547,7 @@ idxPlot <-
           base_size = 12,
           core = list(
             bg_params =
-              list(fill = tbl_colors),
+              list(fill = tbl_colors, col = "black"),
             fg_params =
               list(col = fnt_colors)
           )
@@ -567,7 +567,10 @@ idxPlot <-
       # theme_minimal() +
       annot +
       theme(legend.position = leg_pos,
-            legend.title = element_blank())
+            legend.title = element_blank(),
+            panel.background = element_blank(),
+            plot.background = element_blank(),
+            legend.background = element_blank())
     return(p)
   }
 # Combine pre- and post-Ragout index plots
@@ -632,7 +635,7 @@ combPlot <-
   }
 # Add ggpubr border to plot
 addBorder <- function(p) {
-  p <- p + border()
+  p <- p + border(size = 0.2)
   return(p)
 }
 # Function to summarize indexed AGP dataframe
@@ -739,6 +742,7 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
                    idx_list = idx_list,
                    leg_pos = leg_pos,
                    simplify = F)
+  # Add borders if more than one plot
   if (length(names(p_list)) > 1) {
     p_list <- sapply(p_list, addBorder, simplify = F)
   }
@@ -751,16 +755,13 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
     # ncol = length(p_list),
     labels = "AUTO"
   )
-  # all_bar <- annotate_figure(all_bar,
-  #                            bottom = "Scaffold index",
-  #                            left = "Scaffold length (log10 bp)")
-  print(all_bar)
+  # return(all_bar)
   # Save plot
   ht <- 7
   wd <- 7
   if (length(p_list) > 1) {
-    wd <- wd * length(p_list) * 0.2
-    ht <- ht * length(p_list) * 0.2
+    wd <- wd * length(p_list) * 0.3
+    ht <- ht * length(p_list) * 0.25
   }
   sapply(
     plot1,
@@ -772,6 +773,7 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
     simplify = F
   )
   print(paste("Saved plot:", plot1))
+  
   # Line graph mapping of original scaffolds onto pseudochromosomes
   dot_list <-
     sapply(
@@ -807,9 +809,9 @@ runAnalysis <- function(in_dirs, seqs, pre_gaps, plot1, plot2, leg_pos = "top") 
   if (length(dot_list) > 1)
     wd <- 7 * length(dot_list) * 0.6
   sapply(
-    plot1,
+    plot2,
     ggsave,
-    plot = all_bar,
+    plot = all_dot,
     height = ht,
     width = wd,
     bg = "white",
@@ -854,7 +856,6 @@ result_list2 <-
               outfiles$comp_len_plot,
               outfiles$comp_map_plot,
               leg_pos = "right")
-
 # # All species
 # named_fas <- pull(seqs, Assembly, Species)
 # ps <-
