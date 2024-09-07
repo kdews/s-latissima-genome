@@ -751,7 +751,7 @@ runAnalysis <-
     # Extract titles for plots
     ttls <- sapply(in_dirs, extTtl)
     lab_lets <- LETTERS[1:length(ttls)]
-    print(paste(lab_lets, ttls, sep = ": "))
+    print(paste(lab_lets, paste0(ttls, " (", in_dirs, ")"), sep = ": "))
     # Wrangle data
     # Import AGP
     agp_list <- sapply(in_dirs, readAgp, pre_gaps, simplify = F)
@@ -862,6 +862,7 @@ pre_gaps <- findGaps(pre_genome_file, 1e4)
 ragout_dirs <- list.files(pattern = "ragout-out-")
 # ragout_dirs <- grep("refine|filt", ragout_dirs, value = T)
 # ragout_dirs <- grep("solid.*refine", ragout_dirs, value = T)
+ragout_dirs <- grep("refine", ragout_dirs, value = T)
 result_list1 <-
   runAnalysis(ragout_dir,
               seqs,
