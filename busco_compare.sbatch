@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH -J busco_compare
-#SBATCH --mem-per-cpu=2gb
+#SBATCH -p epyc-64
+#SBATCH --mem=3gb
 #SBATCH --time=05:00:00
 #SBATCH -o %x.log
 

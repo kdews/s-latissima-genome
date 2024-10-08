@@ -1,27 +1,26 @@
 ## Initialization
 # Load required packages
-library(tidytree)
-library(treeio)
-library(tidyverse)
-library(ggtree)
-library(jsonlite)
-# suppressPackageStartupMessages(library(tidytree, quietly = T))
-# suppressPackageStartupMessages(library(treeio, quietly = T))
-# suppressPackageStartupMessages(library(tidyverse, quietly = T))
-# suppressPackageStartupMessages(library(ggtree, quietly = T))
-# suppressPackageStartupMessages(library(jsonlite, quietly = T))
-# suppressPackageStartupMessages(library(aplot, quietly = T))
+suppressPackageStartupMessages(library(tidytree, quietly = T))
+suppressPackageStartupMessages(library(treeio, quietly = T))
+suppressPackageStartupMessages(library(tidyverse, quietly = T))
+suppressPackageStartupMessages(library(ggtree, quietly = T))
+suppressPackageStartupMessages(library(jsonlite, quietly = T))
 if (require(showtext, quietly = T)) {
   showtext_auto()
-  if (interactive()) showtext_opts(dpi=100) else showtext_opts(dpi=300)
+  if (interactive())
+    showtext_opts(dpi = 100)
+  else
+    showtext_opts(dpi = 300)
 }
 
 ## Input
 if (interactive()) {
   setwd("/project/noujdine_61/kdeweese/latissima/genome_stats")
-  line_args <- c("busco_summaries/eukaryota_odb10",
-                 "s-latissima-genome/species_table.txt",
-                 "s-latissima-genome/")
+  line_args <- c(
+    "busco_summaries/eukaryota_odb10",
+    "s-latissima-genome/species_table.txt",
+    "s-latissima-genome/"
+  )
 } else if (length(commandArgs(trailingOnly = T)) == 3) {
   line_args <- commandArgs(trailingOnly = T)
 } else {
@@ -60,16 +59,22 @@ if (dir.exists(outdir)) {
 
 ## Functions
 # Labels for figure legend
-lbs <- c("S"="Complete and single-copy",
-         "D"="Complete and duplicated",
-         "F"="Fragmented",
-         "M"="Missing")
-color_names <- unname(lbs)
+lbs <- c(
+  "C" = "Complete",
+  "S" = "Complete and single-copy",
+  "D" = "Complete and duplicated",
+  "F" = "Fragmented",
+  "M" = "Missing"
+)
+lbs_rev <- names(lbs)
+names(lbs_rev) <- unname(lbs)
+color_names <- unname(lbs[2:5])
 # Format species Latin name
 formatSpc <- function(spc) {
   spc_f <- gsub("_", " ", spc)
   # Converts Ectocarpus siliculosus to Ectocarpus sp. Ec32
-  spc_f <- gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
+  spc_f <-
+    gsub("Ectocarpus siliculosus", "Ectocarpus sp. Ec32", spc_f)
   spc_f <- str_wrap(spc_f, width = 20)
   return(spc_f)
 }
@@ -80,14 +85,17 @@ getBuscoJsons <- function(species_tab) {
   ptns <- paste(ptn, collapse = "|")
   busc_res_dirs <- list.files(pattern = ptns)
   busc_res_dirs <- sapply(busc_ids, grep, busc_res_dirs, value = T)
-  busc_df <- tibble(dir = busc_res_dirs, Species = names(busc_res_dirs))
+  busc_df <-
+    tibble(dir = busc_res_dirs, Species = names(busc_res_dirs))
   busc_json_files <- busc_df %>%
+    rowwise() %>%
     filter(dir.exists(dir)) %>%
     mutate(json_files = list.files(
       path = dir,
       pattern = "sho.*\\.json",
       full.names = T
     )) %>%
+    ungroup() %>%
     pull(json_files, Species)
   return(busc_json_files)
 }
@@ -97,8 +105,10 @@ parseBusco <- function(busc_json_file) {
   busc_res <- busc_data$results %>%
     unlist() %>%
     as_tibble(rownames = "stat") %>%
-    mutate(stat = gsub("Single copy", "Complete and single-copy", stat),
-           stat = gsub("Multi copy", "Complete and duplicated", stat))
+    mutate(
+      stat = gsub("Single copy", "Complete and single-copy", stat),
+      stat = gsub("Multi copy", "Complete and duplicated", stat)
+    )
   return(busc_res)
 }
 
@@ -116,96 +126,74 @@ print(paste("Sourcing", busco_script))
 suppressWarnings(source(busco_script))
 my_colors <- setNames(my_colors, color_names)
 # Read table of species names and FASTA file names
-species_tab <- read.table(assembly_file, sep = "\t", fill = NA, header = F)
+species_tab <-
+  read.table(assembly_file,
+             sep = "\t",
+             fill = NA,
+             header = F)
 colnames(species_tab)[1:2] <- c("Species", "Assembly")
 # Match species table names to BUSCO IDs and tree tip labels
 species_tab <- species_tab %>%
-  mutate(BUSCO_id=paste(basename(tools::file_path_sans_ext(Assembly)),
-                        lineage, sep = "_"),
-         # Add underscores to match tree species names
-         Species=gsub(" ", "_", Species))
-tree_spc <- sapply(tip.label(tp), grep, species_tab$Species, value=T)
+  mutate(
+    BUSCO_id = paste(basename(tools::file_path_sans_ext(Assembly)),
+                     lineage, sep = "_"),
+    # Add underscores to match tree species names
+    Species = gsub(" ", "_", Species)
+  )
+tree_spc <-
+  sapply(tip.label(tp), grep, species_tab$Species, value = T)
 tree_spc <- setNames(names(tree_spc), unname(tree_spc))
 species_dict <- species_tab %>%
-  mutate(Species=tree_spc[Species]) %>%
+  mutate(Species = tree_spc[Species]) %>%
   pull(Species, BUSCO_id)
 
 # Read in BUSCO summaries
 busc_json_files <- getBuscoJsons(species_tab)
-# busco_data <- read_json(busc_json_files[[1]], simplifyVector = T)
-# busco_res <- busco_data$results %>%
-#   unlist() %>%
-#   as_tibble(rownames = "stat")
 busc_res <- sapply(busc_json_files, parseBusco, simplify = F)
 busc_res <- busc_res %>%
   bind_rows(.id = "Species")
-sum_labs <- busc_res %>%
-  filter(stat == "one_line_summary") %>%
-  pull(value, Species)
 busc_res_filt <- busc_res %>%
+  # Keep only BUSCO gene reporting and convert values to numbers
   filter(grepl(paste(lbs, collapse = "|"), stat)) %>%
   mutate(value = as.numeric(value)) %>%
-  separate_wider_regex(
-    stat,
-    patterns = c(Category = ".*", "\\s", Value_Type = "per.*|BUS.*"),
-  ) %>%
+  # Separate gene counts and percentages into two columns
+  separate_wider_regex(stat,
+                       patterns = c(Category = ".*", "\\s",
+                                    Value_Type = "per.*|BUS.*")) %>% 
   pivot_wider(names_from = Value_Type, values_from = value) %>%
-  mutate(Category = factor(Category, levels = unname(lbs)),
-         Label1 = case_when(Category == "Complete and single-copy" ~
-                             sum_labs[Species],
-                           .default = NA))
-sum_labs1 <- busc_res_filt %>%
-  summarize(
-    Label = paste(Category, BUSCOs)
-    # Label = paste(paste0("C:", S+D),
-    #               paste0("[S:", S, ","),
-    #               paste0("D:", D, "],"),
-    #               paste0("F:", F, ","),
-    #               paste0("M:", M))
+  # Create one-line summary labels for each species
+  mutate(
+    C = lbs_rev[Category],
+    Label = paste(C, BUSCOs, sep = ":"),
+    Label = case_when(
+      C == "S" ~ paste0("[", Label),
+      C == "D" ~ paste0(Label, "]"),
+      .default = Label
+    )
+  ) %>%
+  group_by(Species) %>%
+  mutate(Label = case_match(C, "S" ~ paste(Label, collapse = ", ")),
+         Label = gsub(", \\[", " \\[", Label)) %>%
+  ungroup() %>%
+  # Sort BUSCO result categories by desired order in bars
+  mutate(Category = factor(Category, levels = unname(lbs))) %>%
+  # Remove "Complete" category (already represented by "S" and "D")
+  filter(Category != "Complete") %>%
+  # Convert Species to factor ordered by tree tip labels
+  mutate(
+    Species = gsub(" ", "_", Species),
+    Species = tree_spc[Species],
+    Species = factor(Species, levels = tip.label(tp))
   )
-ggplot(data = busc_res_filt, mapping = aes(x = percentage, y = Species)) +
-  geom_col(mapping = aes(fill = Category),
-           position = position_stack(reverse = T)) +
-  scale_fill_manual(name = NULL, values = my_colors,
-                    labels = scales::label_wrap(width = 15)) +
-  geom_text(aes(label = Label), x = 25, na.rm = T) +
-  # guides(fill = guide_legend(ncol = 2)) +
-  # annotate("text", x = 3, y = 1:length(my_labs), label = my_labs,
-  #          hjust = 0, size = 5) +
-  # scale_x_continuous(name = x_lab,
-  #                    labels = scales::label_percent(scale = 1),
-  #                    expand = expansion(mult = 0, add = c(0, 2))) +
-  scale_y_discrete(labels = as_labeller(formatSpc)) +
-  coord_cartesian(clip = "off") +
-  theme_classic2()
-
-
-
-
-df <- df %>%
-  # Match BUSCO ID with species name
-  mutate(Species=unname(species_dict[my_species]),
-         # Add more detail to labels
-         label=factor(lbs[category], levels = unname(lbs)))
-# Label summary of values in each category for each species
-my_labs <- df %>%
-  pivot_wider(id_cols = Species,
-              names_from = category,
-              values_from = my_values) %>%
-  mutate(my_labs = paste(paste0("C:", S+D),
-                         paste0("[S:", S, ","),
-                         paste0("D:", D, "],"),
-                         paste0("F:", F, ","),
-                         paste0("M:", M))) %>%
-  pull(my_labs)
-
-# Convert Species to factor ordered by tree tip labels
-df <- df %>% mutate(Species=factor(Species, levels = tip.label(tp)))
 
 df2 <- quast_df %>%
-  mutate(Species=gsub(" ", "_", Species),
-         Species=tree_spc[Species],
-         Species=factor(Species, levels = tip.label(tp))) %>%
+  # Convert Species to factor ordered by tree tip labels
+  mutate(
+    Species = gsub(" ", "_", Species),
+    Species = tree_spc[Species],
+    Species = factor(Species, levels = tip.label(tp))
+  ) %>%
+  # Pivot wider for plot
   pivot_wider(id_cols = Species,
               names_from = Stat,
               values_from = Assembly)
@@ -220,23 +208,31 @@ x_lab <- paste(x_lab1, x_lab2, sep = "\n")
 
 # Plotting
 # Bar plot of BUSCO score breakdown
-busc_plot <- ggplot(data = df, mapping = aes(x = my_percentage, y = Species)) +
-  geom_col(mapping = aes(fill = label),
+busc_plot <-
+  ggplot(data = busc_res_filt,
+         mapping = aes(x = percentage, y = Species)) +
+  geom_col(mapping = aes(fill = Category),
            position = position_stack(reverse = T)) +
-  scale_fill_manual(name = NULL, values = my_colors,
-                    labels = scales::label_wrap(width = 15)) +
+  geom_text(mapping = aes(label = Label), x = 5, hjust = 0, na.rm = T) +
+  scale_fill_manual(
+    name = NULL,
+    values = my_colors,
+    labels = scales::label_wrap(width = 15)
+  ) +
   # guides(fill = guide_legend(ncol = 2)) +
-  annotate("text", x = 3, y = 1:length(my_labs), label = my_labs,
-           hjust = 0, size = 5) +
-  scale_x_continuous(name = x_lab,
-                     labels = scales::label_percent(scale = 1),
-                     expand = expansion(mult = 0, add = c(0, 2))) +
+  scale_x_continuous(
+    name = x_lab,
+    labels = scales::label_percent(scale = 1),
+    expand = expansion(mult = 0, add = c(0, 2))
+  ) +
   scale_y_discrete(labels = as_labeller(formatSpc)) +
   coord_cartesian(clip = "off") +
   theme_classic2() +
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
 tree_plot <- ggtree(tp) +
   geom_tiplab(aes(label = f_labs), align = T, fontface = "italic") +
   geom_treescale() +
@@ -244,23 +240,43 @@ tree_plot <- ggtree(tp) +
   scale_x_continuous(expand = expansion(mult = 0, add = 0)) +
   scale_y_continuous(expand = expansion(mult = c(0.1, 0.15), add = 0)) +
   coord_cartesian(clip = "off")
-n_plot <- ggplot(data = df2, mapping = aes(x = `# N's per 100 kbp`,
-                                           y = Species)) +
+n_plot <- ggplot(data = df2,
+                 mapping = aes(x = `# N's per 100 kbp`,
+                               y = Species)) +
   geom_col() +
-  scale_x_continuous(label = scales::label_comma(), 
+  scale_x_continuous(label = scales::label_comma(),
                      expand = expansion(mult = 0, add = c(0, 2))) +
   coord_cartesian(clip = "off") +
   theme_classic2() +
-  theme(axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())
-pp <- ggarrange(n_plot, busc_plot, nrow = 1, legend = "right",
-                legend.grob = get_legend(busc_plot), align = "h")
-p <- ggarrange(tree_plot, pp, widths = c(1, 2), nrow = 1, align = "h")
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+pp <- ggarrange(
+  n_plot,
+  busc_plot,
+  nrow = 1,
+  legend = "right",
+  legend.grob = get_legend(busc_plot),
+  align = "h"
+)
+p <-
+  ggarrange(tree_plot,
+            pp,
+            widths = c(1, 2),
+            nrow = 1,
+            align = "h")
 # Save plot with message to user
 print(paste("Saving pretty BUSCO plot of", lineage, "to", busc_plot_file))
 h <- 5
-w <- h*2.5
-sapply(busc_plot_file, ggsave,
-       plot = p, bg = "white", width = w, height = h,
-       simplify = F)
+w <- h * 2.5
+sapply(
+  busc_plot_file,
+  ggsave,
+  plot = p,
+  bg = "white",
+  width = w,
+  height = h,
+  simplify = F
+)
