@@ -70,6 +70,7 @@ fixChrom <- function(contigs) {
 }
 # Find N_len-length gaps (N's) from FASTA file using Biostrings
 findGaps <- function(fasta_file, N_len) {
+  library(Biostrings)
   fasta <- readDNAStringSet(fasta_file)
   gap_ptn <- paste(rep("N", N_len), collapse = "")
   gap_matches <- vmatchPattern(gap_ptn, fasta)
