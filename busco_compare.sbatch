@@ -25,7 +25,7 @@ sum_dir="busco_summaries"
 lineages=("eukaryota_odb10" "stramenopiles_odb10")
 if [[ -z "$1" ]]
 then
-  assembly_file="${scripts_dir}/species_table.txt"
+  assembly_file="${scripts_dir}species_table.txt"
 else
   assembly_file="$1"
 fi
