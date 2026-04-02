@@ -63,7 +63,7 @@ fi
 # Portal names (assemblies/portal_names.txt)
 if [[ -f "$portal_file" ]]
 then
-  mapfile -t portal_list < <(cat "$portal_file")
+  mapfile -t portal_list < "$portal_file"
 else
   echo "Error: $portal_file not found."
   exit 1
