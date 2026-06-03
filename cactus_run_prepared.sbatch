@@ -7,7 +7,7 @@
 
 # Initialize script
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
-if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
+if [[ -e "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Script environment variables
 js="cactus_prepare_steps_jobstore"
@@ -45,7 +45,7 @@ fi
 module purge
 module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
 env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
-if [[ -a "$env_path" ]]
+if [[ -e "$env_path" ]]
 then
   source "$env_path"
 else

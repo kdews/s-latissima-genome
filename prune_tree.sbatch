@@ -7,7 +7,7 @@
 
 # Initialize script
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
-if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
+if [[ -e "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Default kelp Newick tree from https://doi.org/10.1016/j.ympev.2019.04.012
 tree="https://ars.els-cdn.com/content/image/1-s2.0-S1055790319300892-mmc1.txt"
@@ -18,7 +18,7 @@ then
   echo "\
 Takes Newick tree and assembly file, and uses R's ape to prune it to contain
 only desired species.
-Usage: sbatch ${job_name}.sbatch <assembly_file> [tree]
+Usage: sbatch $job_name.sbatch <assembly_file> [tree]
 
 Requires: 
  - R
@@ -30,7 +30,7 @@ fi
 
 # Define variables
 seqFile="${scripts_dir}s_lat_alignment.txt"
-r_script="${scripts_dir}${job_name}.R"
+r_script="${scripts_dir}$job_name.R"
 assembly_file="$1"
 (( $# > 1 )) && tree="$2"
 if [[ ! -f "$tree" ]] && [[ "$tree" == http?(s)://*.txt ]]

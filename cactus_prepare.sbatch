@@ -7,7 +7,7 @@
 
 # Initialize script
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
-if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
+if [[ -e "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Script environment variables
 outdir="cactus-steps-output"
@@ -51,7 +51,7 @@ fi
 module purge
 module load gcc/12.3.0 python/3.11.4 git/2.42.0 py-pip/23.0
 env_path="/home1/kdeweese/bin/cactus-bin-v2.6.7/cactus_env/bin/activate"
-if [[ -a "$env_path" ]]
+if [[ -e "$env_path" ]]
 then
   source "$env_path"
 else
@@ -97,7 +97,7 @@ premem=20
 blastmem=65
 # Alignment memory
 # 3 genomes: 150 GB
-# 5 genomes: 
+# 5 genomes: 300 GB
 alnmem=300
 cpus=14
 opts1="--preprocessCores $cpus --blastCores $cpus --alignCores $cpus"

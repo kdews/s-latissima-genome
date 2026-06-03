@@ -7,7 +7,7 @@
 
 # Initialize script
 init="/home1/kdeweese/scripts/s-latissima-genome/script_init.sh"
-if [[ -a "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
+if [[ -e "$init" ]]; then source "$init"; else { echo "Init err"; exit 1; }; fi
 
 # Default curl login filename
 today="$(date +%F)"
@@ -21,9 +21,9 @@ Downloads assembly and associated feature file from given JGI portal name(s)
 and/or other link(s).
 
 Usage:
-  sbatch ${job_name}.sbatch <portal_list> [username] [password]
-  sbatch ${job_name}.sbatch <portal_list> [curl_login_file]
-  sbatch ${job_name}.sbatch <portal_list>
+  sbatch $job_name.sbatch <portal_list> [username] [password]
+  sbatch $job_name.sbatch <portal_list> [curl_login_file]
+  sbatch $job_name.sbatch <portal_list>
     - Last usage requires curl login file for JGI to be present and readable
       in current working directory generated same date as today ($(date)),
       named with today's date following the convention:
